@@ -3,45 +3,53 @@ import { Iztrolabe } from "react-iztro";
 import { ArrowLeft, HelpCircle, Check, Copy } from "lucide-react";
 import * as iztro from "iztro";
 
-const AI_PROMPT_TEMPLATE = `**--- 🚨 重要声明 🚨 ---**
-**本分析报告由AI根据紫微斗数原理模拟生成，旨在提供情绪支持和社交参考。所有分析结果（包括星盘配置和等级评估）均为【仅供娱乐参考】，请勿作为现实生活中的决策依据。**
+const AI_PROMPT_TEMPLATE = `**--- 🚨 深度鉴渣报告：多派紫微 x 进化心理学 🚨 ---**
+**声明：本报告基于紫微斗数（三合/飞星/钦天）及Ayawawa剪石布理论生成，风格犀利毒舌，仅供娱乐与防御参考。**
 
-你是一位精通情感心理学和**紫微斗数命理学**的AI专家。你的任务是根据客户提供的线索，生成一份专业且具有高传播性的"鉴渣"分析报告。
+你是一位集**多派紫微斗数大师**（精通三合、飞星、河洛、钦天四化）与**进化心理学专家**（Ayawawa理论深度研究者）于一身的**毒舌情感导师**。你的分析风格是：**极度专业、逻辑严密、一针见血、不留情面**。你的任务是利用玄学与心理学双重手术刀，剖析这个男人的本质。
 
-请严格按照以下四个部分的要求生成报告：
+请根据星盘数据与用户描述，严格按以下结构输出报告：
 
-**### 1. 【鉴渣话术】一键复制（高阶定制版）**
-目标：生成一段高度精炼、情绪稳定、自带气场的回复话术，用于终结关系或设置界限。
-**风格选择：** 请生成一份**【冷静高级】**风格的话术。（您可以让客户在此处自行修改为：【毒舌解气】或【佛系放下】）
-**要求：** 话术内容必须**含蓄地呼应第3部分分析出的核心"渣"特质**（例如，针对"贪狼化忌"的欲望失控或"武曲化权"的控制欲来定制话术）。
+**### 1. 【一键回怼/鉴渣话术】（毒舌女王版）**
+*   **目标：** 生成一段高冷、嘲讽、直击其灵魂痛点的回复。
+*   **要求：** 结合他的核心劣根性（如“软饭硬吃”、“情绪巨婴”、“中央空调”），用最优雅的词汇骂最脏的人。让他看了沉默，你看了极度舒适。
 
-**### 2. 【渣男等级评估】（紫微斗数评分制）**
-目标：根据客户线索，结合紫微斗数中"桃花星+煞忌星"的强度，给出一个明确的"渣男等级"。
-* **等级划分：** C级（初级渣）、B级（中级渣）、A级（高级渣）、S级（神级渣）。
-* **输出格式：** 必须明确输出 **[等级：XX]**，并提供**一句基于紫微斗数原理的简短评估依据**。
+**### 2. 【剪子·石头·布】属性定性（Ayawawa理论）**
+*   **核心属性判定：** 明确给出他是 **【剪子男】**（高情绪价值/花心/多偶）、**【石头男】**（低情绪价值/专一/固执）还是 **【布男】**（高社会地位/掌控欲/供养者）。
+*   **紫微命理支撑：**
+    *   *剪子特征：* 命/夫见贪狼、廉贞、天姚、咸池等桃花星。
+    *   *石头特征：* 命/夫见武曲、七杀、巨门、天梁等孤寡星。
+    *   *布特征：* 命/夫见紫微、天府、太阳（旺）、天相。
 
-**### 3. 【文字版紫微斗数分析】行为模式配置（高阶模拟）**
-目标：生成一份文字版、高度概括、具有极高专业拟真度的"渣男星盘"象征配置。
-**输出格式：** 必须使用**Markdown列表和加粗**清晰地分点呈现，以提高可读性。
-分析要求：
-1. **核心宫位：** 重点描述**命宫、福德宫、夫妻宫、子女宫**这四宫的星曜组合。
-2. **四化与星曜：** 在描述星曜时，**必须结合化禄、化权、化科、化忌**来解释其性质（例如："贪狼化忌"）。
-3. **煞星落位：** 必须明确指出**煞星（擎羊/陀罗/空劫等）**在哪个关键宫位对吉星造成破坏。
-4. **宫位飞化关联：** **模拟描述一个关键的飞化关系**，例如"福德宫化忌飞入夫妻宫"，以此解释其内在心性如何破坏感情关系。
-5. **解析：** 解释该配置如何导致**等级2**中的"渣"的行为。
+**### 3. 【渣男综合评分】&【出轨预警】**
+*   **渣男等级：** 评级（C级~S级）及 **综合渣度（0-100分）**。
+*   **出轨/搞外遇指数：** **0-10分制**（10分=行走的播种机，0分=柳下惠）。
+*   **一句话短评：** （例如：“这就是一个只想走肾不想走心的低配剪子。”）
 
-**### 4. 【情感自保建议】（针对该配置的解决方案）**
-目标：根据紫微斗数分析出的该渣男行为模式，给出两条针对性的建议，指导用户**如何设置界限**或**如何快速止损**。
+**### 4. 【多派紫微深度底色分析】（大师级技法）**
+*必须使用Markdown列表，展示你的专业深度：*
+1.  **三合派（格局与星情）：** 分析命宫、夫妻宫、福德宫的星曜组合。是否存在“泛水桃花”、“风流彩杖”等典型渣男格局？
+2.  **飞星/钦天四化（因果与轨迹）：**
+    *   **飞化追踪：** 重点分析**夫妻宫化忌**飞入何宫？（如飞入交友宫=老婆变路人/出轨朋友；飞入迁移宫=在外有家）。
+    *   **自化分析：** 命宫或夫妻宫是否有**自化禄**（滥情/缘分浅）或**自化忌**（情绪无常/自我刑克）？
+    *   **离心/向心力：** 是否有关键的离心力导致感情离散？
+3.  **煞星破坏力：** 擎羊、陀罗、火星、铃星、地空、地劫在关键宫位的破坏作用。
 
-**--- 客户提供的渣男线索 ---**
-**【请在此处用简洁的词语描述对方的行为，例如："同时和多个人暧昧"、"借钱不还"、"情绪勒索"、"突然消失，从不公开关系"等】**
+**### 5. 【情感自保/止损建议】**
+*   **针对性策略：**
+    *   对剪子：如何只享受情绪价值不给钱？
+    *   对石头：如何调教或放弃？
+    *   对布：如何提供情绪价值换取生存资源？
+*   **最终判决：** 是一刀两断，还是留着过年？给出具体操作建议。
 
-**--- 报告生成 ---**`;
+**--- 客户提供的线索 ---**
+**【客户描述】：**
+`;
 
 const getTimeDescription = (time) => {
   const timeMap = {
     0: "早子时 (00:00-01:00)",
-    1: "丑时 (01:00-03:00)", 
+    1: "丑时 (01:00-03:00)",
     2: "寅时 (03:00-05:00)",
     3: "卯时 (05:00-07:00)",
     4: "辰时 (07:00-09:00)",
@@ -62,7 +70,7 @@ const generateScumbagPrompt = (horoscope) => {
     // 🔍 完整调试信息
     console.log('🔍 完整horoscope对象:', horoscope);
     console.log('🔍 宫位数量:', horoscope.palaces ? horoscope.palaces.length : 'no palaces');
-    
+
     // 输出所有宫位的详细信息
     if (horoscope.palaces) {
       horoscope.palaces.forEach((palace, index) => {
@@ -76,22 +84,25 @@ const generateScumbagPrompt = (horoscope) => {
         });
       });
     }
-    
+
     // 现在生成所有12宫的完整数据（不再只提取4宫）
     let scumbagData = "--- 渣男星盘真实数据 ---\n";
-    
+
     if (!horoscope.palaces) {
       return "--- 渣男星盘真实数据 ---\n数据获取失败\n";
     }
-    
+
     // 遍历所有12宫，输出完整星盘数据
     horoscope.palaces.forEach((palace, index) => {
       // 使用宫位的实际名称（从数据中获取），而不是我们预设的映射
       const palaceName = palace.name || `宫位${index}`;
-      
-      let palaceInfo = `- **${palaceName}**：`;
+
+      // 【关键修改】加入干支信息，以便AI推算飞星
+      const stemBranch = `${palace.heavenlyStem}${palace.earthlyBranch}`;
+
+      let palaceInfo = `- **${palaceName}(${stemBranch})**：`;
       let parts = [];
-      
+
       // 提取主星
       if (palace.majorStars && palace.majorStars.length > 0) {
         const majorStarNames = palace.majorStars.map(star => {
@@ -103,38 +114,38 @@ const generateScumbagPrompt = (horoscope) => {
         });
         parts.push(`主星[${majorStarNames.join('、')}]`);
       }
-      
+
       // 提取辅星
       if (palace.minorStars && palace.minorStars.length > 0) {
         const minorStarNames = palace.minorStars.map(star => star.name);
         parts.push(`辅星[${minorStarNames.join('、')}]`);
       }
-      
+
       // 提取形容星（包括煞星）
       if (palace.adjectiveStars && palace.adjectiveStars.length > 0) {
         const adjectiveNames = palace.adjectiveStars.map(star => star.name);
         parts.push(`杂曜[${adjectiveNames.join('、')}]`);
       }
-      
+
       // 提取四化信息
       if (palace.changeSummarize && palace.changeSummarize.length > 0) {
         parts.push(`四化[${palace.changeSummarize.join('、')}]`);
       }
-      
+
       // 提取长生十二神
       if (palace.stage) {
         parts.push(`长生[${palace.stage}]`);
       }
-      
+
       if (parts.length > 0) {
         palaceInfo += parts.join('，');
       } else {
         palaceInfo += "空宫";
       }
-      
+
       scumbagData += palaceInfo + "\n";
     });
-    
+
     return scumbagData;
   } catch (error) {
     console.error('生成渣男数据失败:', error);
@@ -145,13 +156,13 @@ const generateScumbagPrompt = (horoscope) => {
 const generateChartTextData = (birthday, birthTime, gender, calendarType, name) => {
   try {
     // 使用 iztro 库计算星盘
-    const horoscope = calendarType === 'lunar' 
+    const horoscope = calendarType === 'lunar'
       ? iztro.astro.astrolabeByLunarDate(birthday, birthTime, gender)
       : iztro.astro.astrolabeBySolarDate(birthday, birthTime, gender);
-    
+
     // 宫位名称映射
     const palaceNames = ['命宫', '兄弟', '夫妻', '子女', '财帛', '疾厄', '迁移', '交友', '事业', '田宅', '福德', '父母'];
-    
+
     let chartText = `
 **--- 渣男星盘数据 ---**
 
@@ -167,22 +178,22 @@ const generateChartTextData = (birthday, birthTime, gender, calendarType, name) 
     horoscope.palaces.forEach((palace, index) => {
       const palaceName = palaceNames[index];
       chartText += `\n\n**${palaceName}：**`;
-      
+
       // 主星
       if (palace.majorStars && palace.majorStars.length > 0) {
         chartText += `\n- 主星：${palace.majorStars.map(star => star.name).join('、')}`;
       }
-      
+
       // 辅星
       if (palace.minorStars && palace.minorStars.length > 0) {
         chartText += `\n- 辅星：${palace.minorStars.map(star => star.name).join('、')}`;
       }
-      
+
       // 煞星
       if (palace.adjectiveStars && palace.adjectiveStars.length > 0) {
         chartText += `\n- 煞星：${palace.adjectiveStars.map(star => star.name).join('、')}`;
       }
-      
+
       // 四化
       if (palace.changeSummarize && palace.changeSummarize.length > 0) {
         chartText += `\n- 四化：${palace.changeSummarize.join('、')}`;
@@ -190,7 +201,7 @@ const generateChartTextData = (birthday, birthTime, gender, calendarType, name) 
     });
 
     chartText += `\n\n**--- 再次声明：所有分析内容【仅供娱乐参考】 ---**`;
-    
+
     return chartText;
   } catch (error) {
     console.error('生成星盘数据失败:', error);
@@ -210,9 +221,9 @@ const generateChartTextData = (birthday, birthTime, gender, calendarType, name) 
 };
 
 export default function App() {
-  const [view, setView] = useState('home'); 
+  const [view, setView] = useState('home');
   const [calendarType, setCalendarType] = useState('solar');
-  const [gender, setGender] = useState('male'); 
+  const [gender, setGender] = useState('male');
   const [showChart, setShowChart] = useState(false);
   const [name, setName] = useState('');
   const [birthday, setBirthday] = useState('');
@@ -231,22 +242,22 @@ export default function App() {
       alert('请先输入生日信息并生成星盘');
       return;
     }
-    
+
     try {
       // 计算 iztro 星盘数据
-      const horoscope = calendarType === 'lunar' 
+      const horoscope = calendarType === 'lunar'
         ? iztro.astro.astrolabeByLunarDate(birthday, birthTime, gender)
         : iztro.astro.astrolabeBySolarDate(birthday, birthTime, gender);
-      
+
       // 使用新的 generateScumbagPrompt 函数提取关键数据
       const scumbagData = generateScumbagPrompt(horoscope);
-      
+
       // 组合完整的提示模板
       const fullPrompt = `${AI_PROMPT_TEMPLATE}\n\n${scumbagData}`;
-      
+
       // 尝试多种复制方法
       let copySuccess = false;
-      
+
       // 方法1：现代浏览器的 navigator.clipboard
       if (navigator.clipboard && window.isSecureContext) {
         try {
@@ -256,7 +267,7 @@ export default function App() {
           console.log('Clipboard API failed:', clipboardErr);
         }
       }
-      
+
       // 方法2：备用的 document.execCommand (兼容老浏览器)
       if (!copySuccess) {
         try {
@@ -275,7 +286,7 @@ export default function App() {
           console.log('execCommand failed:', execErr);
         }
       }
-      
+
       if (copySuccess) {
         alert('🎉 鉴渣话术模板已复制到剪贴板！\n\n请粘贴到ChatGPT或Claude中使用。');
       } else {
@@ -295,16 +306,16 @@ export default function App() {
           </html>
         `);
       }
-      
+
     } catch (err) {
       console.error('🚨 完整错误信息:', err);
       console.error('🚨 错误堆栈:', err.stack);
       console.log('🚨 输入参数:', { birthday, birthTime, gender, calendarType });
-      
+
       // 测试iztro导入
       console.log('🧪 iztro对象:', iztro);
       console.log('🧪 iztro.astro:', iztro ? iztro.astro : 'undefined');
-      
+
       // 测试astro函数是否能正常工作
       try {
         console.log('🧪 测试astro函数...');
@@ -313,7 +324,7 @@ export default function App() {
       } catch (astroErr) {
         console.error('🚨 astro函数错误:', astroErr);
       }
-      
+
       alert(`生成失败！\n错误：${err.message}\n请查看浏览器控制台获取详细信息`);
     }
   };
@@ -326,7 +337,7 @@ export default function App() {
         </nav>
         <div className="flex-1 flex flex-col items-center justify-center">
           <h1 className="text-7xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-br from-[#c4b5fd] to-[#7c3aed] select-none tracking-tighter text-center leading-tight" style={{ filter: 'drop-shadow(0 4px 0px rgba(168,85,247,0.1))' }}>
-            哥带你<br/>识渣男
+            哥带你<br />识渣男
           </h1>
           <button onClick={() => setView('chart')} className="mt-16 px-16 py-4 bg-[#6d28d9] text-white text-2xl font-bold rounded-full shadow-xl hover:bg-[#5b21b6] hover:-translate-y-1 transition-all active:scale-95">
             排 盘
@@ -347,23 +358,23 @@ export default function App() {
         <div className="flex-1 flex items-center justify-center relative bg-white/30 overflow-auto">
           {!showChart ? (
             <div className="text-center space-y-4 opacity-40 select-none">
-              <h2 className="text-6xl font-black text-gray-300 tracking-tighter">哥带你<br/>识渣男</h2>
+              <h2 className="text-6xl font-black text-gray-300 tracking-tighter">哥带你<br />识渣男</h2>
               <p className="text-[#8b5cf6] text-lg font-medium tracking-wide">输入信息 → 点击排盘 → 获取真相</p>
             </div>
           ) : (
             <div className="w-full h-full p-4 animate-in zoom-in-95 duration-500 overflow-auto">
               <div className="w-full min-h-[600px] bg-white rounded-3xl shadow-2xl p-4 border border-white/50">
-                 <Iztrolabe 
-                    birthday={birthday || "2000-01-01"} 
-                    birthTime={birthTime} 
-                    gender={gender} 
-                    horoscope={{ 
-                      birthday: birthday || "2000-01-01", 
-                      birthTime: birthTime, 
-                      gender: gender, 
-                      isLunar: calendarType === 'lunar' 
-                    }}
-                  />
+                <Iztrolabe
+                  birthday={birthday || "2000-01-01"}
+                  birthTime={birthTime}
+                  gender={gender}
+                  horoscope={{
+                    birthday: birthday || "2000-01-01",
+                    birthTime: birthTime,
+                    gender: gender,
+                    isLunar: calendarType === 'lunar'
+                  }}
+                />
               </div>
             </div>
           )}
@@ -374,23 +385,21 @@ export default function App() {
             <div className="space-y-2">
               <label className="text-sm font-bold text-gray-500 flex gap-1"><span className="text-red-500">*</span> 日期类型</label>
               <div className="flex bg-white p-1.5 rounded-xl border border-gray-200/80 shadow-sm">
-                <button 
+                <button
                   onClick={() => setCalendarType('solar')}
-                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-                    calendarType === 'solar' 
-                      ? 'bg-[#6d28d9] text-white shadow-md' 
+                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${calendarType === 'solar'
+                      ? 'bg-[#6d28d9] text-white shadow-md'
                       : 'text-gray-600 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   阳历
                 </button>
-                <button 
+                <button
                   onClick={() => setCalendarType('lunar')}
-                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${
-                    calendarType === 'lunar' 
-                      ? 'bg-[#6d28d9] text-white shadow-md' 
+                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${calendarType === 'lunar'
+                      ? 'bg-[#6d28d9] text-white shadow-md'
                       : 'text-gray-600 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   农历
                 </button>
@@ -407,12 +416,12 @@ export default function App() {
                   </div>
                 </div>
               </div>
-              <input 
-                type="text" 
-                placeholder="1995-08-20" 
+              <input
+                type="text"
+                placeholder="1995-08-20"
                 value={birthday}
                 onChange={(e) => setBirthday(e.target.value)}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-[#6d28d9] focus:ring-4 focus:ring-[#6d28d9]/5" 
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-[#6d28d9] focus:ring-4 focus:ring-[#6d28d9]/5"
               />
             </div>
 
@@ -427,7 +436,7 @@ export default function App() {
                 </div>
               </div>
               <div className="relative">
-                <select 
+                <select
                   value={birthTime}
                   onChange={(e) => setBirthTime(parseInt(e.target.value))}
                   className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-[#6d28d9] focus:ring-4 focus:ring-[#6d28d9]/5 appearance-none cursor-pointer"
@@ -452,12 +461,12 @@ export default function App() {
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-gray-500">他的名字</label>
-              <input 
-                type="text" 
-                placeholder="请输入姓名（可选）" 
+              <input
+                type="text"
+                placeholder="请输入姓名（可选）"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-[#6d28d9] focus:ring-4 focus:ring-[#6d28d9]/5" 
+                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-[#6d28d9] focus:ring-4 focus:ring-[#6d28d9]/5"
               />
             </div>
 
@@ -465,10 +474,10 @@ export default function App() {
               <label className="text-sm font-bold text-gray-500 flex gap-1"><span className="text-red-500">*</span> 对方性别</label>
               <div className="flex gap-6 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer group">
-                  <input 
-                    type="radio" 
-                    name="gender" 
-                    value="male" 
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="male"
                     checked={gender === 'male'}
                     onChange={(e) => setGender(e.target.value)}
                     className="hidden"
@@ -479,10 +488,10 @@ export default function App() {
                   <span className="text-gray-600 font-medium">男 (渣男鉴定)</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer group">
-                  <input 
-                    type="radio" 
-                    name="gender" 
-                    value="female" 
+                  <input
+                    type="radio"
+                    name="gender"
+                    value="female"
                     checked={gender === 'female'}
                     onChange={(e) => setGender(e.target.value)}
                     className="hidden"
@@ -496,8 +505,8 @@ export default function App() {
             </div>
 
             <div className="pt-4">
-              <button 
-                onClick={handleShowChart} 
+              <button
+                onClick={handleShowChart}
                 className="w-full py-4 bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95"
               >
                 排 盘
@@ -506,11 +515,11 @@ export default function App() {
 
             {showChart && (
               <div className="pt-6 border-t-2 border-dashed border-gray-200 animate-in slide-in-from-bottom-4 fade-in duration-500 space-y-3">
-                <button 
+                <button
                   onClick={handleCopyPrompt}
                   className="w-full py-4 border-2 border-dashed border-[#6d28d9] text-[#6d28d9] rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#6d28d9]/5 transition-all"
                 >
-                  <Copy size={20}/> 一键复制鉴渣话术
+                  <Copy size={20} /> 一键复制鉴渣话术
                 </button>
               </div>
             )}
