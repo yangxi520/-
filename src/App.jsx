@@ -46,6 +46,51 @@ const AI_PROMPT_TEMPLATE = `**--- 🚨 深度鉴渣报告：多派紫微 x 进�
 **【客户描述】：**
 `;
 
+const FEMALE_PROMPT_TEMPLATE = `**--- 🚨 深度鉴茶报告：多派紫微 x 鉴婊指南 🚨 ---**
+**声明：本报告基于紫微斗数（三合/飞星/钦天）及当代情感图鉴生成，风格犀利毒舌，仅供娱乐与防御参考。**
+
+你是一位集**多派紫微斗数大师**与**鉴茶达人**于一身的**毒舌情感导师**。你的任务是撕开伪装，用玄学手术刀剖析这个女人的本质。
+
+请根据星盘数据与用户描述，严格按以下结构输出报告：
+
+**### 1. 【一键回怼/鉴茶话术】（毒舌女王版）**
+*   **目标：** 生成一段高冷、嘲讽、直击其痛点的回复。
+*   **要求：** 针对她的核心手段（如“养鱼”、“索取情绪价值”、“假装无辜”），生成一段让她瞬间破防的话术。
+
+**### 2. 【物种定性】（捞/仙/茶/渣）**
+*   **核心属性判定：** 明确给出她是以下哪种类型：
+    *   **【捞女】**（拜金/吞金兽/利用感情换资源）：命/财见贪狼+禄存、武曲+七杀等。
+    *   **【小仙女】**（巨婴/双标/普信/情绪勒索）：命/福见紫微+破军、巨门（化忌）、天梁（孤克）。
+    *   **【绿茶婊】**（心机/扮猪吃虎/纯欲陷阱）：命/迁见天机+太阴、天同+天姚、廉贞+贪狼。
+    *   **【纯渣女】**（海王/玩弄感情/无缝衔接）：命/夫见廉贞（化忌）、贪狼（泛水桃花）、咸池。
+*   **紫微命理支撑：** 必须引用星曜组合作为证据。
+
+**### 3. 【终极判决】（红玫瑰 vs 玩伴）**
+*   **定位：**
+    *   **【红玫瑰】**：值得娶回家，虽然有刺但值得爱一生。
+    *   **【短期玩伴】**：只适合短期娱乐，千万别动心，动心你就输了。
+*   **综合渣度：** **0-100分**。
+*   **一句话短评：** （例如：“这就是一个段位极高的顶级绿茶，你玩不过她的。”）
+
+**### 4. 【多派紫微深度底色分析】**
+*必须使用Markdown列表：*
+1.  **三合派（心性与手段）：** 分析命宫、福德宫、夫妻宫。她到底是要钱、要爱、还是都要？
+2.  **飞星/钦天四化（因果与轨迹）：**
+    *   **飞化追踪：** 重点分析**命宫/夫妻宫化禄**飞入何宫？（如化禄入财帛=爱钱；化禄入交友=爱玩）。
+    *   **自化分析：** 夫妻宫**自化禄**（对谁都好/不主动不拒绝）或**自化忌**（情绪不稳定/作精）。
+3.  **桃花煞星：** 咸池、天姚、红鸾在命宫或夫妻宫的作用（是真爱还是烂桃花）。
+
+**### 5. 【防御/反制建议】**
+*   **针对性策略：**
+    *   对捞女：如何哭穷并反向索取？
+    *   对绿茶：如何比她更茶？
+    *   对小仙女：如何进行魔法打败魔法？
+*   **操作指南：** 给出具体的战术建议。
+
+**--- 客户提供的线索 ---**
+**【客户描述】：**
+`;
+
 const getTimeDescription = (time) => {
   const timeMap = {
     0: "早子时 (00:00-01:00)",
@@ -86,10 +131,10 @@ const generateScumbagPrompt = (horoscope) => {
     }
 
     // 现在生成所有12宫的完整数据（不再只提取4宫）
-    let scumbagData = "--- 渣男星盘真实数据 ---\n";
+    let scumbagData = "--- 渣男/渣女星盘真实数据 ---\n";
 
     if (!horoscope.palaces) {
-      return "--- 渣男星盘真实数据 ---\n数据获取失败\n";
+      return "--- 渣男/渣女星盘真实数据 ---\n数据获取失败\n";
     }
 
     // 遍历所有12宫，输出完整星盘数据
@@ -149,7 +194,7 @@ const generateScumbagPrompt = (horoscope) => {
     return scumbagData;
   } catch (error) {
     console.error('生成渣男数据失败:', error);
-    return "--- 渣男星盘真实数据 ---\n数据提取失败，请检查星盘计算结果\n";
+    return "--- 渣男/渣女星盘真实数据 ---\n数据提取失败，请检查星盘计算结果\n";
   }
 };
 
@@ -164,7 +209,7 @@ const generateChartTextData = (birthday, birthTime, gender, calendarType, name) 
     const palaceNames = ['命宫', '兄弟', '夫妻', '子女', '财帛', '疾厄', '迁移', '交友', '事业', '田宅', '福德', '父母'];
 
     let chartText = `
-**--- 渣男星盘数据 ---**
+**--- 渣男/渣女星盘数据 ---**
 
 **基本信息：**
 - 姓名：${name || '未填写'}
@@ -206,7 +251,7 @@ const generateChartTextData = (birthday, birthTime, gender, calendarType, name) 
   } catch (error) {
     console.error('生成星盘数据失败:', error);
     return `
-**--- 渣男星盘数据 ---**
+**--- 渣男/渣女星盘数据 ---**
 
 **基本信息：**
 - 姓名：${name || '未填写'}
@@ -252,8 +297,11 @@ export default function App() {
       // 使用新的 generateScumbagPrompt 函数提取关键数据
       const scumbagData = generateScumbagPrompt(horoscope);
 
+      // 【关键修改】根据性别选择不同的提示词模板
+      const template = gender === 'female' ? FEMALE_PROMPT_TEMPLATE : AI_PROMPT_TEMPLATE;
+
       // 组合完整的提示模板
-      const fullPrompt = `${AI_PROMPT_TEMPLATE}\n\n${scumbagData}`;
+      const fullPrompt = `${template}\n\n${scumbagData}`;
 
       // 尝试多种复制方法
       let copySuccess = false;
@@ -331,16 +379,40 @@ export default function App() {
 
   if (view === 'home') {
     return (
-      <div className="min-h-screen flex flex-col relative">
-        <nav className="w-full px-8 py-6 fixed top-0 z-50">
-          <div className="text-2xl font-black text-[#6d28d9] tracking-tight">古书派</div>
+      <div className="min-h-screen flex flex-col relative bg-[#050505] overflow-hidden font-['Orbitron']">
+        {/* Cyberpunk Grid Background */}
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none"></div>
+
+        {/* Neon Glow Effects */}
+        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-[128px] pointer-events-none"></div>
+        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[128px] pointer-events-none"></div>
+
+        <nav className="w-full px-8 py-6 fixed top-0 z-50 flex justify-between items-center">
+          <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 tracking-widest drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">
+            古书派
+          </div>
         </nav>
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <h1 className="text-7xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-br from-[#c4b5fd] to-[#7c3aed] select-none tracking-tighter text-center leading-tight" style={{ filter: 'drop-shadow(0 4px 0px rgba(168,85,247,0.1))' }}>
-            哥带你<br />识渣男
-          </h1>
-          <button onClick={() => setView('chart')} className="mt-16 px-16 py-4 bg-[#6d28d9] text-white text-2xl font-bold rounded-full shadow-xl hover:bg-[#5b21b6] hover:-translate-y-1 transition-all active:scale-95">
-            排 盘
+
+        <div className="flex-1 flex flex-col items-center justify-center relative z-10">
+          <div className="relative">
+            <h1 className="text-7xl md:text-9xl font-black text-white tracking-tighter text-center leading-tight mix-blend-overlay opacity-50 select-none">
+              SCUMBAG<br />SCANNER
+            </h1>
+            <h1 className="absolute inset-0 text-7xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-transparent tracking-tighter text-center leading-tight select-none" style={{ textShadow: '0 0 40px rgba(168,85,247,0.5)' }}>
+              哥带你<br />识渣男
+            </h1>
+          </div>
+
+          <p className="mt-8 text-cyan-300/80 text-lg tracking-[0.5em] font-bold uppercase">System Online // 准备扫描</p>
+
+          <button
+            onClick={() => setView('chart')}
+            className="group mt-16 relative px-12 py-4 bg-black border border-cyan-500/50 text-cyan-400 text-xl font-bold uppercase tracking-widest overflow-hidden transition-all hover:border-cyan-400 hover:text-cyan-300 hover:shadow-[0_0_30px_rgba(34,211,238,0.4)] active:scale-95"
+          >
+            <div className="absolute inset-0 bg-cyan-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+            <span className="relative z-10 flex items-center gap-2">
+              开始排盘 <ArrowLeft className="rotate-180" />
+            </span>
           </button>
         </div>
       </div>
@@ -348,22 +420,41 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col relative">
-      <nav className="w-full px-6 py-4 flex justify-between items-center bg-white/60 backdrop-blur-md border-b border-white/40 z-50">
-        <div className="text-xl font-black text-[#6d28d9] cursor-pointer" onClick={() => setView('home')}>古书派</div>
-        <button onClick={() => setView('home')} className="text-sm text-gray-500 hover:text-[#6d28d9] font-medium transition-colors">返回首页</button>
+    <div className="min-h-screen flex flex-col relative bg-[#050505] font-['Orbitron'] text-gray-200">
+      {/* Background Elements */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
+      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-cyan-600/20 rounded-full blur-[100px] pointer-events-none"></div>
+
+      <nav className="w-full px-6 py-4 flex justify-between items-center bg-black/40 backdrop-blur-xl border-b border-white/10 z-50 sticky top-0">
+        <div className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 cursor-pointer tracking-widest" onClick={() => setView('home')}>
+          古书派
+        </div>
+        <button onClick={() => setView('home')} className="text-xs text-cyan-500/70 hover:text-cyan-400 font-bold uppercase tracking-widest border border-cyan-900/50 px-4 py-2 rounded hover:bg-cyan-950/30 transition-all">
+          返回首页
+        </button>
       </nav>
 
       <div className="flex-1 flex relative overflow-hidden">
-        <div className="flex-1 flex items-center justify-center relative bg-white/30 overflow-auto">
+        {/* Left Side: Chart Display */}
+        <div className="flex-1 flex items-center justify-center relative overflow-auto p-4">
           {!showChart ? (
-            <div className="text-center space-y-4 opacity-40 select-none">
-              <h2 className="text-6xl font-black text-gray-300 tracking-tighter">哥带你<br />识渣男</h2>
-              <p className="text-[#8b5cf6] text-lg font-medium tracking-wide">输入信息 → 点击排盘 → 获取真相</p>
+            <div className="text-center space-y-6 opacity-60 select-none animate-pulse">
+              <div className="w-32 h-32 mx-auto border-2 border-dashed border-cyan-500/30 rounded-full flex items-center justify-center">
+                <div className="w-24 h-24 bg-cyan-500/10 rounded-full animate-ping"></div>
+              </div>
+              <h2 className="text-4xl font-black text-white tracking-widest">等待数据输入</h2>
+              <p className="text-cyan-400/60 text-sm font-mono">请输入目标参数以初始化扫描...</p>
             </div>
           ) : (
-            <div className="w-full h-full p-4 animate-in zoom-in-95 duration-500 overflow-auto">
-              <div className="w-full min-h-[600px] bg-white rounded-3xl shadow-2xl p-4 border border-white/50">
+            <div className="w-full h-full max-w-4xl animate-in zoom-in-95 duration-500">
+              <div className="w-full min-h-[600px] bg-slate-50/95 backdrop-blur-xl rounded-none border border-cyan-500/50 shadow-[0_0_50px_rgba(6,182,212,0.2)] p-6 relative overflow-hidden text-slate-900">
+                {/* Decorative Corner Lines */}
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-cyan-500"></div>
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-cyan-500"></div>
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-cyan-500"></div>
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-cyan-500"></div>
+
                 <Iztrolabe
                   birthday={birthday || "2000-01-01"}
                   birthTime={birthTime}
@@ -380,25 +471,29 @@ export default function App() {
           )}
         </div>
 
-        <div className="w-[400px] bg-[#fcfbf9] border-l border-white/60 shadow-2xl flex flex-col h-full overflow-y-auto z-20 relative">
-          <div className="p-8 space-y-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-500 flex gap-1"><span className="text-red-500">*</span> 日期类型</label>
-              <div className="flex bg-white p-1.5 rounded-xl border border-gray-200/80 shadow-sm">
+        {/* Right Side: Control Panel */}
+        <div className="w-[400px] bg-[#0a0a0a]/90 backdrop-blur-xl border-l border-white/10 shadow-2xl flex flex-col h-full overflow-y-auto z-20 relative">
+          <div className="p-8 space-y-8">
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
+                日期类型
+              </label>
+              <div className="flex bg-black/50 p-1 rounded border border-white/10">
                 <button
                   onClick={() => setCalendarType('solar')}
-                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${calendarType === 'solar'
-                      ? 'bg-[#6d28d9] text-white shadow-md'
-                      : 'text-gray-600 hover:bg-gray-50'
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider transition-all ${calendarType === 'solar'
+                    ? 'bg-cyan-900/50 text-cyan-300 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]'
+                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
                     }`}
                 >
                   阳历
                 </button>
                 <button
                   onClick={() => setCalendarType('lunar')}
-                  className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all ${calendarType === 'lunar'
-                      ? 'bg-[#6d28d9] text-white shadow-md'
-                      : 'text-gray-600 hover:bg-gray-50'
+                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider transition-all ${calendarType === 'lunar'
+                    ? 'bg-purple-900/50 text-purple-300 border border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.2)]'
+                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
                     }`}
                 >
                   农历
@@ -406,31 +501,38 @@ export default function App() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-bold text-gray-500 flex gap-1"><span className="text-red-500">*</span> 他的生日</label>
-                <div className="group relative flex items-center">
-                  <HelpCircle size={14} className="text-gray-400 cursor-help hover:text-[#6d28d9]" style={{ cursor: 'help' }} />
-                  <div className="absolute left-0 bottom-6 w-80 bg-gray-800 text-white text-xs p-3 rounded-lg shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-2">
+                  <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
+                  他的生日
+                </label>
+                <div className="group relative">
+                  <HelpCircle size={14} className="text-gray-600 hover:text-cyan-400 cursor-help transition-colors" />
+                  <div className="absolute right-0 bottom-6 w-64 bg-black border border-cyan-500/30 text-cyan-300 text-xs p-3 shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
                     请输入YYYY-M-D格式的日期，阳历或农历格式一样，比如农历二〇〇〇年三月初四，请输入2000-3-4
                   </div>
                 </div>
               </div>
               <input
                 type="text"
-                placeholder="1995-08-20"
+                placeholder="YYYY-MM-DD"
                 value={birthday}
                 onChange={(e) => setBirthday(e.target.value)}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-[#6d28d9] focus:ring-4 focus:ring-[#6d28d9]/5"
+                className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white placeholder-gray-700 outline-none focus:border-cyan-500/50 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all font-mono text-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <div className="flex items-center gap-2">
-                <label className="text-sm font-bold text-gray-500 flex gap-1"><span className="text-red-500">*</span> 他的时辰</label>
-                <div className="group relative flex items-center">
-                  <HelpCircle size={14} className="text-gray-400 cursor-help hover:text-[#6d28d9]" style={{ cursor: 'help' }} />
-                  <div className="absolute left-0 bottom-6 w-80 bg-gray-800 text-white text-xs p-3 rounded-lg shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                {/* Fixed Layout: Increased width and nowrap to prevent truncation */}
+                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-2 whitespace-nowrap">
+                  <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
+                  他的时辰
+                </label>
+                <div className="group relative">
+                  <HelpCircle size={14} className="text-gray-600 hover:text-cyan-400 cursor-help transition-colors" />
+                  <div className="absolute right-0 bottom-6 w-64 bg-black border border-cyan-500/30 text-cyan-300 text-xs p-3 shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
                     一天分为12个时辰，但是子时分为早子时和晚子时，请注意查看时间范围，时间范围包含起始时间但是不包含结束时间，比如01:00是丑时，03:00是寅时
                   </div>
                 </div>
@@ -439,7 +541,7 @@ export default function App() {
                 <select
                   value={birthTime}
                   onChange={(e) => setBirthTime(parseInt(e.target.value))}
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-[#6d28d9] focus:ring-4 focus:ring-[#6d28d9]/5 appearance-none cursor-pointer"
+                  className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white outline-none focus:border-cyan-500/50 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] appearance-none cursor-pointer font-mono text-sm transition-all hover:border-white/20"
                 >
                   <option value={0}>早子时 (00:00-01:00)</option>
                   <option value={1}>丑时 (01:00-03:00)</option>
@@ -455,25 +557,31 @@ export default function App() {
                   <option value={11}>亥时 (21:00-23:00)</option>
                   <option value={12}>晚子时 (23:00-24:00)</option>
                 </select>
-                <div className="absolute right-4 top-3.5 text-gray-400 pointer-events-none">▼</div>
+                <div className="absolute right-4 top-3.5 text-cyan-500 pointer-events-none text-xs">▼</div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-500">他的名字</label>
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
+                他的名字
+              </label>
               <input
                 type="text"
                 placeholder="请输入姓名（可选）"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:border-[#6d28d9] focus:ring-4 focus:ring-[#6d28d9]/5"
+                className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white placeholder-gray-700 outline-none focus:border-cyan-500/50 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all font-mono text-sm"
               />
             </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-gray-500 flex gap-1"><span className="text-red-500">*</span> 对方性别</label>
-              <div className="flex gap-6 pt-1">
-                <label className="flex items-center gap-2 cursor-pointer group">
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
+                对方性别
+              </label>
+              <div className="grid grid-cols-1 gap-3 pt-1">
+                <label className={`relative flex items-center p-3 border cursor-pointer transition-all group ${gender === 'male' ? 'bg-cyan-950/30 border-cyan-500/50' : 'bg-black/50 border-white/10 hover:border-white/30'}`}>
                   <input
                     type="radio"
                     name="gender"
@@ -482,12 +590,13 @@ export default function App() {
                     onChange={(e) => setGender(e.target.value)}
                     className="hidden"
                   />
-                  <div className="w-5 h-5 rounded-full border-2 border-[#6d28d9] flex items-center justify-center">
-                    {gender === 'male' && <div className="w-2.5 h-2.5 rounded-full bg-[#6d28d9]"></div>}
+                  <div className={`w-4 h-4 border flex items-center justify-center mr-3 transition-colors ${gender === 'male' ? 'border-cyan-400' : 'border-gray-600'}`}>
+                    {gender === 'male' && <div className="w-2 h-2 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>}
                   </div>
-                  <span className="text-gray-600 font-medium">男 (渣男鉴定)</span>
+                  <span className={`font-bold text-sm tracking-wider ${gender === 'male' ? 'text-cyan-300' : 'text-gray-500'}`}>男 (渣男鉴定)</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer group">
+
+                <label className={`relative flex items-center p-3 border cursor-pointer transition-all group ${gender === 'female' ? 'bg-pink-950/30 border-pink-500/50' : 'bg-black/50 border-white/10 hover:border-white/30'}`}>
                   <input
                     type="radio"
                     name="gender"
@@ -496,10 +605,10 @@ export default function App() {
                     onChange={(e) => setGender(e.target.value)}
                     className="hidden"
                   />
-                  <div className="w-5 h-5 rounded-full border-2 border-[#6d28d9] flex items-center justify-center">
-                    {gender === 'female' && <div className="w-2.5 h-2.5 rounded-full bg-[#6d28d9]"></div>}
+                  <div className={`w-4 h-4 border flex items-center justify-center mr-3 transition-colors ${gender === 'female' ? 'border-pink-400' : 'border-gray-600'}`}>
+                    {gender === 'female' && <div className="w-2 h-2 bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.8)]"></div>}
                   </div>
-                  <span className="text-gray-600 font-medium">女</span>
+                  <span className={`font-bold text-sm tracking-wider ${gender === 'female' ? 'text-pink-300' : 'text-gray-500'}`}>女 (渣女鉴定)</span>
                 </label>
               </div>
             </div>
@@ -507,19 +616,21 @@ export default function App() {
             <div className="pt-4">
               <button
                 onClick={handleShowChart}
-                className="w-full py-4 bg-gradient-to-r from-[#6d28d9] to-[#5b21b6] text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all active:scale-95"
+                className="w-full py-4 bg-gradient-to-r from-cyan-600 to-purple-600 text-white font-black text-lg uppercase tracking-[0.2em] border border-white/20 shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:shadow-[0_0_40px_rgba(6,182,212,0.5)] hover:border-cyan-400 transition-all active:scale-95 relative overflow-hidden group"
               >
-                排 盘
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
+                <span className="relative z-10">开始排盘</span>
               </button>
             </div>
 
             {showChart && (
-              <div className="pt-6 border-t-2 border-dashed border-gray-200 animate-in slide-in-from-bottom-4 fade-in duration-500 space-y-3">
+              <div className="pt-6 border-t border-dashed border-white/20 animate-in slide-in-from-bottom-4 fade-in duration-500 space-y-3">
                 <button
                   onClick={handleCopyPrompt}
-                  className="w-full py-4 border-2 border-dashed border-[#6d28d9] text-[#6d28d9] rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-[#6d28d9]/5 transition-all"
+                  className="w-full py-4 border border-dashed border-cyan-500/50 text-cyan-400 hover:bg-cyan-950/30 hover:border-cyan-400 hover:text-cyan-300 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)] transition-all font-bold uppercase tracking-wider flex items-center justify-center gap-2 group"
                 >
-                  <Copy size={20} /> 一键复制鉴渣话术
+                  <Copy size={18} className="group-hover:rotate-12 transition-transform" />
+                  <span>一键复制鉴渣话术</span>
                 </button>
               </div>
             )}
