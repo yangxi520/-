@@ -91,6 +91,64 @@ const FEMALE_PROMPT_TEMPLATE = `**--- 🚨 深度鉴茶报告：多派紫微 x �
 **【客户描述】：**
 `;
 
+const WEALTH_PROMPT_TEMPLATE = `**--- 💰 紫微斗数深度财运分析报告 💰 ---**
+**声明：本报告基于紫微斗数专业排盘生成，旨在分析命主财运格局、财富来源及发财时机。风格严肃、客观、专业。**
+
+你是一位**资深紫微斗数命理师**，擅长通过星盘分析个人的财富格局与事业运势。请根据提供的星盘数据，为命主进行深度的财运分析。
+
+请严格按以下结构输出报告：
+
+**### 1. 【先天财运格局分析】**
+*   **核心定性：** 命主的财富格局层次（富贵/小康/波动/辛苦）。
+*   **命理依据：** 重点分析**财帛宫**、**命宫**、**田宅宫**的主星与煞星组合。
+    *   是否有“火贪格/铃贪格”（爆发横财）？
+    *   是否有“禄马交驰”（动中求财）？
+    *   是否有“财荫夹印”或“双禄交流”？
+
+**### 2. 【财富来源与求财方向】**
+*   **正财vs偏财：** 适合上班领薪（正财）还是创业/投资（偏财）？
+*   **行业建议：** 根据**官禄宫**星曜，推荐最适合发展的行业（如：紫微-管理、天机-策划/技术、太阳-公职/传播、武曲-金融/实业）。
+
+**### 3. 【发财时机与流年运势】**
+*   **大限运势：** 分析目前及未来十年的大限财运走势。
+*   **关键流年：** 预测未来3-5年内，哪一年财运最旺？哪一年需要避坑漏财？
+    *   *重点寻找：* 流年禄存、化禄飞入财帛/命宫的年份。
+
+**### 4. 【风险提示与建议】**
+*   **漏财陷阱：** 分析星盘中的“破财点”（如地劫/地空/化忌在财帛宫）。
+*   **改运建议：** 给出具体的提升财运建议（如风水方位、行事风格调整）。
+
+**--- 命主星盘数据 ---**
+`;
+
+const MARRIAGE_PROMPT_TEMPLATE = `**--- 💍 紫微斗数深度姻缘分析报告 💍 ---**
+**声明：本报告基于紫微斗数专业排盘生成，旨在分析命主正缘特征、婚运时机及婚姻质量。风格严肃、客观、温暖。**
+
+你是一位**资深紫微斗数情感专家**，擅长分析婚恋运势与正缘特征。请根据提供的星盘数据，为命主进行深度的姻缘分析。
+
+请严格按以下结构输出报告：
+
+**### 1. 【先天婚姻体质分析】**
+*   **感情观：** 命主对待感情的态度（如：天梁-保守照顾、贪狼-浪漫多情、七杀-敢爱敢恨）。
+*   **婚姻质量预测：** 分析**夫妻宫**星曜，判断婚姻是和谐美满，还是多有争吵/波折？
+
+**### 2. 【正缘特征画像】**
+*   **另一半特征：** 详细描述未来伴侣的形象、性格、职业特征。
+    *   *外貌：* 高矮胖瘦、气质类型。
+    *   *性格：* 强势/温柔、开朗/内向。
+    *   *能力/家境：* 对方的经济状况与社会地位。
+
+**### 3. 【红鸾天喜与婚运时机】**
+*   **遇见时机：** 预测何时能遇到正缘？（分析流年红鸾/天喜/夫妻宫化禄）。
+*   **结婚时机：** 预测未来3-5年内，哪一年最适合结婚？
+
+**### 4. 【经营建议与避坑指南】**
+*   **潜在危机：** 指出星盘中可能影响婚姻的负面因素（如：寡宿、化忌、桃花煞）。
+*   **相处之道：** 给出一对一的感情经营建议，如何化解矛盾，长久维系。
+
+**--- 命主星盘数据 ---**
+`;
+
 const getTimeDescription = (time) => {
   const timeMap = {
     0: "早子时 (00:00-01:00)",
@@ -273,6 +331,29 @@ export default function App() {
   const [name, setName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [birthTime, setBirthTime] = useState(0);
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+    return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  const handleInstallClick = async () => {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setDeferredPrompt(null);
+      }
+    } else {
+      setShowInstallModal(true);
+    }
+  };
 
   const handleShowChart = () => {
     if (!birthday.trim()) {
@@ -282,7 +363,7 @@ export default function App() {
     setShowChart(true);
   };
 
-  const handleCopyPrompt = async () => {
+  const handleCopyPrompt = async (type = 'scumbag') => {
     if (!birthday.trim()) {
       alert('请先输入生日信息并生成星盘');
       return;
@@ -297,8 +378,15 @@ export default function App() {
       // 使用新的 generateScumbagPrompt 函数提取关键数据
       const scumbagData = generateScumbagPrompt(horoscope);
 
-      // 【关键修改】根据性别选择不同的提示词模板
-      const template = gender === 'female' ? FEMALE_PROMPT_TEMPLATE : AI_PROMPT_TEMPLATE;
+      // 根据类型选择不同的提示词模板
+      let template;
+      if (type === 'wealth') {
+        template = WEALTH_PROMPT_TEMPLATE;
+      } else if (type === 'marriage') {
+        template = MARRIAGE_PROMPT_TEMPLATE;
+      } else {
+        template = gender === 'female' ? FEMALE_PROMPT_TEMPLATE : AI_PROMPT_TEMPLATE;
+      }
 
       // 组合完整的提示模板
       const fullPrompt = `${template}\n\n${scumbagData}`;
@@ -336,7 +424,10 @@ export default function App() {
       }
 
       if (copySuccess) {
-        alert('🎉 鉴渣话术模板已复制到剪贴板！\n\n请粘贴到ChatGPT或Claude中使用。');
+        let msg = '🎉 鉴渣话术模板已复制到剪贴板！';
+        if (type === 'wealth') msg = '💰 财运分析模板已复制到剪贴板！';
+        if (type === 'marriage') msg = '💍 姻缘分析模板已复制到剪贴板！';
+        alert(msg + '\n\n请粘贴到ChatGPT或Claude中使用。');
       } else {
         // 显示内容让用户手动复制
         const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
@@ -393,21 +484,21 @@ export default function App() {
           </div>
         </nav>
 
-        <div className="flex-1 flex flex-col items-center justify-center relative z-10">
-          <div className="relative">
-            <h1 className="text-7xl md:text-9xl font-black text-white tracking-tighter text-center leading-tight mix-blend-overlay opacity-50 select-none">
+        <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-4">
+          <div className="relative w-full max-w-2xl mx-auto">
+            <h1 className="text-5xl md:text-9xl font-black text-white tracking-tighter text-center leading-tight mix-blend-overlay opacity-50 select-none break-words">
               SCUMBAG<br />SCANNER
             </h1>
-            <h1 className="absolute inset-0 text-7xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-transparent tracking-tighter text-center leading-tight select-none" style={{ textShadow: '0 0 40px rgba(168,85,247,0.5)' }}>
+            <h1 className="absolute inset-0 text-5xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-transparent tracking-tighter text-center leading-tight select-none break-words" style={{ textShadow: '0 0 40px rgba(168,85,247,0.5)' }}>
               哥带你<br />识渣男
             </h1>
           </div>
 
-          <p className="mt-8 text-cyan-300/80 text-lg tracking-[0.5em] font-bold uppercase">System Online // 准备扫描</p>
+          <p className="mt-8 text-cyan-300/80 text-sm md:text-lg tracking-[0.2em] md:tracking-[0.5em] font-bold uppercase text-center">System Online // 准备扫描</p>
 
           <button
             onClick={() => setView('chart')}
-            className="group mt-16 relative px-12 py-4 bg-black border border-cyan-500/50 text-cyan-400 text-xl font-bold uppercase tracking-widest overflow-hidden transition-all hover:border-cyan-400 hover:text-cyan-300 hover:shadow-[0_0_30px_rgba(34,211,238,0.4)] active:scale-95"
+            className="group mt-12 md:mt-16 relative px-8 md:px-12 py-3 md:py-4 bg-black border border-cyan-500/50 text-cyan-400 text-lg md:text-xl font-bold uppercase tracking-widest overflow-hidden transition-all hover:border-cyan-400 hover:text-cyan-300 hover:shadow-[0_0_30px_rgba(34,211,238,0.4)] active:scale-95"
           >
             <div className="absolute inset-0 bg-cyan-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
             <span className="relative z-10 flex items-center gap-2">
@@ -423,23 +514,23 @@ export default function App() {
     <div className="min-h-screen flex flex-col relative bg-[#050505] font-['Orbitron'] text-gray-200">
       {/* Background Elements */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
-      <div className="absolute top-[-10%] right-[-5%] w-[500px] h-[500px] bg-purple-600/20 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] left-[-5%] w-[500px] h-[500px] bg-cyan-600/20 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute top-[-10%] right-[-5%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-purple-600/20 rounded-full blur-[100px] pointer-events-none"></div>
+      <div className="absolute bottom-[-10%] left-[-5%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-cyan-600/20 rounded-full blur-[100px] pointer-events-none"></div>
 
-      <nav className="w-full px-6 py-4 flex justify-between items-center bg-black/40 backdrop-blur-xl border-b border-white/10 z-50 sticky top-0">
-        <div className="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 cursor-pointer tracking-widest" onClick={() => setView('home')}>
+      <nav className="w-full px-4 md:px-6 py-4 flex justify-between items-center bg-black/40 backdrop-blur-xl border-b border-white/10 z-50 sticky top-0">
+        <div className="text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 cursor-pointer tracking-widest" onClick={() => setView('home')}>
           古书派
         </div>
-        <button onClick={() => setView('home')} className="text-xs text-cyan-500/70 hover:text-cyan-400 font-bold uppercase tracking-widest border border-cyan-900/50 px-4 py-2 rounded hover:bg-cyan-950/30 transition-all">
+        <button onClick={() => setView('home')} className="text-[10px] md:text-xs text-cyan-500/70 hover:text-cyan-400 font-bold uppercase tracking-widest border border-cyan-900/50 px-3 md:px-4 py-1.5 md:py-2 rounded hover:bg-cyan-950/30 transition-all">
           返回首页
         </button>
       </nav>
 
-      <div className="flex-1 flex relative overflow-hidden">
-        {/* Left Side: Chart Display */}
-        <div className="flex-1 flex items-center justify-center relative overflow-auto p-4">
+      <div className="flex-1 flex flex-col md:flex-row relative overflow-hidden">
+        {/* Left Side: Chart Display (Top on mobile) */}
+        <div className="flex-1 flex items-center justify-center relative overflow-auto p-2 md:p-4 min-h-[400px] md:min-h-0 order-2 md:order-1">
           {!showChart ? (
-            <div className="text-center space-y-6 opacity-60 select-none animate-pulse">
+            <div className="text-center space-y-6 opacity-60 select-none animate-pulse hidden md:block">
               <div className="w-32 h-32 mx-auto border-2 border-dashed border-cyan-500/30 rounded-full flex items-center justify-center">
                 <div className="w-24 h-24 bg-cyan-500/10 rounded-full animate-ping"></div>
               </div>
@@ -448,32 +539,34 @@ export default function App() {
             </div>
           ) : (
             <div className="w-full h-full max-w-4xl animate-in zoom-in-95 duration-500">
-              <div className="w-full min-h-[600px] bg-slate-50/95 backdrop-blur-xl rounded-none border border-cyan-500/50 shadow-[0_0_50px_rgba(6,182,212,0.2)] p-6 relative overflow-hidden text-slate-900">
+              <div className="w-full min-h-[400px] md:min-h-[600px] bg-slate-50/95 backdrop-blur-xl rounded-none border border-cyan-500/50 shadow-[0_0_50px_rgba(6,182,212,0.2)] p-2 md:p-6 relative overflow-hidden text-slate-900">
                 {/* Decorative Corner Lines */}
-                <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-cyan-500"></div>
-                <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-cyan-500"></div>
-                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-cyan-500"></div>
-                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-cyan-500"></div>
+                <div className="absolute top-0 left-0 w-4 md:w-8 h-4 md:h-8 border-t-2 border-l-2 border-cyan-500"></div>
+                <div className="absolute top-0 right-0 w-4 md:w-8 h-4 md:h-8 border-t-2 border-r-2 border-cyan-500"></div>
+                <div className="absolute bottom-0 left-0 w-4 md:w-8 h-4 md:h-8 border-b-2 border-l-2 border-cyan-500"></div>
+                <div className="absolute bottom-0 right-0 w-4 md:w-8 h-4 md:h-8 border-b-2 border-r-2 border-cyan-500"></div>
 
-                <Iztrolabe
-                  birthday={birthday || "2000-01-01"}
-                  birthTime={birthTime}
-                  gender={gender}
-                  horoscope={{
-                    birthday: birthday || "2000-01-01",
-                    birthTime: birthTime,
-                    gender: gender,
-                    isLunar: calendarType === 'lunar'
-                  }}
-                />
+                <div className="overflow-x-auto">
+                  <Iztrolabe
+                    birthday={birthday || "2000-01-01"}
+                    birthTime={birthTime}
+                    gender={gender}
+                    horoscope={{
+                      birthday: birthday || "2000-01-01",
+                      birthTime: birthTime,
+                      gender: gender,
+                      isLunar: calendarType === 'lunar'
+                    }}
+                  />
+                </div>
               </div>
             </div>
           )}
         </div>
 
-        {/* Right Side: Control Panel */}
-        <div className="w-[400px] bg-[#0a0a0a]/90 backdrop-blur-xl border-l border-white/10 shadow-2xl flex flex-col h-full overflow-y-auto z-20 relative">
-          <div className="p-8 space-y-8">
+        {/* Right Side: Control Panel (Bottom on mobile) */}
+        <div className="w-full md:w-[400px] bg-[#0a0a0a]/90 backdrop-blur-xl border-t md:border-t-0 md:border-l border-white/10 shadow-2xl flex flex-col h-auto md:h-full overflow-y-auto z-20 relative order-1 md:order-2">
+          <div className="p-6 md:p-8 space-y-6 md:space-y-8">
             <div className="space-y-3">
               <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-2">
                 <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
@@ -626,17 +719,73 @@ export default function App() {
             {showChart && (
               <div className="pt-6 border-t border-dashed border-white/20 animate-in slide-in-from-bottom-4 fade-in duration-500 space-y-3">
                 <button
-                  onClick={handleCopyPrompt}
+                  onClick={() => handleCopyPrompt('scumbag')}
                   className="w-full py-4 border border-dashed border-cyan-500/50 text-cyan-400 hover:bg-cyan-950/30 hover:border-cyan-400 hover:text-cyan-300 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)] transition-all font-bold uppercase tracking-wider flex items-center justify-center gap-2 group"
                 >
                   <Copy size={18} className="group-hover:rotate-12 transition-transform" />
                   <span>一键复制鉴渣话术</span>
                 </button>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => handleCopyPrompt('wealth')}
+                    className="w-full py-3 border border-yellow-500/50 text-yellow-400 hover:bg-yellow-950/30 hover:border-yellow-400 hover:text-yellow-300 hover:shadow-[0_0_20px_rgba(234,179,8,0.2)] transition-all font-bold uppercase tracking-wider flex items-center justify-center gap-2 group text-sm"
+                  >
+                    <Copy size={16} className="group-hover:rotate-12 transition-transform" />
+                    <span>何时发财</span>
+                  </button>
+                  <button
+                    onClick={() => handleCopyPrompt('marriage')}
+                    className="w-full py-3 border border-pink-500/50 text-pink-400 hover:bg-pink-950/30 hover:border-pink-400 hover:text-pink-300 hover:shadow-[0_0_20px_rgba(236,72,153,0.2)] transition-all font-bold uppercase tracking-wider flex items-center justify-center gap-2 group text-sm"
+                  >
+                    <Copy size={16} className="group-hover:rotate-12 transition-transform" />
+                    <span>何时结婚</span>
+                  </button>
+                </div>
               </div>
             )}
+
+            <div className="pt-6 mt-auto border-t border-white/10">
+              <button
+                onClick={handleInstallClick}
+                className="w-full py-3 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs uppercase tracking-widest transition-all rounded flex items-center justify-center gap-2"
+              >
+                <span>📲 下载APP (防走丢)</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {/* Install Modal */}
+      {showInstallModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowInstallModal(false)}>
+          <div className="bg-[#111] border border-cyan-500/30 p-6 max-w-sm w-full relative shadow-[0_0_50px_rgba(6,182,212,0.2)]" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowInstallModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              <span className="text-cyan-400">📲</span> 安装到手机
+            </h3>
+            <div className="space-y-4 text-sm text-gray-300">
+              <p>为了获得最佳体验（全屏、离线使用），请将本应用添加到主屏幕。</p>
+
+              <div className="bg-white/5 p-3 rounded border border-white/10">
+                <strong className="text-white block mb-1">🍎 iOS (Safari浏览器):</strong>
+                1. 点击底部工具栏的 <span className="text-cyan-400 font-bold">分享按钮</span><br />
+                2. 下滑找到并点击 <span className="text-cyan-400 font-bold">"添加到主屏幕"</span>
+              </div>
+
+              <div className="bg-white/5 p-3 rounded border border-white/10">
+                <strong className="text-white block mb-1">🤖 Android (Chrome浏览器):</strong>
+                1. 点击右上角菜单 (⋮)<br />
+                2. 点击 <span className="text-cyan-400 font-bold">"安装应用"</span> 或 <span className="text-cyan-400 font-bold">"添加到主屏幕"</span>
+              </div>
+            </div>
+            <button onClick={() => setShowInstallModal(false)} className="w-full mt-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold uppercase tracking-wider transition-all">
+              知道了
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
