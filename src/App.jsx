@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Iztrolabe } from "react-iztro";
-import { ArrowLeft, HelpCircle, Check, Copy } from "lucide-react";
+import ProfessionalChart from "./components/ProfessionalChart";
+import { ArrowLeft, HelpCircle, Check, Copy, Sparkles, Heart, DollarSign } from "lucide-react";
 import * as iztro from "iztro";
 
 const AI_PROMPT_TEMPLATE = `**--- 🚨 深度鉴渣报告：多派紫微 x 进化心理学 🚨 ---**
@@ -85,7 +85,7 @@ const FEMALE_PROMPT_TEMPLATE = `**--- 🚨 深度鉴茶报告：多派紫微 x �
     *   对捞女：如何哭穷并反向索取？
     *   对绿茶：如何比她更茶？
     *   对小仙女：如何进行魔法打败魔法？
-*   **操作指南：** 给出具体的战术建议。
+*   **操作指南：：** 给出具体的战术建议。
 
 **--- 客户提供的线索 ---**
 **【客户描述】：**
@@ -100,7 +100,7 @@ const WEALTH_PROMPT_TEMPLATE = `**--- 💰 紫微斗数深度财运分析报告 
 
 **### 1. 【先天财运格局分析】**
 *   **核心定性：** 命主的财富格局层次（富贵/小康/波动/辛苦）。
-*   **命理依据：** 重点分析**财帛宫**、**命宫**、**田宅宫**的主星与煞星组合。
+*   **命理依据：：** 重点分析**财帛宫**、**命宫**、**田宅宫**的主星与煞星组合。
     *   是否有“火贪格/铃贪格”（爆发横财）？
     *   是否有“禄马交驰”（动中求财）？
     *   是否有“财荫夹印”或“双禄交流”？
@@ -252,7 +252,7 @@ const generateScumbagPrompt = (horoscope) => {
     return scumbagData;
   } catch (error) {
     console.error('生成渣男数据失败:', error);
-    return "--- 渣男/渣女星盘真实数据 ---\n数据提取失败，请检查星盘计算结果\n";
+    return "--- 渣男/渣女星盘真实数据 ---\n数据获取失败\n";
   }
 };
 
@@ -324,13 +324,14 @@ const generateChartTextData = (birthday, birthTime, gender, calendarType, name) 
 };
 
 export default function App() {
-  const [view, setView] = useState('home');
+  const [view, setView] = useState('input'); // 'input' or 'chart'
+  const [showAiMenu, setShowAiMenu] = useState(false);
   const [calendarType, setCalendarType] = useState('solar');
   const [gender, setGender] = useState('male');
-  const [showChart, setShowChart] = useState(false);
   const [name, setName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [birthTime, setBirthTime] = useState(0);
+  const [horoscope, setHoroscope] = useState(null); // Added horoscope state
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
 
@@ -355,12 +356,22 @@ export default function App() {
     }
   };
 
-  const handleShowChart = () => {
-    if (!birthday.trim()) {
+  const handleStartScan = () => {
+    if (!birthday) {
       alert('请输入生日');
       return;
     }
-    setShowChart(true);
+    try {
+      const newHoroscope = calendarType === 'lunar'
+        ? iztro.astro.astrolabeByLunarDate(birthday, birthTime, gender)
+        : iztro.astro.astrolabeBySolarDate(birthday, birthTime, gender);
+      setHoroscope(newHoroscope);
+      setView('chart');
+    } catch (error) {
+      console.error("Error generating horoscope:", error);
+      alert("生成星盘失败，请检查日期和时间格式是否正确。");
+      setHoroscope(null);
+    }
   };
 
   const handleCopyPrompt = async (type = 'scumbag') => {
@@ -370,15 +381,15 @@ export default function App() {
     }
 
     try {
-      // 计算 iztro 星盘数据
-      const horoscope = calendarType === 'lunar'
+      // Calculate iztro horoscope data if not already available (or re-calculate for freshness)
+      const currentHoroscope = calendarType === 'lunar'
         ? iztro.astro.astrolabeByLunarDate(birthday, birthTime, gender)
         : iztro.astro.astrolabeBySolarDate(birthday, birthTime, gender);
 
-      // 使用新的 generateScumbagPrompt 函数提取关键数据
-      const scumbagData = generateScumbagPrompt(horoscope);
+      // Use new generateScumbagPrompt function to extract key data
+      const scumbagData = generateScumbagPrompt(currentHoroscope);
 
-      // 根据类型选择不同的提示词模板
+      // Select different prompt templates based on type
       let template;
       if (type === 'wealth') {
         template = WEALTH_PROMPT_TEMPLATE;
@@ -388,13 +399,22 @@ export default function App() {
         template = gender === 'female' ? FEMALE_PROMPT_TEMPLATE : AI_PROMPT_TEMPLATE;
       }
 
-      // 组合完整的提示模板
-      const fullPrompt = `${template}\n\n${scumbagData}`;
+      // Generate basic information data
+      const basicInfoData = `
+**--- 命主基本信息 (用于推算大限流年) ---**
+- **姓名**：${name || '未填写'}
+- **性别**：${gender === 'male' ? '男' : '女'}
+- **生辰**：${birthday} (${calendarType === 'lunar' ? '农历' : '阳历'})
+- **出生时辰**：${getTimeDescription(birthTime)}
+`;
 
-      // 尝试多种复制方法
+      // Combine the full prompt template
+      const fullPrompt = `${template}\n${basicInfoData}\n${scumbagData}`;
+
+      // Try multiple copy methods
       let copySuccess = false;
 
-      // 方法1：现代浏览器的 navigator.clipboard
+      // Method 1: Modern browser navigator.clipboard
       if (navigator.clipboard && window.isSecureContext) {
         try {
           await navigator.clipboard.writeText(fullPrompt);
@@ -404,7 +424,7 @@ export default function App() {
         }
       }
 
-      // 方法2：备用的 document.execCommand (兼容老浏览器)
+      // Method 2: Fallback document.execCommand (for older browsers)
       if (!copySuccess) {
         try {
           const textArea = document.createElement('textarea');
@@ -429,7 +449,7 @@ export default function App() {
         if (type === 'marriage') msg = '💍 姻缘分析模板已复制到剪贴板！';
         alert(msg + '\n\n请粘贴到ChatGPT或Claude中使用。');
       } else {
-        // 显示内容让用户手动复制
+        // Show content for manual copying
         const newWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
         newWindow.document.write(`
           <html>
@@ -451,11 +471,11 @@ export default function App() {
       console.error('🚨 错误堆栈:', err.stack);
       console.log('🚨 输入参数:', { birthday, birthTime, gender, calendarType });
 
-      // 测试iztro导入
+      // Test iztro import
       console.log('🧪 iztro对象:', iztro);
       console.log('🧪 iztro.astro:', iztro ? iztro.astro : 'undefined');
 
-      // 测试astro函数是否能正常工作
+      // Test astro function if it works
       try {
         console.log('🧪 测试astro函数...');
         const testResult = iztro.astro.astrolabeBySolarDate('1996-06-14', 0, 'male');
@@ -468,319 +488,181 @@ export default function App() {
     }
   };
 
-  if (view === 'home') {
-    return (
-      <div className="min-h-screen flex flex-col relative bg-[#050505] overflow-hidden font-['Orbitron']">
-        {/* Cyberpunk Grid Background */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] pointer-events-none"></div>
+  return (
+    <div className="min-h-screen bg-[#050505] text-gray-100 font-sans selection:bg-cyan-500/30 overflow-hidden flex flex-col">
+      {/* Background Effects */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-900/20 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-900/20 rounded-full blur-[120px] animate-pulse delay-1000"></div>
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
+      </div>
 
-        {/* Neon Glow Effects */}
-        <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-[128px] pointer-events-none"></div>
-        <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-cyan-500/20 rounded-full blur-[128px] pointer-events-none"></div>
-
-        <nav className="w-full px-8 py-6 fixed top-0 z-50 flex justify-between items-center">
-          <div className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 tracking-widest drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]">
-            古书派
-          </div>
-        </nav>
-
-        <div className="flex-1 flex flex-col items-center justify-center relative z-10 px-4">
-          <div className="relative w-full max-w-2xl mx-auto">
-            <h1 className="text-5xl md:text-9xl font-black text-white tracking-tighter text-center leading-tight mix-blend-overlay opacity-50 select-none break-words">
-              SCUMBAG<br />SCANNER
+      {/* Header */}
+      <header className="relative z-50 border-b border-white/10 bg-black/50 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            {view === 'chart' && (
+              <button onClick={() => setView('input')} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+                <ArrowLeft className="w-5 h-5 text-cyan-400" />
+              </button>
+            )}
+            <div className="w-8 h-8 bg-gradient-to-tr from-cyan-500 to-purple-600 rounded flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.5)]">
+              <span className="text-lg font-black text-white font-orbitron">古</span>
+            </div>
+            <h1 className="text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 font-orbitron">
+              古书派·紫微
             </h1>
-            <h1 className="absolute inset-0 text-5xl md:text-9xl font-black text-transparent bg-clip-text bg-gradient-to-b from-white to-transparent tracking-tighter text-center leading-tight select-none break-words" style={{ textShadow: '0 0 40px rgba(168,85,247,0.5)' }}>
-              哥带你<br />识渣男
-            </h1>
           </div>
-
-          <p className="mt-8 text-cyan-300/80 text-sm md:text-lg tracking-[0.2em] md:tracking-[0.5em] font-bold uppercase text-center">System Online // 准备扫描</p>
-
           <button
-            onClick={() => setView('chart')}
-            className="group mt-12 md:mt-16 relative px-8 md:px-12 py-3 md:py-4 bg-black border border-cyan-500/50 text-cyan-400 text-lg md:text-xl font-bold uppercase tracking-widest overflow-hidden transition-all hover:border-cyan-400 hover:text-cyan-300 hover:shadow-[0_0_30px_rgba(34,211,238,0.4)] active:scale-95"
+            onClick={handleInstallClick}
+            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-900/50 to-purple-900/50 border border-cyan-500/30 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)]"
           >
-            <div className="absolute inset-0 bg-cyan-500/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-            <span className="relative z-10 flex items-center gap-2">
-              开始排盘 <ArrowLeft className="rotate-180" />
-            </span>
+            📲 下载APP
           </button>
         </div>
-      </div>
-    );
-  }
+      </header>
 
-  return (
-    <div className="min-h-screen flex flex-col relative bg-[#050505] font-['Orbitron'] text-gray-200">
-      {/* Background Elements */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] pointer-events-none"></div>
-      <div className="absolute top-[-10%] right-[-5%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-purple-600/20 rounded-full blur-[100px] pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] left-[-5%] w-[300px] md:w-[500px] h-[300px] md:h-[500px] bg-cyan-600/20 rounded-full blur-[100px] pointer-events-none"></div>
-
-      <nav className="w-full px-4 md:px-6 py-4 flex justify-between items-center bg-black/40 backdrop-blur-xl border-b border-white/10 z-50 sticky top-0">
-        <div className="text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-500 cursor-pointer tracking-widest" onClick={() => setView('home')}>
-          古书派
-        </div>
-        <button onClick={() => setView('home')} className="text-[10px] md:text-xs text-cyan-500/70 hover:text-cyan-400 font-bold uppercase tracking-widest border border-cyan-900/50 px-3 md:px-4 py-1.5 md:py-2 rounded hover:bg-cyan-950/30 transition-all">
-          返回首页
-        </button>
-      </nav>
-
-      <div className="flex-1 flex flex-col md:flex-row relative overflow-hidden">
-        {/* Left Side: Chart Display (Top on mobile) */}
-        <div className="flex-1 flex items-center justify-center relative overflow-auto p-2 md:p-4 min-h-[400px] md:min-h-0 order-2 md:order-1">
-          {!showChart ? (
-            <div className="text-center space-y-6 opacity-60 select-none animate-pulse hidden md:block">
-              <div className="w-32 h-32 mx-auto border-2 border-dashed border-cyan-500/30 rounded-full flex items-center justify-center">
-                <div className="w-24 h-24 bg-cyan-500/10 rounded-full animate-ping"></div>
+      {/* Main Content */}
+      <main className="flex-1 relative z-10 overflow-hidden flex flex-col">
+        {view === 'input' ? (
+          // --- INPUT VIEW ---
+          <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
+            <div className="w-full max-w-md bg-[#0a0a0a]/90 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl p-6 md:p-8 space-y-8 animate-in fade-in zoom-in duration-500">
+              <div className="text-center space-y-2">
+                <h2 className="text-2xl font-bold text-white">开启您的紫微之旅</h2>
+                <p className="text-gray-400 text-sm">输入生辰，洞察命运玄机</p>
               </div>
-              <h2 className="text-4xl font-black text-white tracking-widest">等待数据输入</h2>
-              <p className="text-cyan-400/60 text-sm font-mono">请输入目标参数以初始化扫描...</p>
-            </div>
-          ) : (
-            <div className="w-full h-full max-w-4xl animate-in zoom-in-95 duration-500">
-              <div className="w-full min-h-[400px] md:min-h-[600px] bg-slate-50/95 backdrop-blur-xl rounded-none border border-cyan-500/50 shadow-[0_0_50px_rgba(6,182,212,0.2)] p-2 md:p-6 relative overflow-hidden text-slate-900">
-                {/* Decorative Corner Lines */}
-                <div className="absolute top-0 left-0 w-4 md:w-8 h-4 md:h-8 border-t-2 border-l-2 border-cyan-500"></div>
-                <div className="absolute top-0 right-0 w-4 md:w-8 h-4 md:h-8 border-t-2 border-r-2 border-cyan-500"></div>
-                <div className="absolute bottom-0 left-0 w-4 md:w-8 h-4 md:h-8 border-b-2 border-l-2 border-cyan-500"></div>
-                <div className="absolute bottom-0 right-0 w-4 md:w-8 h-4 md:h-8 border-b-2 border-r-2 border-cyan-500"></div>
 
-                <div className="overflow-x-auto">
-                  <Iztrolabe
-                    birthday={birthday || "2000-01-01"}
-                    birthTime={birthTime}
-                    gender={gender}
-                    horoscope={{
-                      birthday: birthday || "2000-01-01",
-                      birthTime: birthTime,
-                      gender: gender,
-                      isLunar: calendarType === 'lunar'
-                    }}
-                  />
+              {/* Date Type */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest">日期类型</label>
+                <div className="flex bg-black/50 p-1 rounded border border-white/10">
+                  <button onClick={() => setCalendarType('solar')} className={`flex-1 py-2 text-xs font-bold transition-all rounded ${calendarType === 'solar' ? 'bg-cyan-900/50 text-cyan-300 border border-cyan-500/50' : 'text-gray-500'}`}>阳历</button>
+                  <button onClick={() => setCalendarType('lunar')} className={`flex-1 py-2 text-xs font-bold transition-all rounded ${calendarType === 'lunar' ? 'bg-purple-900/50 text-purple-300 border border-purple-500/50' : 'text-gray-500'}`}>农历</button>
                 </div>
               </div>
-            </div>
-          )}
-        </div>
 
-        {/* Right Side: Control Panel (Bottom on mobile) */}
-        <div className="w-full md:w-[400px] bg-[#0a0a0a]/90 backdrop-blur-xl border-t md:border-t-0 md:border-l border-white/10 shadow-2xl flex flex-col h-auto md:h-full overflow-y-auto z-20 relative order-1 md:order-2">
-          <div className="p-6 md:p-8 space-y-6 md:space-y-8">
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-2">
-                <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
-                日期类型
-              </label>
-              <div className="flex bg-black/50 p-1 rounded border border-white/10">
-                <button
-                  onClick={() => setCalendarType('solar')}
-                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider transition-all ${calendarType === 'solar'
-                    ? 'bg-cyan-900/50 text-cyan-300 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                    }`}
-                >
-                  阳历
-                </button>
-                <button
-                  onClick={() => setCalendarType('lunar')}
-                  className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider transition-all ${calendarType === 'lunar'
-                    ? 'bg-purple-900/50 text-purple-300 border border-purple-500/50 shadow-[0_0_10px_rgba(168,85,247,0.2)]'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                    }`}
-                >
-                  农历
-                </button>
+              {/* Birthday Input */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest">出生日期</label>
+                <input type="text" placeholder="YYYY-MM-DD" value={birthday} onChange={(e) => setBirthday(e.target.value)} className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white rounded outline-none focus:border-cyan-500/50 transition-all font-mono text-sm" />
               </div>
-            </div>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-2">
-                  <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
-                  他的生日
-                </label>
-                <div className="group relative">
-                  <HelpCircle size={14} className="text-gray-600 hover:text-cyan-400 cursor-help transition-colors" />
-                  <div className="absolute right-0 bottom-6 w-64 bg-black border border-cyan-500/30 text-cyan-300 text-xs p-3 shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                    请输入YYYY-M-D格式的日期，阳历或农历格式一样，比如农历二〇〇〇年三月初四，请输入2000-3-4
-                  </div>
-                </div>
-              </div>
-              <input
-                type="text"
-                placeholder="YYYY-MM-DD"
-                value={birthday}
-                onChange={(e) => setBirthday(e.target.value)}
-                className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white placeholder-gray-700 outline-none focus:border-cyan-500/50 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all font-mono text-sm"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                {/* Fixed Layout: Increased width and nowrap to prevent truncation */}
-                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-2 whitespace-nowrap">
-                  <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
-                  他的时辰
-                </label>
-                <div className="group relative">
-                  <HelpCircle size={14} className="text-gray-600 hover:text-cyan-400 cursor-help transition-colors" />
-                  <div className="absolute right-0 bottom-6 w-64 bg-black border border-cyan-500/30 text-cyan-300 text-xs p-3 shadow-xl z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
-                    一天分为12个时辰，但是子时分为早子时和晚子时，请注意查看时间范围，时间范围包含起始时间但是不包含结束时间，比如01:00是丑时，03:00是寅时
-                  </div>
-                </div>
-              </div>
-              <div className="relative">
-                <select
-                  value={birthTime}
-                  onChange={(e) => setBirthTime(parseInt(e.target.value))}
-                  className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white outline-none focus:border-cyan-500/50 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] appearance-none cursor-pointer font-mono text-sm transition-all hover:border-white/20"
-                >
-                  <option value={0}>早子时 (00:00-01:00)</option>
-                  <option value={1}>丑时 (01:00-03:00)</option>
-                  <option value={2}>寅时 (03:00-05:00)</option>
-                  <option value={3}>卯时 (05:00-07:00)</option>
-                  <option value={4}>辰时 (07:00-09:00)</option>
-                  <option value={5}>巳时 (09:00-11:00)</option>
-                  <option value={6}>午时 (11:00-13:00)</option>
-                  <option value={7}>未时 (13:00-15:00)</option>
-                  <option value={8}>申时 (15:00-17:00)</option>
-                  <option value={9}>酉时 (17:00-19:00)</option>
-                  <option value={10}>戌时 (19:00-21:00)</option>
-                  <option value={11}>亥时 (21:00-23:00)</option>
-                  <option value={12}>晚子时 (23:00-24:00)</option>
+              {/* Birth Time Input */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest">出生时辰</label>
+                <select value={birthTime} onChange={(e) => setBirthTime(Number(e.target.value))} className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white rounded outline-none focus:border-cyan-500/50 transition-all font-mono text-sm appearance-none cursor-pointer">
+                  {Array.from({ length: 13 }).map((_, i) => (
+                    <option key={i} value={i}>{getTimeDescription(i)}</option>
+                  ))}
                 </select>
-                <div className="absolute right-4 top-3.5 text-cyan-500 pointer-events-none text-xs">▼</div>
+              </div>
+
+              {/* Name Input */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest">您的姓名</label>
+                <input type="text" placeholder="请输入姓名" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white rounded outline-none focus:border-cyan-500/50 transition-all text-sm" />
+              </div>
+
+              {/* Gender Input */}
+              <div className="space-y-3">
+                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest">您的性别</label>
+                <div className="grid grid-cols-2 gap-4">
+                  <button onClick={() => setGender('male')} className={`py-3 border rounded transition-all flex items-center justify-center gap-2 ${gender === 'male' ? 'bg-cyan-900/20 border-cyan-500 text-cyan-400' : 'bg-black/50 border-white/10 text-gray-500'}`}>
+                    <span className="font-bold">男</span>
+                  </button>
+                  <button onClick={() => setGender('female')} className={`py-3 border rounded transition-all flex items-center justify-center gap-2 ${gender === 'female' ? 'bg-pink-900/20 border-pink-500 text-pink-400' : 'bg-black/50 border-white/10 text-gray-500'}`}>
+                    <span className="font-bold">女</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Start Button */}
+              <button onClick={handleStartScan} className="w-full py-4 bg-gradient-to-r from-cyan-600 to-purple-600 text-white font-bold text-lg uppercase tracking-widest hover:from-cyan-500 hover:to-purple-500 transition-all shadow-lg shadow-cyan-500/20 rounded">
+                开始排盘
+              </button>
+            </div>
+          </div>
+        ) : (
+          // --- CHART VIEW ---
+          <div className="flex-1 relative overflow-hidden flex flex-col">
+            {/* Chart Area */}
+            <div className="flex-1 overflow-auto p-2 md:p-4 pb-24">
+              <div className="max-w-3xl mx-auto bg-slate-50/95 rounded-lg overflow-hidden shadow-2xl border border-cyan-500/30">
+                <ProfessionalChart
+                  horoscope={horoscope}
+                  basicInfo={{
+                    name,
+                    gender,
+                    birthday,
+                    birthTime: getTimeDescription(birthTime),
+                    lunarDate: horoscope?.lunarDate
+                  }}
+                />
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-2">
-                <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
-                他的名字
-              </label>
-              <input
-                type="text"
-                placeholder="请输入姓名（可选）"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white placeholder-gray-700 outline-none focus:border-cyan-500/50 focus:shadow-[0_0_15px_rgba(6,182,212,0.2)] transition-all font-mono text-sm"
-              />
-            </div>
-
-            <div className="space-y-3">
-              <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest flex items-center gap-2">
-                <span className="w-2 h-2 bg-cyan-500 rounded-full animate-pulse"></span>
-                对方性别
-              </label>
-              <div className="grid grid-cols-1 gap-3 pt-1">
-                <label className={`relative flex items-center p-3 border cursor-pointer transition-all group ${gender === 'male' ? 'bg-cyan-950/30 border-cyan-500/50' : 'bg-black/50 border-white/10 hover:border-white/30'}`}>
-                  <input
-                    type="radio"
-                    name="gender"
-                    value="male"
-                    checked={gender === 'male'}
-                    onChange={(e) => setGender(e.target.value)}
-                    className="hidden"
-                  />
-                  <div className={`w-4 h-4 border flex items-center justify-center mr-3 transition-colors ${gender === 'male' ? 'border-cyan-400' : 'border-gray-600'}`}>
-                    {gender === 'male' && <div className="w-2 h-2 bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.8)]"></div>}
-                  </div>
-                  <span className={`font-bold text-sm tracking-wider ${gender === 'male' ? 'text-cyan-300' : 'text-gray-500'}`}>男 (渣男鉴定)</span>
-                </label>
-
-                <label className={`relative flex items-center p-3 border cursor-pointer transition-all group ${gender === 'female' ? 'bg-pink-950/30 border-pink-500/50' : 'bg-black/50 border-white/10 hover:border-white/30'}`}>
-                  <input
-                    type="radio"
-                    name="gender"
-                    value="female"
-                    checked={gender === 'female'}
-                    onChange={(e) => setGender(e.target.value)}
-                    className="hidden"
-                  />
-                  <div className={`w-4 h-4 border flex items-center justify-center mr-3 transition-colors ${gender === 'female' ? 'border-pink-400' : 'border-gray-600'}`}>
-                    {gender === 'female' && <div className="w-2 h-2 bg-pink-400 shadow-[0_0_8px_rgba(244,114,182,0.8)]"></div>}
-                  </div>
-                  <span className={`font-bold text-sm tracking-wider ${gender === 'female' ? 'text-pink-300' : 'text-gray-500'}`}>女 (渣女鉴定)</span>
-                </label>
-              </div>
-            </div>
-
-            <div className="pt-4">
+            {/* AI Analysis Floating Button */}
+            <div className="absolute bottom-6 left-6 z-50">
               <button
-                onClick={handleShowChart}
-                className="w-full py-4 bg-gradient-to-r from-cyan-600 to-purple-600 text-white font-black text-lg uppercase tracking-[0.2em] border border-white/20 shadow-[0_0_20px_rgba(147,51,234,0.3)] hover:shadow-[0_0_40px_rgba(6,182,212,0.5)] hover:border-cyan-400 transition-all active:scale-95 relative overflow-hidden group"
+                onClick={() => setShowAiMenu(!showAiMenu)}
+                className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-full shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:scale-105 transition-transform animate-pulse"
               >
-                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                <span className="relative z-10">开始排盘</span>
+                <Sparkles className="w-5 h-5" />
+                AI 分析
               </button>
             </div>
 
-            {showChart && (
-              <div className="pt-6 border-t border-dashed border-white/20 animate-in slide-in-from-bottom-4 fade-in duration-500 space-y-3">
-                <button
-                  onClick={() => handleCopyPrompt('scumbag')}
-                  className="w-full py-4 border border-dashed border-cyan-500/50 text-cyan-400 hover:bg-cyan-950/30 hover:border-cyan-400 hover:text-cyan-300 hover:shadow-[0_0_20px_rgba(6,182,212,0.2)] transition-all font-bold uppercase tracking-wider flex items-center justify-center gap-2 group"
-                >
-                  <Copy size={18} className="group-hover:rotate-12 transition-transform" />
-                  <span>一键复制鉴渣话术</span>
-                </button>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    onClick={() => handleCopyPrompt('wealth')}
-                    className="w-full py-3 border border-yellow-500/50 text-yellow-400 hover:bg-yellow-950/30 hover:border-yellow-400 hover:text-yellow-300 hover:shadow-[0_0_20px_rgba(234,179,8,0.2)] transition-all font-bold uppercase tracking-wider flex items-center justify-center gap-2 group text-sm"
-                  >
-                    <Copy size={16} className="group-hover:rotate-12 transition-transform" />
-                    <span>何时发财</span>
+            {/* AI Analysis Menu (Drawer) */}
+            {showAiMenu && (
+              <div className="absolute bottom-20 left-6 z-50 w-64 bg-black/90 backdrop-blur-xl border border-purple-500/30 rounded-xl shadow-2xl p-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
+                <div className="space-y-2">
+                  <button onClick={() => handleCopyPrompt('scumbag')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-gray-200 border border-transparent hover:border-purple-500/30 transition-all">
+                    <span className="text-xl">🕵️</span> 一键鉴渣话术
                   </button>
-                  <button
-                    onClick={() => handleCopyPrompt('marriage')}
-                    className="w-full py-3 border border-pink-500/50 text-pink-400 hover:bg-pink-950/30 hover:border-pink-400 hover:text-pink-300 hover:shadow-[0_0_20px_rgba(236,72,153,0.2)] transition-all font-bold uppercase tracking-wider flex items-center justify-center gap-2 group text-sm"
-                  >
-                    <Copy size={16} className="group-hover:rotate-12 transition-transform" />
-                    <span>何时结婚</span>
+                  <button onClick={() => handleCopyPrompt('marriage')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-pink-300 border border-transparent hover:border-pink-500/30 transition-all">
+                    <span className="text-xl">💍</span> 何时结婚
+                  </button>
+                  <button onClick={() => handleCopyPrompt('wealth')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-yellow-300 border border-transparent hover:border-yellow-500/30 transition-all">
+                    <span className="text-xl">💰</span> 何时发财
+                  </button>
+                  <div className="h-px bg-white/10 my-2"></div>
+                  <button className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-gray-400 cursor-not-allowed opacity-50">
+                    <span className="text-xl">📅</span> 今年运势 (开发中)
+                  </button>
+                  <button className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-gray-400 cursor-not-allowed opacity-50">
+                    <span className="text-xl">🌙</span> 今月运势 (开发中)
+                  </button>
+                  <button className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-gray-400 cursor-not-allowed opacity-50">
+                    <span className="text-xl">☀️</span> 今日运势 (开发中)
                   </button>
                 </div>
               </div>
             )}
-
-            <div className="pt-6 mt-auto border-t border-white/10">
-              <button
-                onClick={handleInstallClick}
-                className="w-full py-3 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs uppercase tracking-widest transition-all rounded flex items-center justify-center gap-2"
-              >
-                <span>📲 下载APP (防走丢)</span>
-              </button>
-            </div>
           </div>
-        </div>
-      </div>
+        )}
+      </main>
 
-      {/* Install Modal */}
+      {/* PWA Install Modal */}
       {showInstallModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowInstallModal(false)}>
-          <div className="bg-[#111] border border-cyan-500/30 p-6 max-w-sm w-full relative shadow-[0_0_50px_rgba(6,182,212,0.2)]" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-[#111] border border-cyan-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
             <button onClick={() => setShowInstallModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
             <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <span className="text-cyan-400">📲</span> 安装到手机
+              <span className="text-2xl">📲</span> 安装 App
             </h3>
             <div className="space-y-4 text-sm text-gray-300">
               <p>为了获得最佳体验（全屏、离线使用），请将本应用添加到主屏幕。</p>
-
               <div className="bg-white/5 p-3 rounded border border-white/10">
-                <strong className="text-white block mb-1">🍎 iOS (Safari浏览器):</strong>
-                1. 点击底部工具栏的 <span className="text-cyan-400 font-bold">分享按钮</span><br />
-                2. 下滑找到并点击 <span className="text-cyan-400 font-bold">"添加到主屏幕"</span>
+                <p className="font-bold text-cyan-400 mb-1">🍎 iOS (Safari):</p>
+                <p>点击底部中间的分享按钮 <span className="inline-block border border-gray-500 px-1 rounded">⎋</span>，然后选择 <span className="font-bold text-white">"添加到主屏幕"</span>。</p>
               </div>
-
               <div className="bg-white/5 p-3 rounded border border-white/10">
-                <strong className="text-white block mb-1">🤖 Android (Chrome浏览器):</strong>
-                1. 点击右上角菜单 (⋮)<br />
-                2. 点击 <span className="text-cyan-400 font-bold">"安装应用"</span> 或 <span className="text-cyan-400 font-bold">"添加到主屏幕"</span>
+                <p className="font-bold text-green-400 mb-1">🤖 Android (Chrome):</p>
+                <p>点击右上角菜单 <span className="font-bold text-white">⋮</span>，然后选择 <span className="font-bold text-white">"安装应用"</span> 或 <span className="font-bold text-white">"添加到主屏幕"</span>。</p>
               </div>
             </div>
-            <button onClick={() => setShowInstallModal(false)} className="w-full mt-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold uppercase tracking-wider transition-all">
+            <button onClick={() => setShowInstallModal(false)} className="w-full mt-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded transition-colors">
               知道了
             </button>
           </div>
