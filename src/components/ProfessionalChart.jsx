@@ -250,7 +250,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                             <div key={idx} className={`font-bold ${star.brightness === '庙' || star.brightness === '旺' ? 'text-red-600' : 'text-blue-600'} flex items-center flex-wrap gap-0.5`}>
                                 <span>{star.name}</span>
                                 <span className="text-[10px] font-normal text-gray-500 scale-90 origin-left">{star.brightness}</span>
-                                {star.mutagen && <span className="bg-red-500 text-white px-[1px] rounded text-[8px] scale-90">{star.mutagen}</span>}
+                                <span className="text-[10px] font-normal text-gray-500 scale-90 origin-left">{star.brightness}</span>
 
                                 {/* Si Hua Badges */}
                                 {siHuaBadges && siHuaBadges.map((badge, bIdx) => (
@@ -610,18 +610,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                     </tbody>
                 </table>
             </div>
-            {/* Debug Info (Temporary) */}
-            <div className="bg-black text-white p-2 text-xs font-mono overflow-auto h-32">
-                <div>Active Stems: {JSON.stringify(activeStems)}</div>
-                <div>Selection: {JSON.stringify(selection)}</div>
-                <div>Active Layers: {JSON.stringify(activeLayers)}</div>
-                <div>Year Stem Index: {getYearStemIndex(selection.year)}</div>
-                <div>Month Stem Calculation:
-                    {selection.year && selection.month ?
-                        `Start: ${(getYearStemIndex(selection.year) % 5) * 2 + 2}, Index: ${((getYearStemIndex(selection.year) % 5) * 2 + 2 + (selection.month - 1)) % 10}`
-                        : 'N/A'}
-                </div>
-            </div>
+            {/* Debug Info Removed */}
         </div>
     );
 }
