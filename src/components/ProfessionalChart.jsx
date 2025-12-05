@@ -89,8 +89,13 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
         const stems = {};
 
         // 1. Origin (Ben)
-        if (horoscope.chineseDate && horoscope.chineseDate.yearly) {
-            stems.origin = horoscope.chineseDate.yearly[0];
+        if (horoscope.chineseDate) {
+            if (typeof horoscope.chineseDate === 'string') {
+                // Format: "Year Month Day Hour" (e.g., "辛丑 癸巳 癸亥 壬子")
+                stems.origin = horoscope.chineseDate.split(' ')[0][0];
+            } else if (horoscope.chineseDate.yearly) {
+                stems.origin = horoscope.chineseDate.yearly[0];
+            }
         }
 
         // 2. Decadal (Xian)
@@ -124,17 +129,18 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 );
 
                 if (tempHoroscope && tempHoroscope.chineseDate) {
-                    // 4. Monthly (Yue)
-                    stems.monthly = tempHoroscope.chineseDate.monthly[0];
+                    if (typeof tempHoroscope.chineseDate === 'string') {
+                        const parts = tempHoroscope.chineseDate.split(' ');
+                        // parts[0] = Year, parts[1] = Month, parts[2] = Day, parts[3] = Hour
 
-                    // 5. Daily (Ri) - Only if day is selected
-                    if (selection.day) {
-                        stems.daily = tempHoroscope.chineseDate.daily[0];
-                    }
-
-                    // 6. Hourly (Shi) - Only if hour is selected
-                    if (selection.day && selection.hour !== null) {
-                        stems.hourly = tempHoroscope.chineseDate.hourly[0];
+                        if (parts.length >= 2) stems.monthly = parts[1][0];
+                        if (parts.length >= 3 && selection.day) stems.daily = parts[2][0];
+                        if (parts.length >= 4 && selection.day && selection.hour !== null) stems.hourly = parts[3][0];
+                    } else {
+                        // Fallback for object format
+                        if (tempHoroscope.chineseDate.monthly) stems.monthly = tempHoroscope.chineseDate.monthly[0];
+                        if (selection.day && tempHoroscope.chineseDate.daily) stems.daily = tempHoroscope.chineseDate.daily[0];
+                        if (selection.day && selection.hour !== null && tempHoroscope.chineseDate.hourly) stems.hourly = tempHoroscope.chineseDate.hourly[0];
                     }
                 }
             } catch (e) {
@@ -525,11 +531,11 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                             <tr className="border-b border-gray-200">
                                 <td className="bg-gray-100 font-bold p-1 border-r">流月</td>
                                 <td className="p-1">
-                                    <div className="flex gap-1 overflow-x-auto">
+                                    <div className="grid grid-cols-6 gap-1">
                                         {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
                                             <button
                                                 key={month}
-                                                className={`px-2 py-1 rounded whitespace-nowrap ${selection.month === month ? 'bg-yellow-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                                                className={`px-2 py-1 rounded whitespace-nowrap text-center ${selection.month === month ? 'bg-yellow-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 onClick={() => handleSelection('month', month)}
                                             >
                                                 {month}月
@@ -545,17 +551,17 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                             <tr className="border-b border-gray-200">
                                 <td className="bg-gray-100 font-bold p-1 border-r">流日</td>
                                 <td className="p-1">
-                                    <div className="flex gap-1 overflow-x-auto">
+                                    <div className="grid grid-cols-7 gap-1">
                                         {(() => {
                                             // Dynamic days based on year and month
                                             const daysInMonth = new Date(selection.year, selection.month, 0).getDate();
                                             return Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
                                                 <button
                                                     key={day}
-                                                    className={`px-2 py-1 rounded whitespace-nowrap ${selection.day === day ? 'bg-purple-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                                                    className={`px-1 py-1 rounded whitespace-nowrap text-center text-[10px] ${selection.day === day ? 'bg-purple-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
                                                     onClick={() => handleSelection('day', day)}
                                                 >
-                                                    {day}日
+                                                    {day}
                                                 </button>
                                             ));
                                         })()}
@@ -585,6 +591,12 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                         )}
                     </tbody>
                 </table>
+            </div>
+            {/* Debug Info (Temporary) */}
+            <div className="bg-black text-white p-2 text-xs font-mono overflow-auto">
+                <div>Active Stems: {JSON.stringify(activeStems)}</div>
+                <div>Selection: {JSON.stringify(selection)}</div>
+                <div>Active Layers: {JSON.stringify(activeLayers)}</div>
             </div>
         </div>
     );
