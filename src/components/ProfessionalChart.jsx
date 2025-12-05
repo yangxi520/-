@@ -364,6 +364,58 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
         );
     };
 
+    // Generate Prompt for AI Analysis
+    const generateFortunePrompt = (layerKey) => {
+        const stem = activeStems[layerKey];
+        if (!stem) {
+            alert(`请先选择${layerKey === 'yearly' ? '流年' : layerKey === 'monthly' ? '流月' : '流日'}！`);
+            return;
+        }
+
+        const map = SI_HUA_MAP[stem];
+        const layerName = layerKey === 'yearly' ? '流年' : layerKey === 'monthly' ? '流月' : '流日';
+        const timeInfo = layerKey === 'yearly' ? `${selection.year}年` :
+            layerKey === 'monthly' ? `${selection.year}年${selection.month}月` :
+                `${selection.year}年${selection.month}月${selection.day}日`;
+
+        let prompt = `你是一位精通紫微斗数的命理大师。请根据以下命盘数据和${layerName}四化，为命主进行${layerName}运势分析。\n\n`;
+
+        prompt += `【基本信息】\n`;
+        prompt += `性别：${basicInfo.gender === 'male' ? '男' : '女'}\n`;
+        prompt += `五行局：${horoscope.fiveElementsClass}\n`;
+        prompt += `命主：${horoscope.soul}  身主：${horoscope.body}\n\n`;
+
+        prompt += `【${layerName}信息】\n`;
+        prompt += `时间：${timeInfo}\n`;
+        prompt += `天干：${stem}\n`;
+        prompt += `四化：\n`;
+        prompt += `  - 禄：${map.lu}\n`;
+        prompt += `  - 权：${map.quan}\n`;
+        prompt += `  - 科：${map.ke}\n`;
+        prompt += `  - 忌：${map.ji}\n\n`;
+
+        prompt += `【命盘十二宫位分布】\n`;
+        palaces.forEach(p => {
+            const major = p.majorStars.map(s => `${s.name}(${s.brightness})`).join('、');
+            const minor = p.minorStars.map(s => s.name).join('、');
+            prompt += `- ${p.name} (${p.heavenlyStem}${p.earthlyBranch})：${major} | ${minor}\n`;
+        });
+
+        prompt += `\n【分析要求】\n`;
+        prompt += `1. 结合本命盘格局与${layerName}四化的引动，分析${layerName}的整体运势走向。\n`;
+        prompt += `2. 重点分析【事业】、【财运】、【感情】三个维度的吉凶变化。\n`;
+        prompt += `3. 针对“忌”星所在的宫位和冲照宫位，给出具体的避坑建议。\n`;
+        prompt += `4. 针对“禄”星所在的宫位，给出具体的把握机会建议。\n`;
+        prompt += `5. 语气专业、客观、富有同理心，不要使用过于宿命论的词汇。\n`;
+
+        navigator.clipboard.writeText(prompt).then(() => {
+            alert(`已复制【${layerName}运势】分析指令！\n请发送给AI进行分析。`);
+        }).catch(err => {
+            console.error('Failed to copy:', err);
+            alert('复制失败，请手动复制。');
+        });
+    };
+
     return (
         <div className="w-full max-w-3xl mx-auto bg-slate-100 text-slate-900 p-1 select-none flex flex-col gap-2">
             {/* Chart Grid */}
@@ -609,6 +661,31 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                         )}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Fortune Analysis Buttons */}
+            <div className="grid grid-cols-3 gap-2 p-2 bg-white border border-gray-300">
+                <button
+                    className="bg-blue-600 text-white py-2 rounded shadow hover:bg-blue-700 flex flex-col items-center justify-center"
+                    onClick={() => generateFortunePrompt('yearly')}
+                >
+                    <span className="font-bold">今年运势</span>
+                    <span className="text-[10px] opacity-80">一键导出分析</span>
+                </button>
+                <button
+                    className="bg-yellow-600 text-white py-2 rounded shadow hover:bg-yellow-700 flex flex-col items-center justify-center"
+                    onClick={() => generateFortunePrompt('monthly')}
+                >
+                    <span className="font-bold">今月运势</span>
+                    <span className="text-[10px] opacity-80">一键导出分析</span>
+                </button>
+                <button
+                    className="bg-purple-600 text-white py-2 rounded shadow hover:bg-purple-700 flex flex-col items-center justify-center"
+                    onClick={() => generateFortunePrompt('daily')}
+                >
+                    <span className="font-bold">今日运势</span>
+                    <span className="text-[10px] opacity-80">一键导出分析</span>
+                </button>
             </div>
             {/* Debug Info Removed */}
         </div>
