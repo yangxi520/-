@@ -611,11 +611,16 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 </table>
             </div>
             {/* Debug Info (Temporary) */}
-            <div className="bg-black text-white p-2 text-xs font-mono overflow-auto">
+            <div className="bg-black text-white p-2 text-xs font-mono overflow-auto h-32">
                 <div>Active Stems: {JSON.stringify(activeStems)}</div>
                 <div>Selection: {JSON.stringify(selection)}</div>
                 <div>Active Layers: {JSON.stringify(activeLayers)}</div>
-                {/* Add debug for tempHoroscope if needed, but activeStems should be enough now */}
+                <div>Year Stem Index: {getYearStemIndex(selection.year)}</div>
+                <div>Month Stem Calculation:
+                    {selection.year && selection.month ?
+                        `Start: ${(getYearStemIndex(selection.year) % 5) * 2 + 2}, Index: ${((getYearStemIndex(selection.year) % 5) * 2 + 2 + (selection.month - 1)) % 10}`
+                        : 'N/A'}
+                </div>
             </div>
         </div>
     );
