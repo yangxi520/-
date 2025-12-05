@@ -104,49 +104,65 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
         }
 
         // 3. Yearly (Nian)
+        let yearStemIndex = null;
         if (selection.year) {
-            // Simple calculation for year stem is reliable
-            const idx = getYearStemIndex(selection.year);
-            stems.yearly = HEAVENLY_STEMS[idx];
+            yearStemIndex = getYearStemIndex(selection.year);
+            stems.yearly = HEAVENLY_STEMS[yearStemIndex];
         }
 
-        // For Monthly, Daily, Hourly - we need accurate Lunar conversion from Solar date
-        if (selection.year && selection.month) {
-            try {
-                // Construct a representative date for the selected month
-                // Default to 1st day if day not selected, or selected day
-                const day = selection.day || 1;
-                // Default to hour 0 (Zi) if not selected, or selected hour index directly
-                // iztro expects hour index (0-12), not solar hour (0-23)
-                const hour = selection.hour !== null ? selection.hour : 0;
+        // 4. Monthly (Yue) - Five Tigers Chasing Month
+        // Based on Year Stem and Month Index (1-12)
+        // Formula: Start Stem = (YearStemIndex % 5) * 2 + 2
+        if (yearStemIndex !== null && selection.month) {
+            const startStem = (yearStemIndex % 5) * 2 + 2;
+            // Month 1 is Tiger (Index 2 in Branches), but we just need the stem sequence.
+            // The sequence starts from Month 1.
+            const monthStemIndex = (startStem + (selection.month - 1)) % 10;
+            stems.monthly = HEAVENLY_STEMS[monthStemIndex];
+        }
 
-                // Create a temporary horoscope to get the accurate Chinese Date
-                // We use the user's gender, but the date is the *selected timeline date*
-                const tempHoroscope = astro.bySolar(
-                    `${selection.year}-${selection.month}-${day}`,
-                    hour,
+        // 5. Daily (Ri) - Requires Calendar Lookup
+        // We use astro.byLunar to get the Day Stem (Day Pillar)
+        // 6. Hourly (Shi) - Five Rats Chasing Hour
+        // Based on Day Stem and Hour Index (0-11)
+        if (selection.year && selection.month && selection.day) {
+            try {
+                // Use byLunar to get accurate Day Pillar
+                // Note: We use hour 0 just to get the day
+                const tempHoroscope = astro.byLunar(
+                    `${selection.year}-${selection.month}-${selection.day}`,
+                    0,
                     basicInfo.gender === 'male' ? '男' : '女',
+                    false, // isLeapMonth (Assuming false for now as UI doesn't support it)
                     true // fixLeap
                 );
 
                 if (tempHoroscope && tempHoroscope.chineseDate) {
+                    let dayStemIndex = null;
                     if (typeof tempHoroscope.chineseDate === 'string') {
-                        // Use regex to split by whitespace to handle potential multiple spaces
                         const parts = tempHoroscope.chineseDate.trim().split(/\s+/);
-                        // parts[0] = Year, parts[1] = Month, parts[2] = Day, parts[3] = Hour
+                        // parts[2] is Day Pillar (e.g. "戊戌")
+                        if (parts.length >= 3) {
+                            const dayStemChar = parts[2][0];
+                            stems.daily = dayStemChar;
+                            dayStemIndex = HEAVENLY_STEMS.indexOf(dayStemChar);
+                        }
+                    } else if (tempHoroscope.chineseDate.daily) {
+                        const dayStemChar = tempHoroscope.chineseDate.daily[0];
+                        stems.daily = dayStemChar;
+                        dayStemIndex = HEAVENLY_STEMS.indexOf(dayStemChar);
+                    }
 
-                        if (parts.length >= 2) stems.monthly = parts[1][0];
-                        if (parts.length >= 3 && selection.day) stems.daily = parts[2][0];
-                        if (parts.length >= 4 && selection.day && selection.hour !== null) stems.hourly = parts[3][0];
-                    } else {
-                        // Fallback for object format
-                        if (tempHoroscope.chineseDate.monthly) stems.monthly = tempHoroscope.chineseDate.monthly[0];
-                        if (selection.day && tempHoroscope.chineseDate.daily) stems.daily = tempHoroscope.chineseDate.daily[0];
-                        if (selection.day && selection.hour !== null && tempHoroscope.chineseDate.hourly) stems.hourly = tempHoroscope.chineseDate.hourly[0];
+                    // Calculate Hourly Stem if Day Stem is found and Hour is selected
+                    if (dayStemIndex !== -1 && dayStemIndex !== null && selection.hour !== null) {
+                        // Formula: Start Stem = (DayStemIndex % 5) * 2
+                        const startStem = (dayStemIndex % 5) * 2;
+                        const hourStemIndex = (startStem + selection.hour) % 10;
+                        stems.hourly = HEAVENLY_STEMS[hourStemIndex];
                     }
                 }
             } catch (e) {
-                console.error("Error calculating timeline stems:", e);
+                console.error("Error calculating daily/hourly stems:", e);
             }
         }
 
