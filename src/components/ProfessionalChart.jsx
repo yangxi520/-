@@ -116,8 +116,9 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 // Construct a representative date for the selected month
                 // Default to 1st day if day not selected, or selected day
                 const day = selection.day || 1;
-                // Default to hour 0 (Zi) if not selected, or selected hour * 2 (approx solar hour)
-                const hour = selection.hour !== null ? selection.hour * 2 : 0;
+                // Default to hour 0 (Zi) if not selected, or selected hour index directly
+                // iztro expects hour index (0-12), not solar hour (0-23)
+                const hour = selection.hour !== null ? selection.hour : 0;
 
                 // Create a temporary horoscope to get the accurate Chinese Date
                 // We use the user's gender, but the date is the *selected timeline date*
@@ -125,12 +126,13 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                     `${selection.year}-${selection.month}-${day}`,
                     hour,
                     basicInfo.gender === 'male' ? '男' : '女',
-                    true // fixLeap (not strictly needed for just getting stems but good practice)
+                    true // fixLeap
                 );
 
                 if (tempHoroscope && tempHoroscope.chineseDate) {
                     if (typeof tempHoroscope.chineseDate === 'string') {
-                        const parts = tempHoroscope.chineseDate.split(' ');
+                        // Use regex to split by whitespace to handle potential multiple spaces
+                        const parts = tempHoroscope.chineseDate.trim().split(/\s+/);
                         // parts[0] = Year, parts[1] = Month, parts[2] = Day, parts[3] = Hour
 
                         if (parts.length >= 2) stems.monthly = parts[1][0];
@@ -597,6 +599,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 <div>Active Stems: {JSON.stringify(activeStems)}</div>
                 <div>Selection: {JSON.stringify(selection)}</div>
                 <div>Active Layers: {JSON.stringify(activeLayers)}</div>
+                {/* Add debug for tempHoroscope if needed, but activeStems should be enough now */}
             </div>
         </div>
     );
