@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { astro } from 'iztro';
 import {
@@ -9,6 +10,7 @@ import {
     generateFortunePromptText,
     generateBabyPrompt
 } from '../utils/aiPrompts';
+import { findBestConceptionDates } from '../utils/babySelector';
 import { Sparkles, HelpCircle } from "lucide-react";
 
 // Helper to get palace position in 4x4 grid (0-11 index to grid coordinates)
@@ -121,6 +123,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
         birthday: '',
         birthTime: '子'
     });
+    const [isCalculating, setIsCalculating] = React.useState(false);
 
     // Calculate Stems for each layer based on selection
     // Calculate Stems for each layer based on selection using iztro for accuracy
@@ -170,7 +173,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 // Use byLunar to get accurate Day Pillar
                 // Note: We use hour 0 just to get the day
                 const tempHoroscope = astro.byLunar(
-                    `${selection.year}-${selection.month}-${selection.day}`,
+                    `${selection.year} -${selection.month} -${selection.day} `,
                     0,
                     basicInfo.gender === 'male' ? '男' : '女',
                     false, // isLeapMonth (Assuming false for now as UI doesn't support it)
@@ -279,7 +282,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
 
         return (
             <div
-                className={`h-full w-full border ${isFocused ? 'border-2 border-red-500 z-10' : 'border-gray-300'} bg-white relative p-1 text-xs flex flex-col justify-between transition-all cursor-pointer hover:bg-slate-50`}
+                className={`h - full w - full border ${isFocused ? 'border-2 border-red-500 z-10' : 'border-gray-300'} bg - white relative p - 1 text - xs flex flex - col justify - between transition - all cursor - pointer hover: bg - slate - 50`}
                 onClick={() => setFocusedIndex(palace.index)}
             >
                 {/* Major Stars */}
@@ -287,13 +290,13 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                     {palace.majorStars.map((star, idx) => {
                         const siHuaBadges = getActiveSiHua(star.name);
                         return (
-                            <div key={idx} className={`font-bold ${star.brightness === '庙' || star.brightness === '旺' ? 'text-red-600' : 'text-blue-600'} flex items-center flex-wrap gap-0.5`}>
+                            <div key={idx} className={`font - bold ${star.brightness === '庙' || star.brightness === '旺' ? 'text-red-600' : 'text-blue-600'} flex items - center flex - wrap gap - 0.5`}>
                                 <span>{star.name}</span>
                                 <span className="text-[10px] font-normal text-gray-500 scale-90 origin-left">{star.brightness}</span>
 
                                 {/* Si Hua Badges */}
                                 {siHuaBadges && siHuaBadges.map((badge, bIdx) => (
-                                    <span key={bIdx} className={`${badge.color} text-white px-[1px] rounded text-[8px] scale-90 flex items-center justify-center min-w-[12px]`}>
+                                    <span key={bIdx} className={`${badge.color} text - white px - [1px] rounded text - [8px] scale - 90 flex items - center justify - center min - w - [12px]`}>
                                         {badge.type}
                                     </span>
                                 ))}
@@ -386,8 +389,8 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
 
                 {/* Dui Gong Line */}
                 <line
-                    x1={`${pSelf.x}%`} y1={`${pSelf.y}%`}
-                    x2={`${pDuiGong.x}%`} y2={`${pDuiGong.y}%`}
+                    x1={`${pSelf.x}% `} y1={`${pSelf.y}% `}
+                    x2={`${pDuiGong.x}% `} y2={`${pDuiGong.y}% `}
                     stroke="rgba(34, 211, 238, 0.8)"
                     strokeWidth="2"
                     strokeDasharray="4,2"
@@ -395,10 +398,10 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 />
 
                 {/* Dots at intersections */}
-                <circle cx={`${pSelf.x}%`} cy={`${pSelf.y}%`} r="3" fill="#ec4899" />
-                <circle cx={`${pSanHe1.x}%`} cy={`${pSanHe1.y}%`} r="3" fill="#ec4899" />
-                <circle cx={`${pSanHe2.x}%`} cy={`${pSanHe2.y}%`} r="3" fill="#ec4899" />
-                <circle cx={`${pDuiGong.x}%`} cy={`${pDuiGong.y}%`} r="3" fill="#22d3ee" />
+                <circle cx={`${pSelf.x}% `} cy={`${pSelf.y}% `} r="3" fill="#ec4899" />
+                <circle cx={`${pSanHe1.x}% `} cy={`${pSanHe1.y}% `} r="3" fill="#ec4899" />
+                <circle cx={`${pSanHe2.x}% `} cy={`${pSanHe2.y}% `} r="3" fill="#ec4899" />
+                <circle cx={`${pDuiGong.x}% `} cy={`${pDuiGong.y}% `} r="3" fill="#22d3ee" />
             </svg>
         );
     };
@@ -408,20 +411,20 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
         let prompt = '';
         const scumbagData = generateScumbagPrompt(horoscope);
         const basicInfoData = `
-**--- 命主基本信息 (用于推算大限流年) ---**
-- **姓名**：${basicInfo.name || '未填写'}
-- **性别**：${basicInfo.gender === 'male' ? '男' : '女'}
-- **生辰**：${basicInfo.birthday}
-- **出生时辰**：${basicInfo.birthTime}
+    ** --- 命主基本信息(用于推算大限流年)-- -**
+- ** 姓名 **：${basicInfo.name || '未填写'}
+- ** 性别 **：${basicInfo.gender === 'male' ? '男' : '女'}
+- ** 生辰 **：${basicInfo.birthday}
+- ** 出生时辰 **：${basicInfo.birthTime}
 `;
 
         if (type === 'scumbag') {
             const template = basicInfo.gender === 'female' ? FEMALE_PROMPT_TEMPLATE : AI_PROMPT_TEMPLATE;
-            prompt = `${template}\n${basicInfoData}\n${scumbagData}`;
+            prompt = `${template} \n${basicInfoData} \n${scumbagData} `;
         } else if (type === 'marriage') {
-            prompt = `${MARRIAGE_PROMPT_TEMPLATE}\n${basicInfoData}\n${scumbagData}`;
+            prompt = `${MARRIAGE_PROMPT_TEMPLATE} \n${basicInfoData} \n${scumbagData} `;
         } else if (type === 'wealth') {
-            prompt = `${WEALTH_PROMPT_TEMPLATE}\n${basicInfoData}\n${scumbagData}`;
+            prompt = `${WEALTH_PROMPT_TEMPLATE} \n${basicInfoData} \n${scumbagData} `;
         } else if (['yearly', 'monthly', 'daily', 'hourly'].includes(type)) {
             prompt = generateFortunePromptText(type, selection, activeStems, basicInfo, horoscope, palaces, SI_HUA_MAP);
             if (!prompt) {
@@ -445,36 +448,46 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
         });
     };
 
-    const handleConfirmPartner = () => {
+    const handleConfirmPartner = async () => {
         if (!partnerInfo.birthday) {
             alert('请选择配偶出生日期');
             return;
         }
 
-        try {
-            // Calculate Partner Horoscope
-            const partnerHoroscope = astro.bySolar(
-                partnerInfo.birthday,
-                TIME_RANGES.indexOf(partnerInfo.birthTime),
-                partnerInfo.gender === 'male' ? '男' : '女',
-                true,
-                'zh-CN'
-            );
+        setIsCalculating(true);
 
-            const prompt = generateBabyPrompt(selectedBabyType, basicInfo, horoscope, partnerHoroscope);
+        // Use setTimeout to allow UI to update with "Calculating..." state
+        setTimeout(async () => {
+            try {
+                // Calculate Partner Horoscope
+                const partnerHoroscope = astro.bySolar(
+                    partnerInfo.birthday,
+                    TIME_RANGES.indexOf(partnerInfo.birthTime),
+                    partnerInfo.gender === 'male' ? '男' : '女',
+                    true,
+                    'zh-CN'
+                );
 
-            navigator.clipboard.writeText(prompt).then(() => {
-                alert(`已复制双人命盘分析指令！\n请发送给AI进行分析。`);
-                setShowPartnerModal(false);
-            }).catch(err => {
-                console.error('Failed to copy:', err);
-                alert('复制失败，请手动复制。');
-            });
+                // Calculate Best Dates (The Heavy Lifting)
+                const bestDates = await findBestConceptionDates(selectedBabyType);
 
-        } catch (error) {
-            console.error('Partner horoscope calculation failed:', error);
-            alert('配偶命盘计算失败，请检查输入信息。');
-        }
+                const prompt = generateBabyPrompt(selectedBabyType, basicInfo, horoscope, partnerHoroscope, bestDates);
+
+                navigator.clipboard.writeText(prompt).then(() => {
+                    alert(`✅ 已生成【${selectedBabyType === 'leader' ? '帝王' : selectedBabyType === 'iq' ? '文昌' : selectedBabyType === 'sport' ? '武曲' : '陶朱'} 起居注】指令！\n\n已为您筛选出未来120天内Top3最佳受孕时机。\n请发送给AI获取详细解读。`);
+                    setShowPartnerModal(false);
+                }).catch(err => {
+                    console.error('Failed to copy:', err);
+                    alert('复制失败，请手动复制。');
+                });
+
+            } catch (error) {
+                console.error('Calculation failed:', error);
+                alert('计算失败，请重试。');
+            } finally {
+                setIsCalculating(false);
+            }
+        }, 100);
     };
 
     return (
@@ -573,7 +586,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                             {['origin', 'decadal', 'yearly', 'monthly', 'daily', 'hourly'].map(layer => (
                                 <button
                                     key={layer}
-                                    className={`border rounded px-1 py-0.5 ${activeLayers[layer] ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-gray-50 border-gray-200 text-gray-400'}`}
+                                    className={`border rounded px - 1 py - 0.5 ${activeLayers[layer] ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-gray-50 border-gray-200 text-gray-400'} `}
                                     onClick={() => setActiveLayers(prev => ({ ...prev, [layer]: !prev[layer] }))}
                                 >
                                     {layer === 'origin' ? '本' : layer === 'decadal' ? '限' : layer === 'yearly' ? '年' : layer === 'monthly' ? '月' : layer === 'daily' ? '日' : '时'}
@@ -613,7 +626,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                                     {[...palaces].sort((a, b) => a.decadal.range[0] - b.decadal.range[0]).map((p, idx) => (
                                         <button
                                             key={idx}
-                                            className={`px-2 py-1 rounded whitespace-nowrap ${selection.daxianIndex === p.index ? 'bg-green-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                                            className={`px - 2 py - 1 rounded whitespace - nowrap ${selection.daxianIndex === p.index ? 'bg-green-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
                                             onClick={() => handleSelection('daxian', p.index)}
                                         >
                                             {p.decadal.range[0]}-{p.decadal.range[1]}<br />
@@ -644,7 +657,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                                             return years.map(year => (
                                                 <button
                                                     key={year}
-                                                    className={`px-2 py-1 rounded whitespace-nowrap ${selection.year === year ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                                                    className={`px - 2 py - 1 rounded whitespace - nowrap ${selection.year === year ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
                                                     onClick={() => handleSelection('year', year)}
                                                 >
                                                     {year}年<br />
@@ -682,7 +695,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                                         {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
                                             <button
                                                 key={month}
-                                                className={`px-2 py-1 rounded whitespace-nowrap text-center ${selection.month === month ? 'bg-yellow-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                                                className={`px - 2 py - 1 rounded whitespace - nowrap text - center ${selection.month === month ? 'bg-yellow-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
                                                 onClick={() => handleSelection('month', month)}
                                             >
                                                 {month}月
@@ -705,7 +718,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                                             return Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
                                                 <button
                                                     key={day}
-                                                    className={`px-1 py-1 rounded whitespace-nowrap text-center text-[10px] ${selection.day === day ? 'bg-purple-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                                                    className={`px - 1 py - 1 rounded whitespace - nowrap text - center text - [10px] ${selection.day === day ? 'bg-purple-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
                                                     onClick={() => handleSelection('day', day)}
                                                 >
                                                     {day}
@@ -726,7 +739,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                                         {EARTHLY_BRANCHES.map((branch, idx) => (
                                             <button
                                                 key={branch}
-                                                className={`px-2 py-1 rounded whitespace-nowrap flex flex-col items-center ${selection.hour === idx ? 'bg-cyan-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                                                className={`px - 2 py - 1 rounded whitespace - nowrap flex flex - col items - center ${selection.hour === idx ? 'bg-cyan-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
                                                 onClick={() => handleSelection('hour', idx)}
                                             >
                                                 <span>{branch}时</span>
@@ -805,16 +818,16 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                                     <span>⬅️</span> 返回上一级
                                 </button>
                                 <button onClick={() => handleGeneratePrompt('baby_leader')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-yellow-500 border border-transparent hover:border-yellow-500/30 transition-all">
-                                    <span className="text-xl">👑</span> 领导型宝宝
+                                    <span className="text-xl">👑</span> 帝王起居注 (领导型)
                                 </button>
                                 <button onClick={() => handleGeneratePrompt('baby_iq')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-blue-400 border border-transparent hover:border-blue-500/30 transition-all">
-                                    <span className="text-xl">🧠</span> 高IQ宝宝
+                                    <span className="text-xl">🧠</span> 文昌起居注 (高IQ)
                                 </button>
                                 <button onClick={() => handleGeneratePrompt('baby_sport')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-red-400 border border-transparent hover:border-red-500/30 transition-all">
-                                    <span className="text-xl">🏅</span> 体育型宝宝
+                                    <span className="text-xl">💪</span> 武曲起居注 (体育型)
                                 </button>
                                 <button onClick={() => handleGeneratePrompt('baby_wealth')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-green-400 border border-transparent hover:border-green-500/30 transition-all">
-                                    <span className="text-xl">💰</span> 搞钱型宝宝
+                                    <span className="text-xl">💰</span> 陶朱起居注 (搞钱型)
                                 </button>
                             </>
                         )}
@@ -886,9 +899,17 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
 
                             <button
                                 onClick={handleConfirmPartner}
-                                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 rounded-lg shadow-lg hover:opacity-90 transition-opacity mt-2"
+                                disabled={isCalculating}
+                                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 rounded-lg shadow-lg hover:opacity-90 transition-opacity mt-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                             >
-                                生成双人分析指令
+                                {isCalculating ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                        <span>正在遍历未来120天命盘...</span>
+                                    </>
+                                ) : (
+                                    <span>生成双人分析指令</span>
+                                )}
                             </button>
                         </div>
                     </div>

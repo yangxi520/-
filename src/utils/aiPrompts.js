@@ -259,63 +259,78 @@ export const BABY_PROMPT_TEMPLATE = `**--- 👶 紫微斗数备孕择吉（起�
 
 **### 1. 核心目标：打造【{{TYPE_NAME}}】宝宝**
 *   **目标天赋：** {{TYPE_DESC}}
-*   **理想命盘特征：**
-    *   **命宫/身宫主星：** {{TARGET_STARS}}
-    *   **三方四正：** 汇聚吉星（如左辅右弼、天魁天钺、文昌文曲、禄存）。
-    *   **避坑雷区：** **必须避开严重的刑克格局**（如命宫/福德宫见地空、地劫、化忌冲破，或形成“铃昌陀武”等恶格）。
+*   **理想命盘特征：** {{TARGET_STARS}}
 
-**### 2. 黄金受孕窗口期推算**
-*   **计算逻辑：** 请根据当前时间（{{CURRENT_TIME}}）往后推算未来3-6个月内的最佳受孕时机（受孕后约280天出生）。
-*   **推荐时间段：**
-    *   **日期范围：** （例如：202X年X月X日 - X月X日）
-    *   **最佳时辰：** （例如：亥时 21:00-23:00）
-*   **择吉理由：** 解释为何该时间段受孕（即对应出生的紫微盘）最符合上述目标。（例如：“此时受孕，预产期约为X月，届时紫微星在午宫坐命，官禄宫见...”）
+**### 2. 黄金受孕窗口期推算 (程序测算结论)**
+经后台算法遍历未来 120 天受孕窗口，筛选出以下 Top 3 最佳受孕时机（已反推预产期命盘）：
+
+{{BEST_DATES_LIST}}
 
 **### 3. 亲子缘分与家庭和谐**
-*   **父母缘分：** 请结合父母的星盘数据（如有），优先选择与父母缘分深厚、利于亲子关系的时间段。避免宝宝命盘严重克泄父母。
+*   **父母缘分：** 请结合父母的星盘数据，优先选择与父母缘分深厚、利于亲子关系的时间段。避免宝宝命盘严重克泄父母。
 
 **### 4. 备孕建议与起居注**
 *   **风水助运：** 卧室床位或摆设建议。
 *   **心情与饮食：** 针对该类型宝宝的备孕期特别建议。
 
-**--- 父母星盘数据（参考） ---**
+**--- 父母星盘全量数据 (用于深度合盘) ---**
 {{PARENTS_DATA}}
 `;
 
-export const generateBabyPrompt = (type, basicInfo, horoscope, partnerHoroscope) => {
+// Helper to dump full palace data
+const dumpPalaceData = (palace) => {
+  const major = palace.majorStars.map(s => `${s.name}(${s.brightness})${s.mutagen ? '[' + s.mutagen + ']' : ''}`).join('、') || '无';
+  const minor = palace.minorStars.map(s => s.name).join('、') || '无';
+  const adjs = palace.adjectiveStars.map(s => s.name).join('、') || '无';
+  return `  - ${palace.name}：主星[${major}] | 辅星[${minor}] | 杂曜[${adjs}]`;
+};
+
+const dumpHoroscope = (horoscope, label) => {
+  if (!horoscope) return `${label}：数据缺失\n`;
+  let dump = `${label} (${horoscope.gender === 'male' ? '男' : '女'}, 五行局: ${horoscope.fiveElementsClass})：\n`;
+  horoscope.palaces.forEach(p => {
+    dump += dumpPalaceData(p) + '\n';
+  });
+  return dump;
+};
+
+export const generateBabyPrompt = (type, basicInfo, horoscope, partnerHoroscope, bestDates = []) => {
   const typeMap = {
-    'leader': { name: '领导型', desc: '具备帝王之气、领袖风范、管理能力，适合从政或企业高管。', stars: '紫微、天府、太阳（旺）、武曲' },
-    'iq': { name: '高IQ型', desc: '智商超群、逻辑严密、学霸体质，适合科研、学术或智囊工作。', stars: '天机、天梁、太阴、巨门（化权/禄）' },
-    'sport': { name: '体育型', desc: '体能卓越、精力旺盛、动作协调，适合竞技体育、军警或舞蹈。', stars: '七杀、破军、贪狼、武曲' },
-    'wealth': { name: '搞钱型', desc: '财商极高、对金钱敏感、善于理财，适合经商、金融或投资。', stars: '武曲、太阴、禄存、化禄' }
+    'leader': { name: '领导型 (帝王起居注)', desc: '具备帝王之气、领袖风范、管理能力，适合从政或企业高管。', stars: '紫微、天府、太阳（旺）、武曲' },
+    'iq': { name: '高IQ型 (文昌起居注)', desc: '智商超群、逻辑严密、学霸体质，适合科研、学术或智囊工作。', stars: '天机、天梁、太阴、巨门（化权/禄）' },
+    'sport': { name: '体育型 (武曲起居注)', desc: '体能卓越、精力旺盛、动作协调，适合竞技体育、军警或舞蹈。', stars: '七杀、破军、贪狼、武曲' },
+    'wealth': { name: '搞钱型 (陶朱起居注)', desc: '财商极高、对金钱敏感、善于理财，适合经商、金融或投资。', stars: '武曲、太阴、禄存、化禄' }
   };
 
   const target = typeMap[type] || typeMap['leader'];
   const currentTime = new Date().toLocaleString();
 
-  // Format parents data (using current user's horoscope as "Parent 1")
-  let parentsData = "【父/母命盘 1 (用户)】\n";
-  parentsData += `性别：${basicInfo.gender === 'male' ? '男' : '女'}\n`;
-  parentsData += `五行局：${horoscope.fiveElementsClass}\n`;
-  parentsData += `命宫主星：${horoscope.palaces.find(p => p.name === '命宫')?.majorStars.map(s => s.name).join('、') || '无'}\n`;
-  parentsData += `夫妻宫主星：${horoscope.palaces.find(p => p.name === '夫妻宫')?.majorStars.map(s => s.name).join('、') || '无'}\n`;
-  parentsData += `子女宫主星：${horoscope.palaces.find(p => p.name === '子女宫')?.majorStars.map(s => s.name).join('、') || '无'}\n\n`;
-
-  if (partnerHoroscope) {
-    parentsData += "【父/母命盘 2 (配偶)】\n";
-    parentsData += `性别：${partnerHoroscope.gender === 'male' ? '男' : '女'}\n`;
-    parentsData += `五行局：${partnerHoroscope.fiveElementsClass}\n`;
-    parentsData += `命宫主星：${partnerHoroscope.palaces.find(p => p.name === '命宫')?.majorStars.map(s => s.name).join('、') || '无'}\n`;
-    parentsData += `夫妻宫主星：${partnerHoroscope.palaces.find(p => p.name === '夫妻宫')?.majorStars.map(s => s.name).join('、') || '无'}\n`;
-    parentsData += `子女宫主星：${partnerHoroscope.palaces.find(p => p.name === '子女宫')?.majorStars.map(s => s.name).join('、') || '无'}\n`;
+  // Format Best Dates
+  let bestDatesList = "";
+  if (bestDates && bestDates.length > 0) {
+    bestDates.forEach((d, i) => {
+      bestDatesList += `**方案 ${i + 1}：**\n`;
+      bestDatesList += `   - **建议受孕日期：** ${d.conceptionDate}\n`;
+      bestDatesList += `   - **预产期 (参考)：** ${d.birthDate}\n`;
+      bestDatesList += `   - **核心格局得分：** ${d.score}分\n`;
+      bestDatesList += `   - **命盘特征：** ${d.desc}\n\n`;
+    });
   } else {
-    parentsData += "【父/母命盘 2 (配偶)】\n(用户未提供配偶数据，请根据单方命盘推算)\n";
+    bestDatesList = "(正在计算中，请稍后...)\n";
+  }
+
+  // Format parents data (Full Dump)
+  let parentsData = dumpHoroscope(horoscope, "【父/母命盘 1 (用户)】") + "\n";
+  if (partnerHoroscope) {
+    parentsData += dumpHoroscope(partnerHoroscope, "【父/母命盘 2 (配偶)】");
+  } else {
+    parentsData += "【父/母命盘 2 (配偶)】\n(用户未提供配偶数据)\n";
   }
 
   return BABY_PROMPT_TEMPLATE
     .replace(/{{TYPE_NAME}}/g, target.name)
     .replace(/{{TYPE_DESC}}/g, target.desc)
     .replace(/{{TARGET_STARS}}/g, target.stars)
-    .replace(/{{CURRENT_TIME}}/g, currentTime)
+    .replace(/{{BEST_DATES_LIST}}/g, bestDatesList)
     .replace(/{{PARENTS_DATA}}/g, parentsData);
 };
