@@ -419,6 +419,9 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 alert(`请先选择${type === 'yearly' ? '流年' : type === 'monthly' ? '流月' : type === 'daily' ? '流日' : '流时'}！`);
                 return;
             }
+        } else if (type.startsWith('baby_')) {
+            const babyType = type.replace('baby_', '');
+            prompt = generateBabyPrompt(babyType, basicInfo, horoscope);
         }
 
         navigator.clipboard.writeText(prompt).then(() => {
