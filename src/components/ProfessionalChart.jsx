@@ -58,6 +58,21 @@ const SI_HUA_MAP = {
 const HEAVENLY_STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
 const EARTHLY_BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
 
+const TIME_RANGES = [
+    "23:00-01:00", // Zi
+    "01:00-03:00", // Chou
+    "03:00-05:00", // Yin
+    "05:00-07:00", // Mao
+    "07:00-09:00", // Chen
+    "09:00-11:00", // Si
+    "11:00-13:00", // Wu
+    "13:00-15:00", // Wei
+    "15:00-17:00", // Shen
+    "17:00-19:00", // You
+    "19:00-21:00", // Xu
+    "21:00-23:00"  // Hai
+];
+
 // Helper: Get Year Stem (0-9 index)
 const getYearStemIndex = (year) => (year - 4) % 10;
 
@@ -645,10 +660,11 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                                         {EARTHLY_BRANCHES.map((branch, idx) => (
                                             <button
                                                 key={branch}
-                                                className={`px-2 py-1 rounded whitespace-nowrap ${selection.hour === idx ? 'bg-cyan-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
+                                                className={`px-2 py-1 rounded whitespace-nowrap flex flex-col items-center ${selection.hour === idx ? 'bg-cyan-500 text-white' : 'text-gray-700 hover:bg-gray-100'}`}
                                                 onClick={() => handleSelection('hour', idx)}
                                             >
-                                                {branch}时
+                                                <span>{branch}时</span>
+                                                <span className="text-[9px] opacity-80">{TIME_RANGES[idx]}</span>
                                             </button>
                                         ))}
                                     </div>
