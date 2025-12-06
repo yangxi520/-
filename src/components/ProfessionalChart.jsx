@@ -270,36 +270,50 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
         });
     };
 
-    const getPalaceByBranch = (branch) => {
-        return palaces.find(p => p.earthlyBranch === branch);
-    };
-
+    // Helper to render a palace cell
     const renderPalace = (branch) => {
-        const palace = getPalaceByBranch(branch);
-        if (!palace) return null;
+        const palace = palaces.find(p => p.earthlyBranch === branch);
+        if (!palace) return <div className="w-full h-full bg-stone-50" />;
 
-        const isFocused = focusedIndex === palace.index;
+        const isFocused = focusedIndex !== null && palaces[focusedIndex]?.earthlyBranch === branch;
+
+        // Determine if this palace is Ming or Shen
+        const isMing = palace.name === '命宫';
+        const isShen = palace.isBodyPalace;
 
         return (
             <div
-                className={`h - full w - full border ${isFocused ? 'border-2 border-red-500 z-10' : 'border-gray-300'} bg - white relative p - 1 text - xs flex flex - col justify - between transition - all cursor - pointer hover: bg - slate - 50`}
-                onClick={() => setFocusedIndex(palace.index)}
+                className={`w-full h-full relative p-1 flex flex-col justify-between transition-all duration-200 cursor-pointer
+                    ${isFocused ? 'bg-amber-50 ring-2 ring-amber-400 z-10 shadow-lg' : 'bg-stone-50 hover:bg-stone-100'}
+                    ${isMing ? 'bg-red-50/30' : ''}
+                `}
+                onClick={() => setFocusedIndex(palaces.findIndex(p => p.earthlyBranch === branch))}
             >
-                {/* Major Stars */}
-                <div className="flex flex-col items-start w-full">
+                {/* Top Left: Major Stars */}
+                <div className="flex flex-col items-start gap-0.5">
                     {palace.majorStars.map((star, idx) => {
-                        const siHuaBadges = getActiveSiHua(star.name);
-                        return (
-                            <div key={idx} className={`font - bold ${star.brightness === '庙' || star.brightness === '旺' ? 'text-red-600' : 'text-blue-600'} flex items - center flex - wrap gap - 0.5`}>
-                                <span>{star.name}</span>
-                                <span className="text-[10px] font-normal text-gray-500 scale-90 origin-left">{star.brightness}</span>
+                        // Color logic for Major Stars
+                        const starColor = star.mutagen === '忌' ? 'text-red-600' :
+                            star.mutagen === '禄' ? 'text-green-600' :
+                                star.mutagen === '权' ? 'text-blue-600' :
+                                    star.mutagen === '科' ? 'text-amber-600' :
+                                        'text-slate-800'; // Default dark grey
 
-                                {/* Si Hua Badges */}
-                                {siHuaBadges && siHuaBadges.map((badge, bIdx) => (
-                                    <span key={bIdx} className={`${badge.color} text - white px - [1px] rounded text - [8px] scale - 90 flex items - center justify - center min - w - [12px]`}>
-                                        {badge.type}
+                        return (
+                            <div key={idx} className={`flex items-center gap-0.5 font-serif font-bold text-sm ${starColor}`}>
+                                <span>{star.name}</span>
+                                <span className="text-[9px] font-normal text-gray-400 scale-75 origin-left">{star.brightness}</span>
+                                {star.mutagen && (
+                                    <span className={`
+                                        text-[9px] px-0.5 rounded-sm text-white scale-90 origin-left
+                                        ${star.mutagen === '禄' ? 'bg-green-600' : ''}
+                                        ${star.mutagen === '权' ? 'bg-blue-600' : ''}
+                                        ${star.mutagen === '科' ? 'bg-amber-500' : ''}
+                                        ${star.mutagen === '忌' ? 'bg-red-600' : ''}
+                                    `}>
+                                        {star.mutagen}
                                     </span>
-                                ))}
+                                )}
                             </div>
                         );
                     })}
@@ -321,8 +335,10 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
 
                     {/* Palace Name & Stem/Branch */}
                     <div className="text-right">
-                        <div className="text-purple-600 font-bold">{palace.name}</div>
-                        <div className="text-gray-400 text-[10px]">{palace.heavenlyStem}{palace.earthlyBranch}</div>
+                        <div className={`font-serif font-bold text-sm ${isMing ? 'text-red-700' : isShen ? 'text-amber-700' : 'text-slate-700'}`}>
+                            {palace.name}
+                        </div>
+                        <div className="text-stone-400 text-[10px] font-mono">{palace.heavenlyStem}{palace.earthlyBranch}</div>
                     </div>
                 </div>
             </div>
@@ -491,19 +507,19 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
     };
 
     return (
-        <div className="w-full max-w-3xl mx-auto bg-slate-100 text-slate-900 p-1 select-none flex flex-col gap-2 overflow-x-auto">
+        <div className="w-full max-w-3xl mx-auto bg-stone-200 text-slate-900 p-1 select-none flex flex-col gap-2 overflow-x-auto shadow-2xl rounded-sm">
             {/* Chart Grid - Min width to ensure readability on mobile */}
-            <div className="aspect-square grid grid-cols-4 grid-rows-4 gap-[1px] bg-gray-300 border border-gray-400 relative min-w-[600px] md:min-w-0">
+            <div className="aspect-square grid grid-cols-4 grid-rows-4 gap-[1px] bg-stone-300 border-2 border-stone-400 relative min-w-[600px] md:min-w-0 shadow-inner">
                 {renderConnections()}
                 {/* Row 1 */}
-                <div className="bg-white">{renderPalace('巳')}</div>
-                <div className="bg-white">{renderPalace('午')}</div>
-                <div className="bg-white">{renderPalace('未')}</div>
-                <div className="bg-white">{renderPalace('申')}</div>
+                <div className="bg-stone-50">{renderPalace('巳')}</div>
+                <div className="bg-stone-50">{renderPalace('午')}</div>
+                <div className="bg-stone-50">{renderPalace('未')}</div>
+                <div className="bg-stone-50">{renderPalace('申')}</div>
 
                 {/* Row 2 */}
-                <div className="bg-white">{renderPalace('辰')}</div>
-                <div className="col-span-2 row-span-2 bg-[#F5F7FA] flex flex-col relative overflow-hidden border border-gray-200 m-[1px]">
+                <div className="bg-stone-50">{renderPalace('辰')}</div>
+                <div className="col-span-2 row-span-2 bg-stone-100 flex flex-col relative overflow-hidden border border-stone-200 m-[1px] shadow-inner">
                     {/* Background Watermark (Optional, simplified for now) */}
                     <div className="absolute inset-0 pointer-events-none opacity-5">
                         <svg viewBox="0 0 100 100" className="w-full h-full">
@@ -600,18 +616,18 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                         </div>
                     </div>
                 </div>
-                <div className="bg-white">{renderPalace('酉')}</div>
+                <div className="bg-stone-50">{renderPalace('酉')}</div>
 
                 {/* Row 3 */}
-                <div className="bg-white">{renderPalace('卯')}</div>
+                <div className="bg-stone-50">{renderPalace('卯')}</div>
                 {/* Center spans here */}
-                <div className="bg-white">{renderPalace('戌')}</div>
+                <div className="bg-stone-50">{renderPalace('戌')}</div>
 
                 {/* Row 4 */}
-                <div className="bg-white">{renderPalace('寅')}</div>
-                <div className="bg-white">{renderPalace('丑')}</div>
-                <div className="bg-white">{renderPalace('子')}</div>
-                <div className="bg-white">{renderPalace('亥')}</div>
+                <div className="bg-stone-50">{renderPalace('寅')}</div>
+                <div className="bg-stone-50">{renderPalace('丑')}</div>
+                <div className="bg-stone-50">{renderPalace('子')}</div>
+                <div className="bg-stone-50">{renderPalace('亥')}</div>
             </div>
 
             {/* Cascading Timeline Table */}
