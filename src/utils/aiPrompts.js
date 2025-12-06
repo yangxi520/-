@@ -300,43 +300,22 @@ const dumpHoroscope = (horoscope, label) => {
   return dump;
 };
 
-export const generateBabyPrompt = (type, basicInfo, horoscope, partnerHoroscope, bestDates = []) => {
-  const typeMap = {
-    'leader': { name: '领导型 (帝王起居注)', desc: '具备帝王之气、领袖风范、管理能力，适合从政或企业高管。', stars: '紫微、天府、太阳（旺）、武曲' },
-    'iq': { name: '高IQ型 (文昌起居注)', desc: '智商超群、逻辑严密、学霸体质，适合科研、学术或智囊工作。', stars: '天机、天梁、太阴、巨门（化权/禄）' },
-    'sport': { name: '体育型 (武曲起居注)', desc: '体能卓越、精力旺盛、动作协调，适合竞技体育、军警或舞蹈。', stars: '七杀、破军、贪狼、武曲' },
-    'wealth': { name: '搞钱型 (陶朱起居注)', desc: '财商极高、对金钱敏感、善于理财，适合经商、金融或投资。', stars: '武曲、太阴、禄存、化禄' }
-  };
+export const generateBabyPrompt = (type, basicInfo, horoscope, partnerHoroscope, bestDates) => {
+  const typeName = type === 'leader' ? '帝王之命' : type === 'iq' ? '文昌魁首' : type === 'sport' ? '武曲将星' : '陶朱富豪';
+  const typeDesc = type === 'leader' ? '具备领导力、决断力，适合从政或管理' : type === 'iq' ? '智商超群、学业优秀，适合科研或学术' : type === 'sport' ? '体魄强健、行动力强，适合竞技或军警' : '财运亨通、商业嗅觉敏锐，适合经商';
+  const targetStars = type === 'leader' ? '紫微、天府、太阳(旺)、天相，辅以左辅右弼' : type === 'iq' ? '天机、天梁、太阴、巨门，辅以文昌文曲' : type === 'sport' ? '七杀、破军、贪狼、武曲，辅以火星铃星' : '武曲、太阴、天府、贪狼，辅以禄存化禄';
 
-  const target = typeMap[type] || typeMap['leader'];
-  const currentTime = new Date().toLocaleString();
+  const bestDatesList = bestDates.map((d, i) => {
+    return `${i + 1}. **${d.date} ${d.timeRange}** (评分: ${d.score} ${d.stars})\n   - **格局特征：** ${d.desc}\n   - **预产期(参考)：** ${d.birthDate}`;
+  }).join('\n\n');
 
-  // Format Best Dates
-  let bestDatesList = "";
-  if (bestDates && bestDates.length > 0) {
-    bestDates.forEach((d, i) => {
-      bestDatesList += `**方案 ${i + 1}：**\n`;
-      bestDatesList += `   - **建议受孕日期：** ${d.conceptionDate}\n`;
-      bestDatesList += `   - **预产期 (参考)：** ${d.birthDate}\n`;
-      bestDatesList += `   - **核心格局评分：** ${d.stars} (综合得分: ${d.score})\n`;
-      bestDatesList += `   - **命盘特征：** ${d.desc}\n\n`;
-    });
-  } else {
-    bestDatesList = "(正在计算中，请稍后...)\n";
-  }
-
-  // Format parents data (Full Dump)
-  let parentsData = dumpHoroscope(horoscope, "【父/母命盘 1 (用户)】") + "\n";
-  if (partnerHoroscope) {
-    parentsData += dumpHoroscope(partnerHoroscope, "【父/母命盘 2 (配偶)】");
-  } else {
-    parentsData += "【父/母命盘 2 (配偶)】\n(用户未提供配偶数据)\n";
-  }
+  const parentsData = dumpHoroscope(horoscope, '父亲/母亲(本人)') + '\n' + dumpHoroscope(partnerHoroscope, '母亲/父亲(配偶)');
 
   return BABY_PROMPT_TEMPLATE
-    .replace(/{{TYPE_NAME}}/g, target.name)
-    .replace(/{{TYPE_DESC}}/g, target.desc)
-    .replace(/{{TARGET_STARS}}/g, target.stars)
-    .replace(/{{BEST_DATES_LIST}}/g, bestDatesList)
-    .replace(/{{PARENTS_DATA}}/g, parentsData);
+    .replace(/{{TYPE_NAME}}/g, typeName)
+    .replace('{{TYPE_DESC}}', typeDesc)
+    .replace('{{TARGET_STARS}}', targetStars)
+    .replace('{{BEST_DATES_LIST}}', bestDatesList)
+    .replace('{{PARENTS_DATA}}', parentsData);
 };
+
