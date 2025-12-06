@@ -11,7 +11,9 @@ import {
     generateBabyPrompt
 } from '../utils/aiPrompts';
 import { findBestConceptionDates } from '../utils/babySelector';
-import { Sparkles, HelpCircle } from "lucide-react";
+import { Sparkles, HelpCircle, Coffee } from "lucide-react";
+import wechatPayImg from '../assets/wechat_pay.jpg';
+import alipayImg from '../assets/alipay.jpg';
 
 // Helper to get palace position in 4x4 grid (0-11 index to grid coordinates)
 // Standard Ziwei grid:
@@ -99,23 +101,11 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
     // Let's make it independent but initialized by Da Xian selection.
     const [focusedIndex, setFocusedIndex] = React.useState(null);
 
-    // Active Layer Visibility State (Toggle)
-    const [activeLayers, setActiveLayers] = React.useState({
-        origin: true,
-        decadal: true,
-        yearly: true,
-        monthly: true,
-        daily: true,
-        hourly: true
-    });
-
-    // AI Menu State
+    // State for AI Menu
     const [showAiMenu, setShowAiMenu] = React.useState(false);
     const [menuView, setMenuView] = React.useState('main'); // 'main', 'fortune', 'baby'
-    // Lunar Tip State
-    const [showLunarTip, setShowLunarTip] = React.useState(false);
 
-    // Partner Modal State
+    // State for Partner Modal (Conception Planner)
     const [showPartnerModal, setShowPartnerModal] = React.useState(false);
     const [selectedBabyType, setSelectedBabyType] = React.useState(null);
     const [partnerInfo, setPartnerInfo] = React.useState({
@@ -970,7 +960,66 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                     </div>
                 </div>
             )}
-            {/* Debug Info Removed */}
+            {/* Donation Modal */}
+            {showDonationModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDonationModal(false)}>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                        <div className="bg-gradient-to-r from-red-500 to-orange-500 p-4 text-white flex justify-between items-center">
+                            <h3 className="font-bold text-lg flex items-center gap-2">
+                                <Coffee className="w-5 h-5" />
+                                随喜打赏 (Buy me a coffee)
+                            </h3>
+                            <button onClick={() => setShowDonationModal(false)} className="hover:bg-white/20 rounded-full p-1">
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
+                        <div className="p-6 flex flex-col items-center gap-6">
+                            <p className="text-center text-gray-600 text-sm">
+                                如果觉得这个工具对您有帮助，<br />欢迎请作者喝杯咖啡，支持持续开发！☕️
+                            </p>
+
+                            <div className="flex justify-center gap-4 w-full">
+                                <div className="flex flex-col items-center gap-2 flex-1">
+                                    <div className="relative group">
+                                        <img src={wechatPayImg} alt="微信支付" className="w-full rounded-lg shadow-md border border-green-100" />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-lg" />
+                                    </div>
+                                    <span className="text-xs font-bold text-green-600 flex items-center gap-1">
+                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M8.5,16.5c0-4.7,4.7-8.5,10.5-8.5c5.8,0,10.5,3.8,10.5,8.5c0,4.7-4.7,8.5-10.5,8.5c-1.3,0-2.6-0.2-3.7-0.6 c-0.5-0.2-1-0.2-1.5,0l-3.2,1.6c-0.6,0.3-1.2-0.3-1-0.9l0.8-3.3c0.1-0.5,0-1-0.3-1.4C8.9,19.1,8.5,17.8,8.5,16.5z M3,18.5 c0-4.1,4.1-7.5,9.2-7.5c0.6,0,1.2,0.1,1.8,0.2C13.2,7.3,9.8,4.5,5.5,4.5C2.5,4.5,0,6.5,0,9c0,1.5,0.9,2.8,2.3,3.6 c0.3,0.2,0.4,0.6,0.3,0.9l-0.6,2.3c-0.2,0.6,0.5,1.1,1,0.8l2.5-1.2c0.4-0.2,0.8-0.2,1.2,0c0.9,0.5,2,0.8,3.1,0.8 C6.8,15.7,4.7,14.4,3,12.6C3,12.6,3,18.5,3,18.5z" /></svg>
+                                        微信支付
+                                    </span>
+                                </div>
+                                <div className="flex flex-col items-center gap-2 flex-1">
+                                    <div className="relative group">
+                                        <img src={alipayImg} alt="支付宝" className="w-full rounded-lg shadow-md border border-blue-100" />
+                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors rounded-lg" />
+                                    </div>
+                                    <span className="text-xs font-bold text-blue-600 flex items-center gap-1">
+                                        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24"><path d="M18.7,6.2c0.5,0,0.8-0.4,0.8-0.8s-0.4-0.8-0.8-0.8h-4.5V3.3c0-0.5-0.4-0.8-0.8-0.8s-0.8,0.4-0.8,0.8v1.3H8.1 c-0.5,0-0.8,0.4-0.8,0.8s0.4,0.8,0.8,0.8h8.2c-0.5,2.4-1.9,4.5-3.8,5.9c-1.2-1.1-2.1-2.4-2.6-3.8c-0.2-0.4-0.7-0.6-1.1-0.4 c-0.4,0.2-0.6,0.7-0.4,1.1c0.7,1.8,1.8,3.4,3.3,4.7c-1.7,0.9-3.6,1.4-5.6,1.4c-0.5,0-0.8,0.4-0.8,0.8s0.4,0.8,0.8,0.8 c2.3,0,4.5-0.6,6.4-1.7c1.6,1.1,3.5,1.7,5.5,1.7c0.5,0,0.8-0.4,0.8-0.8s-0.4-0.8-0.8-0.8c-1.7,0-3.3-0.5-4.7-1.4 c2.1-1.3,3.6-3.4,4.2-5.9H18.7z" /></svg>
+                                        支付宝
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="text-[10px] text-gray-400 text-center">
+                                感谢您的每一份支持，都将化作代码的动力！❤️
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Floating Donation Button */}
+            <button
+                onClick={() => setShowDonationModal(true)}
+                className="fixed bottom-6 right-6 bg-gradient-to-r from-red-500 to-orange-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all z-40 flex items-center gap-2 group"
+                title="打赏作者"
+            >
+                <Coffee className="w-5 h-5" />
+                <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap text-sm font-bold">
+                    请喝咖啡
+                </span>
+            </button>
         </div>
     );
 }
