@@ -109,6 +109,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
 
     // AI Menu State
     const [showAiMenu, setShowAiMenu] = React.useState(false);
+    const [menuView, setMenuView] = React.useState('main'); // 'main', 'fortune', 'baby'
     // Lunar Tip State
     const [showLunarTip, setShowLunarTip] = React.useState(false);
 
@@ -708,42 +709,68 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
             {showAiMenu && (
                 <div className="absolute bottom-20 left-6 z-50 w-64 bg-black/90 backdrop-blur-xl border border-purple-500/30 rounded-xl shadow-2xl p-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
                     <div className="space-y-2">
-                        <button onClick={() => handleGeneratePrompt('scumbag')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-gray-200 border border-transparent hover:border-purple-500/30 transition-all">
-                            <span className="text-xl">🕵️</span> 一键鉴渣话术
-                        </button>
-                        <button onClick={() => handleGeneratePrompt('marriage')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-pink-300 border border-transparent hover:border-pink-500/30 transition-all">
-                            <span className="text-xl">💍</span> 何时结婚
-                        </button>
-                        <button onClick={() => handleGeneratePrompt('wealth')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-yellow-300 border border-transparent hover:border-yellow-500/30 transition-all">
-                            <span className="text-xl">💰</span> 何时发财
-                        </button>
-                        <div className="h-px bg-white/10 my-2"></div>
-                        <button onClick={() => handleGeneratePrompt('yearly')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-blue-300 border border-transparent hover:border-blue-500/30 transition-all">
-                            <span className="text-xl">📅</span> 今年运势
-                        </button>
-                        <button onClick={() => handleGeneratePrompt('monthly')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-yellow-300 border border-transparent hover:border-yellow-500/30 transition-all">
-                            <span className="text-xl">🌙</span> 今月运势
-                        </button>
-                        <button onClick={() => handleGeneratePrompt('daily')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-purple-300 border border-transparent hover:border-purple-500/30 transition-all">
-                            <span className="text-xl">☀️</span> 今日运势
-                        </button>
-                        <button onClick={() => handleGeneratePrompt('hourly')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-all">
-                            <span className="text-xl">⏰</span> 今时运势
-                        </button>
-                        <div className="h-px bg-white/10 my-2"></div>
-                        <div className="px-4 py-1 text-xs text-gray-400 font-bold">👶 备孕择吉 (起居注)</div>
-                        <button onClick={() => handleGeneratePrompt('baby_leader')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-yellow-500 border border-transparent hover:border-yellow-500/30 transition-all">
-                            <span className="text-xl">👑</span> 领导型宝宝
-                        </button>
-                        <button onClick={() => handleGeneratePrompt('baby_iq')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-blue-400 border border-transparent hover:border-blue-500/30 transition-all">
-                            <span className="text-xl">🧠</span> 高IQ宝宝
-                        </button>
-                        <button onClick={() => handleGeneratePrompt('baby_sport')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-red-400 border border-transparent hover:border-red-500/30 transition-all">
-                            <span className="text-xl">🏅</span> 体育型宝宝
-                        </button>
-                        <button onClick={() => handleGeneratePrompt('baby_wealth')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-green-400 border border-transparent hover:border-green-500/30 transition-all">
-                            <span className="text-xl">💰</span> 搞钱型宝宝
-                        </button>
+                        {menuView === 'main' && (
+                            <>
+                                <button onClick={() => handleGeneratePrompt('scumbag')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-gray-200 border border-transparent hover:border-purple-500/30 transition-all">
+                                    <span className="text-xl">🕵️</span> 一键鉴渣话术
+                                </button>
+                                <button onClick={() => handleGeneratePrompt('marriage')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-pink-300 border border-transparent hover:border-pink-500/30 transition-all">
+                                    <span className="text-xl">💍</span> 何时结婚
+                                </button>
+                                <button onClick={() => handleGeneratePrompt('wealth')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-yellow-300 border border-transparent hover:border-yellow-500/30 transition-all">
+                                    <span className="text-xl">💰</span> 何时发财
+                                </button>
+                                <div className="h-px bg-white/10 my-2"></div>
+                                <button onClick={() => setMenuView('fortune')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center justify-between text-sm font-bold text-blue-300 border border-transparent hover:border-blue-500/30 transition-all">
+                                    <div className="flex items-center gap-3"><span className="text-xl">📅</span> 运势分析</div>
+                                    <span>›</span>
+                                </button>
+                                <button onClick={() => setMenuView('baby')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center justify-between text-sm font-bold text-green-300 border border-transparent hover:border-green-500/30 transition-all">
+                                    <div className="flex items-center gap-3"><span className="text-xl">👶</span> 起居注 (备孕)</div>
+                                    <span>›</span>
+                                </button>
+                            </>
+                        )}
+
+                        {menuView === 'fortune' && (
+                            <>
+                                <button onClick={() => setMenuView('main')} className="w-full text-left px-4 py-2 rounded hover:bg-white/10 flex items-center gap-2 text-xs font-bold text-gray-400 mb-2">
+                                    <span>⬅️</span> 返回上一级
+                                </button>
+                                <button onClick={() => handleGeneratePrompt('yearly')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-blue-300 border border-transparent hover:border-blue-500/30 transition-all">
+                                    <span className="text-xl">📅</span> 今年运势
+                                </button>
+                                <button onClick={() => handleGeneratePrompt('monthly')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-yellow-300 border border-transparent hover:border-yellow-500/30 transition-all">
+                                    <span className="text-xl">🌙</span> 今月运势
+                                </button>
+                                <button onClick={() => handleGeneratePrompt('daily')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-purple-300 border border-transparent hover:border-purple-500/30 transition-all">
+                                    <span className="text-xl">☀️</span> 今日运势
+                                </button>
+                                <button onClick={() => handleGeneratePrompt('hourly')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-all">
+                                    <span className="text-xl">⏰</span> 今时运势
+                                </button>
+                            </>
+                        )}
+
+                        {menuView === 'baby' && (
+                            <>
+                                <button onClick={() => setMenuView('main')} className="w-full text-left px-4 py-2 rounded hover:bg-white/10 flex items-center gap-2 text-xs font-bold text-gray-400 mb-2">
+                                    <span>⬅️</span> 返回上一级
+                                </button>
+                                <button onClick={() => handleGeneratePrompt('baby_leader')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-yellow-500 border border-transparent hover:border-yellow-500/30 transition-all">
+                                    <span className="text-xl">👑</span> 领导型宝宝
+                                </button>
+                                <button onClick={() => handleGeneratePrompt('baby_iq')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-blue-400 border border-transparent hover:border-blue-500/30 transition-all">
+                                    <span className="text-xl">🧠</span> 高IQ宝宝
+                                </button>
+                                <button onClick={() => handleGeneratePrompt('baby_sport')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-red-400 border border-transparent hover:border-red-500/30 transition-all">
+                                    <span className="text-xl">🏅</span> 体育型宝宝
+                                </button>
+                                <button onClick={() => handleGeneratePrompt('baby_wealth')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-green-400 border border-transparent hover:border-green-500/30 transition-all">
+                                    <span className="text-xl">💰</span> 搞钱型宝宝
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             )}
