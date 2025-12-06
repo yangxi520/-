@@ -125,6 +125,9 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
     });
     const [isCalculating, setIsCalculating] = React.useState(false);
 
+    // State for Donation Modal
+    const [showDonationModal, setShowDonationModal] = React.useState(false);
+
     // Helper to calculate stems (extracted for reuse)
     const calculateActiveStems = (sel, horo, info) => {
         if (!horo) return {};
