@@ -1,5 +1,14 @@
 import React, { useMemo } from 'react';
 import { astro } from 'iztro';
+import {
+    AI_PROMPT_TEMPLATE,
+    FEMALE_PROMPT_TEMPLATE,
+    WEALTH_PROMPT_TEMPLATE,
+    MARRIAGE_PROMPT_TEMPLATE,
+    generateScumbagPrompt,
+    generateFortunePromptText
+} from '../utils/aiPrompts';
+import { Sparkles } from "lucide-react";
 
 // Helper to get palace position in 4x4 grid (0-11 index to grid coordinates)
 // Standard Ziwei grid:
@@ -81,6 +90,9 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
         daily: true,
         hourly: true
     });
+
+    // AI Menu State
+    const [showAiMenu, setShowAiMenu] = React.useState(false);
 
     // Calculate Stems for each layer based on selection
     // Calculate Stems for each layer based on selection using iztro for accuracy
@@ -313,7 +325,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
         const getCenter = (branch) => {
             const pos = GRID_MAP[branch];
             if (!pos) return { x: 0, y: 0 };
-            // Grid is 4x4. 
+            // Grid is 4x4.
             // Col 1 center is 12.5%, Col 2 is 37.5%, etc.
             // Row 1 center is 12.5%, Row 2 is 37.5%, etc.
             const x = (pos.col - 1) * 25 + 12.5;
@@ -365,51 +377,35 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
     };
 
     // Generate Prompt for AI Analysis
-    const generateFortunePrompt = (layerKey) => {
-        const stem = activeStems[layerKey];
-        if (!stem) {
-            alert(`请先选择${layerKey === 'yearly' ? '流年' : layerKey === 'monthly' ? '流月' : '流日'}！`);
-            return;
+    const handleGeneratePrompt = (type) => {
+        let prompt = '';
+        const scumbagData = generateScumbagPrompt(horoscope);
+        const basicInfoData = `
+**--- 命主基本信息 (用于推算大限流年) ---**
+- **姓名**：${basicInfo.name || '未填写'}
+- **性别**：${basicInfo.gender === 'male' ? '男' : '女'}
+- **生辰**：${basicInfo.birthday}
+- **出生时辰**：${basicInfo.birthTime}
+`;
+
+        if (type === 'scumbag') {
+            const template = basicInfo.gender === 'female' ? FEMALE_PROMPT_TEMPLATE : AI_PROMPT_TEMPLATE;
+            prompt = `${template}\n${basicInfoData}\n${scumbagData}`;
+        } else if (type === 'marriage') {
+            prompt = `${MARRIAGE_PROMPT_TEMPLATE}\n${basicInfoData}\n${scumbagData}`;
+        } else if (type === 'wealth') {
+            prompt = `${WEALTH_PROMPT_TEMPLATE}\n${basicInfoData}\n${scumbagData}`;
+        } else if (['yearly', 'monthly', 'daily', 'hourly'].includes(type)) {
+            prompt = generateFortunePromptText(type, selection, activeStems, basicInfo, horoscope, palaces, SI_HUA_MAP);
+            if (!prompt) {
+                alert(`请先选择${type === 'yearly' ? '流年' : type === 'monthly' ? '流月' : type === 'daily' ? '流日' : '流时'}！`);
+                return;
+            }
         }
 
-        const map = SI_HUA_MAP[stem];
-        const layerName = layerKey === 'yearly' ? '流年' : layerKey === 'monthly' ? '流月' : '流日';
-        const timeInfo = layerKey === 'yearly' ? `${selection.year}年` :
-            layerKey === 'monthly' ? `${selection.year}年${selection.month}月` :
-                `${selection.year}年${selection.month}月${selection.day}日`;
-
-        let prompt = `你是一位精通紫微斗数的命理大师。请根据以下命盘数据和${layerName}四化，为命主进行${layerName}运势分析。\n\n`;
-
-        prompt += `【基本信息】\n`;
-        prompt += `性别：${basicInfo.gender === 'male' ? '男' : '女'}\n`;
-        prompt += `五行局：${horoscope.fiveElementsClass}\n`;
-        prompt += `命主：${horoscope.soul}  身主：${horoscope.body}\n\n`;
-
-        prompt += `【${layerName}信息】\n`;
-        prompt += `时间：${timeInfo}\n`;
-        prompt += `天干：${stem}\n`;
-        prompt += `四化：\n`;
-        prompt += `  - 禄：${map.lu}\n`;
-        prompt += `  - 权：${map.quan}\n`;
-        prompt += `  - 科：${map.ke}\n`;
-        prompt += `  - 忌：${map.ji}\n\n`;
-
-        prompt += `【命盘十二宫位分布】\n`;
-        palaces.forEach(p => {
-            const major = p.majorStars.map(s => `${s.name}(${s.brightness})`).join('、');
-            const minor = p.minorStars.map(s => s.name).join('、');
-            prompt += `- ${p.name} (${p.heavenlyStem}${p.earthlyBranch})：${major} | ${minor}\n`;
-        });
-
-        prompt += `\n【分析要求】\n`;
-        prompt += `1. 结合本命盘格局与${layerName}四化的引动，分析${layerName}的整体运势走向。\n`;
-        prompt += `2. 重点分析【事业】、【财运】、【感情】三个维度的吉凶变化。\n`;
-        prompt += `3. 针对“忌”星所在的宫位和冲照宫位，给出具体的避坑建议。\n`;
-        prompt += `4. 针对“禄”星所在的宫位，给出具体的把握机会建议。\n`;
-        prompt += `5. 语气专业、客观、富有同理心，不要使用过于宿命论的词汇。\n`;
-
         navigator.clipboard.writeText(prompt).then(() => {
-            alert(`已复制【${layerName}运势】分析指令！\n请发送给AI进行分析。`);
+            alert(`已复制分析指令！\n请发送给AI进行分析。`);
+            setShowAiMenu(false);
         }).catch(err => {
             console.error('Failed to copy:', err);
             alert('复制失败，请手动复制。');
@@ -663,30 +659,46 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 </table>
             </div>
 
-            {/* Fortune Analysis Buttons */}
-            <div className="grid grid-cols-3 gap-2 p-2 bg-white border border-gray-300">
+            {/* AI Analysis Floating Button */}
+            <div className="absolute bottom-6 left-6 z-50">
                 <button
-                    className="bg-blue-600 text-white py-2 rounded shadow hover:bg-blue-700 flex flex-col items-center justify-center"
-                    onClick={() => generateFortunePrompt('yearly')}
+                    onClick={() => setShowAiMenu(!showAiMenu)}
+                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-full shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:scale-105 transition-transform animate-pulse"
                 >
-                    <span className="font-bold">今年运势</span>
-                    <span className="text-[10px] opacity-80">一键导出分析</span>
-                </button>
-                <button
-                    className="bg-yellow-600 text-white py-2 rounded shadow hover:bg-yellow-700 flex flex-col items-center justify-center"
-                    onClick={() => generateFortunePrompt('monthly')}
-                >
-                    <span className="font-bold">今月运势</span>
-                    <span className="text-[10px] opacity-80">一键导出分析</span>
-                </button>
-                <button
-                    className="bg-purple-600 text-white py-2 rounded shadow hover:bg-purple-700 flex flex-col items-center justify-center"
-                    onClick={() => generateFortunePrompt('daily')}
-                >
-                    <span className="font-bold">今日运势</span>
-                    <span className="text-[10px] opacity-80">一键导出分析</span>
+                    <Sparkles className="w-5 h-5" />
+                    AI 分析
                 </button>
             </div>
+
+            {/* AI Analysis Menu (Drawer) */}
+            {showAiMenu && (
+                <div className="absolute bottom-20 left-6 z-50 w-64 bg-black/90 backdrop-blur-xl border border-purple-500/30 rounded-xl shadow-2xl p-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
+                    <div className="space-y-2">
+                        <button onClick={() => handleGeneratePrompt('scumbag')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-gray-200 border border-transparent hover:border-purple-500/30 transition-all">
+                            <span className="text-xl">🕵️</span> 一键鉴渣话术
+                        </button>
+                        <button onClick={() => handleGeneratePrompt('marriage')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-pink-300 border border-transparent hover:border-pink-500/30 transition-all">
+                            <span className="text-xl">💍</span> 何时结婚
+                        </button>
+                        <button onClick={() => handleGeneratePrompt('wealth')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-yellow-300 border border-transparent hover:border-yellow-500/30 transition-all">
+                            <span className="text-xl">💰</span> 何时发财
+                        </button>
+                        <div className="h-px bg-white/10 my-2"></div>
+                        <button onClick={() => handleGeneratePrompt('yearly')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-blue-300 border border-transparent hover:border-blue-500/30 transition-all">
+                            <span className="text-xl">📅</span> 今年运势
+                        </button>
+                        <button onClick={() => handleGeneratePrompt('monthly')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-yellow-300 border border-transparent hover:border-yellow-500/30 transition-all">
+                            <span className="text-xl">🌙</span> 今月运势
+                        </button>
+                        <button onClick={() => handleGeneratePrompt('daily')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-purple-300 border border-transparent hover:border-purple-500/30 transition-all">
+                            <span className="text-xl">☀️</span> 今日运势
+                        </button>
+                        <button onClick={() => handleGeneratePrompt('hourly')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-all">
+                            <span className="text-xl">⏰</span> 今时运势
+                        </button>
+                    </div>
+                </div>
+            )}
             {/* Debug Info Removed */}
         </div>
     );
