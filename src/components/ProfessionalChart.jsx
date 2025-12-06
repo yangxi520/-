@@ -113,6 +113,15 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
     // Lunar Tip State
     const [showLunarTip, setShowLunarTip] = React.useState(false);
 
+    // Partner Modal State
+    const [showPartnerModal, setShowPartnerModal] = React.useState(false);
+    const [selectedBabyType, setSelectedBabyType] = React.useState(null);
+    const [partnerInfo, setPartnerInfo] = React.useState({
+        gender: 'female',
+        birthday: '',
+        birthTime: '子'
+    });
+
     // Calculate Stems for each layer based on selection
     // Calculate Stems for each layer based on selection using iztro for accuracy
     const activeStems = useMemo(() => {
@@ -421,7 +430,10 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
             }
         } else if (type.startsWith('baby_')) {
             const babyType = type.replace('baby_', '');
-            prompt = generateBabyPrompt(babyType, basicInfo, horoscope);
+            setSelectedBabyType(babyType);
+            setShowPartnerModal(true);
+            setShowAiMenu(false); // Close menu
+            return; // Stop here, wait for modal
         }
 
         navigator.clipboard.writeText(prompt).then(() => {
@@ -431,6 +443,38 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
             console.error('Failed to copy:', err);
             alert('复制失败，请手动复制。');
         });
+    };
+
+    const handleConfirmPartner = () => {
+        if (!partnerInfo.birthday) {
+            alert('请选择配偶出生日期');
+            return;
+        }
+
+        try {
+            // Calculate Partner Horoscope
+            const partnerHoroscope = astro.bySolar(
+                partnerInfo.birthday,
+                TIME_RANGES.indexOf(partnerInfo.birthTime),
+                partnerInfo.gender === 'male' ? '男' : '女',
+                true,
+                'zh-CN'
+            );
+
+            const prompt = generateBabyPrompt(selectedBabyType, basicInfo, horoscope, partnerHoroscope);
+
+            navigator.clipboard.writeText(prompt).then(() => {
+                alert(`已复制双人命盘分析指令！\n请发送给AI进行分析。`);
+                setShowPartnerModal(false);
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+                alert('复制失败，请手动复制。');
+            });
+
+        } catch (error) {
+            console.error('Partner horoscope calculation failed:', error);
+            alert('配偶命盘计算失败，请检查输入信息。');
+        }
     };
 
     return (
@@ -774,6 +818,79 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                                 </button>
                             </>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Partner Info Modal */}
+            {showPartnerModal && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="bg-purple-600 px-4 py-3 flex justify-between items-center">
+                            <h3 className="text-white font-bold text-lg">💑 输入配偶信息</h3>
+                            <button onClick={() => setShowPartnerModal(false)} className="text-white/80 hover:text-white">✕</button>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div className="text-sm text-gray-500 bg-purple-50 p-2 rounded">
+                                为了更精准地进行优生备孕择吉，请提供另一半的生辰信息，系统将结合双人命盘进行推算。
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-700">性别</label>
+                                <div className="flex gap-4">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="gender"
+                                            checked={partnerInfo.gender === 'male'}
+                                            onChange={() => setPartnerInfo({ ...partnerInfo, gender: 'male' })}
+                                            className="accent-purple-600"
+                                        />
+                                        <span className="text-sm">男</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="gender"
+                                            checked={partnerInfo.gender === 'female'}
+                                            onChange={() => setPartnerInfo({ ...partnerInfo, gender: 'female' })}
+                                            className="accent-purple-600"
+                                        />
+                                        <span className="text-sm">女</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-700">出生日期 (阳历)</label>
+                                <input
+                                    type="date"
+                                    value={partnerInfo.birthday}
+                                    onChange={(e) => setPartnerInfo({ ...partnerInfo, birthday: e.target.value })}
+                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-gray-700">出生时辰</label>
+                                <select
+                                    value={partnerInfo.birthTime}
+                                    onChange={(e) => setPartnerInfo({ ...partnerInfo, birthTime: e.target.value })}
+                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
+                                >
+                                    {TIME_RANGES.map((time, index) => (
+                                        <option key={index} value={time}>{time}</option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <button
+                                onClick={handleConfirmPartner}
+                                className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 rounded-lg shadow-lg hover:opacity-90 transition-opacity mt-2"
+                            >
+                                生成双人分析指令
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

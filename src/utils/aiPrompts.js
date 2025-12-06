@@ -282,7 +282,7 @@ export const BABY_PROMPT_TEMPLATE = `**--- 👶 紫微斗数备孕择吉（起�
 {{PARENTS_DATA}}
 `;
 
-export const generateBabyPrompt = (type, basicInfo, horoscope) => {
+export const generateBabyPrompt = (type, basicInfo, horoscope, partnerHoroscope) => {
   const typeMap = {
     'leader': { name: '领导型', desc: '具备帝王之气、领袖风范、管理能力，适合从政或企业高管。', stars: '紫微、天府、太阳（旺）、武曲' },
     'iq': { name: '高IQ型', desc: '智商超群、逻辑严密、学霸体质，适合科研、学术或智囊工作。', stars: '天机、天梁、太阴、巨门（化权/禄）' },
@@ -294,10 +294,23 @@ export const generateBabyPrompt = (type, basicInfo, horoscope) => {
   const currentTime = new Date().toLocaleString();
 
   // Format parents data (using current user's horoscope as "Parent 1")
-  let parentsData = "【父/母命盘】\\n";
-  parentsData += `性别：${basicInfo.gender === 'male' ? '男' : '女'}\\n`;
-  parentsData += `五行局：${horoscope.fiveElementsClass}\\n`;
-  parentsData += `命宫主星：${horoscope.palaces.find(p => p.name === '命宫')?.majorStars.map(s => s.name).join('、') || '无'}\\n`;
+  let parentsData = "【父/母命盘 1 (用户)】\n";
+  parentsData += `性别：${basicInfo.gender === 'male' ? '男' : '女'}\n`;
+  parentsData += `五行局：${horoscope.fiveElementsClass}\n`;
+  parentsData += `命宫主星：${horoscope.palaces.find(p => p.name === '命宫')?.majorStars.map(s => s.name).join('、') || '无'}\n`;
+  parentsData += `夫妻宫主星：${horoscope.palaces.find(p => p.name === '夫妻宫')?.majorStars.map(s => s.name).join('、') || '无'}\n`;
+  parentsData += `子女宫主星：${horoscope.palaces.find(p => p.name === '子女宫')?.majorStars.map(s => s.name).join('、') || '无'}\n\n`;
+
+  if (partnerHoroscope) {
+    parentsData += "【父/母命盘 2 (配偶)】\n";
+    parentsData += `性别：${partnerHoroscope.gender === 'male' ? '男' : '女'}\n`;
+    parentsData += `五行局：${partnerHoroscope.fiveElementsClass}\n`;
+    parentsData += `命宫主星：${partnerHoroscope.palaces.find(p => p.name === '命宫')?.majorStars.map(s => s.name).join('、') || '无'}\n`;
+    parentsData += `夫妻宫主星：${partnerHoroscope.palaces.find(p => p.name === '夫妻宫')?.majorStars.map(s => s.name).join('、') || '无'}\n`;
+    parentsData += `子女宫主星：${partnerHoroscope.palaces.find(p => p.name === '子女宫')?.majorStars.map(s => s.name).join('、') || '无'}\n`;
+  } else {
+    parentsData += "【父/母命盘 2 (配偶)】\n(用户未提供配偶数据，请根据单方命盘推算)\n";
+  }
 
   return BABY_PROMPT_TEMPLATE
     .replace(/{{TYPE_NAME}}/g, target.name)
