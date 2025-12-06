@@ -491,9 +491,9 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
     };
 
     return (
-        <div className="w-full max-w-3xl mx-auto bg-slate-100 text-slate-900 p-1 select-none flex flex-col gap-2">
-            {/* Chart Grid */}
-            <div className="aspect-square grid grid-cols-4 grid-rows-4 gap-[1px] bg-gray-300 border border-gray-400 relative">
+        <div className="w-full max-w-3xl mx-auto bg-slate-100 text-slate-900 p-1 select-none flex flex-col gap-2 overflow-x-auto">
+            {/* Chart Grid - Min width to ensure readability on mobile */}
+            <div className="aspect-square grid grid-cols-4 grid-rows-4 gap-[1px] bg-gray-300 border border-gray-400 relative min-w-[600px] md:min-w-0">
                 {renderConnections()}
                 {/* Row 1 */}
                 <div className="bg-white">{renderPalace('巳')}</div>

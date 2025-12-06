@@ -262,6 +262,12 @@ export const BABY_PROMPT_TEMPLATE = `**--- 👶 紫微斗数备孕择吉（起�
 *   **理想命盘特征：** {{TARGET_STARS}}
 
 **### 2. 黄金受孕窗口期推算 (程序测算结论)**
+**评分标准说明 (满分50分)：**
+*   ⭐⭐⭐⭐⭐ (5 Stars): Perfect Match (Score 50+) - 完美契合
+*   ⭐⭐⭐⭐ (4 Stars): Excellent (Score 40+) - 非常优秀
+*   ⭐⭐⭐ (3 Stars): Good (Score 30+) - 良好
+*   ⭐⭐ (2 Stars): Fair (Score 20+) - 一般
+
 经后台算法遍历未来 14 天受孕窗口，筛选出以下 Top 3 最佳受孕时机（已反推预产期命盘）：
 
 {{BEST_DATES_LIST}}
