@@ -101,6 +101,16 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
     // Let's make it independent but initialized by Da Xian selection.
     const [focusedIndex, setFocusedIndex] = React.useState(null);
 
+    // Active Layer Visibility State (Toggle)
+    const [activeLayers, setActiveLayers] = React.useState({
+        origin: true,
+        decadal: true,
+        yearly: true,
+        monthly: true,
+        daily: true,
+        hourly: true
+    });
+
     // State for AI Menu
     const [showAiMenu, setShowAiMenu] = React.useState(false);
     const [menuView, setMenuView] = React.useState('main'); // 'main', 'fortune', 'baby'
