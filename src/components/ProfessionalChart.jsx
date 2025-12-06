@@ -279,7 +279,6 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                             <div key={idx} className={`font-bold ${star.brightness === '庙' || star.brightness === '旺' ? 'text-red-600' : 'text-blue-600'} flex items-center flex-wrap gap-0.5`}>
                                 <span>{star.name}</span>
                                 <span className="text-[10px] font-normal text-gray-500 scale-90 origin-left">{star.brightness}</span>
-                                <span className="text-[10px] font-normal text-gray-500 scale-90 origin-left">{star.brightness}</span>
 
                                 {/* Si Hua Badges */}
                                 {siHuaBadges && siHuaBadges.map((badge, bIdx) => (
@@ -293,9 +292,9 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 </div>
 
                 {/* Minor Stars (Simplified) */}
-                <div className="flex flex-wrap gap-1 text-[10px] text-gray-600 absolute top-1 right-1 w-1/2 justify-end">
+                <div className="flex flex-wrap gap-1 text-[10px] text-gray-600 absolute top-1 right-1 w-1/2 justify-end pointer-events-none">
                     {palace.minorStars.map((star, idx) => (
-                        <span key={idx}>{star.name}</span>
+                        <span key={idx} className="bg-white/80 px-0.5 rounded">{star.name}</span>
                     ))}
                 </div>
 
