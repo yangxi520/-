@@ -125,66 +125,54 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
     });
     const [isCalculating, setIsCalculating] = React.useState(false);
 
-    // Calculate Stems for each layer based on selection
-    // Calculate Stems for each layer based on selection using iztro for accuracy
-    const activeStems = useMemo(() => {
-        if (!horoscope) return {};
+    // Helper to calculate stems (extracted for reuse)
+    const calculateActiveStems = (sel, horo, info) => {
+        if (!horo) return {};
         const stems = {};
 
         // 1. Origin (Ben)
-        if (horoscope.chineseDate) {
-            if (typeof horoscope.chineseDate === 'string') {
-                // Format: "Year Month Day Hour" (e.g., "辛丑 癸巳 癸亥 壬子")
-                stems.origin = horoscope.chineseDate.split(' ')[0][0];
-            } else if (horoscope.chineseDate.yearly) {
-                stems.origin = horoscope.chineseDate.yearly[0];
+        if (horo.chineseDate) {
+            if (typeof horo.chineseDate === 'string') {
+                stems.origin = horo.chineseDate.split(' ')[0][0];
+            } else if (horo.chineseDate.yearly) {
+                stems.origin = horo.chineseDate.yearly[0];
             }
         }
 
         // 2. Decadal (Xian)
-        if (selection.daxianIndex !== null && palaces[selection.daxianIndex]) {
-            stems.decadal = palaces[selection.daxianIndex].heavenlyStem;
+        if (sel.daxianIndex !== null && horo.palaces[sel.daxianIndex]) {
+            stems.decadal = horo.palaces[sel.daxianIndex].heavenlyStem;
         }
 
         // 3. Yearly (Nian)
         let yearStemIndex = null;
-        if (selection.year) {
-            yearStemIndex = getYearStemIndex(selection.year);
+        if (sel.year) {
+            yearStemIndex = getYearStemIndex(sel.year);
             stems.yearly = HEAVENLY_STEMS[yearStemIndex];
         }
 
-        // 4. Monthly (Yue) - Five Tigers Chasing Month
-        // Based on Year Stem and Month Index (1-12)
-        // Formula: Start Stem = (YearStemIndex % 5) * 2 + 2
-        if (yearStemIndex !== null && selection.month) {
+        // 4. Monthly (Yue)
+        if (yearStemIndex !== null && sel.month) {
             const startStem = (yearStemIndex % 5) * 2 + 2;
-            // Month 1 is Tiger (Index 2 in Branches), but we just need the stem sequence.
-            // The sequence starts from Month 1.
-            const monthStemIndex = (startStem + (selection.month - 1)) % 10;
+            const monthStemIndex = (startStem + (sel.month - 1)) % 10;
             stems.monthly = HEAVENLY_STEMS[monthStemIndex];
         }
 
-        // 5. Daily (Ri) - Requires Calendar Lookup
-        // We use astro.byLunar to get the Day Stem (Day Pillar)
-        // 6. Hourly (Shi) - Five Rats Chasing Hour
-        // Based on Day Stem and Hour Index (0-11)
-        if (selection.year && selection.month && selection.day) {
+        // 5. Daily & 6. Hourly
+        if (sel.year && sel.month && sel.day) {
             try {
-                // Use byLunar to get accurate Day Pillar
-                // Note: We use hour 0 just to get the day
                 const tempHoroscope = astro.byLunar(
-                    `${selection.year} -${selection.month} -${selection.day} `,
+                    `${sel.year}-${sel.month}-${sel.day}`,
                     0,
-                    basicInfo.gender === 'male' ? '男' : '女',
-                    false, // isLeapMonth (Assuming false for now as UI doesn't support it)
-                    true // fixLeap
+                    info.gender === 'male' ? '男' : '女',
+                    false,
+                    true
                 );
 
                 if (tempHoroscope && tempHoroscope.chineseDate) {
                     let dayStemIndex = null;
                     if (typeof tempHoroscope.chineseDate === 'string') {
                         const parts = tempHoroscope.chineseDate.trim().split(/\s+/);
-                        // parts[2] is Day Pillar (e.g. "戊戌")
                         if (parts.length >= 3) {
                             const dayStemChar = parts[2][0];
                             stems.daily = dayStemChar;
@@ -196,11 +184,9 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                         dayStemIndex = HEAVENLY_STEMS.indexOf(dayStemChar);
                     }
 
-                    // Calculate Hourly Stem if Day Stem is found and Hour is selected
-                    if (dayStemIndex !== -1 && dayStemIndex !== null && selection.hour !== null) {
-                        // Formula: Start Stem = (DayStemIndex % 5) * 2
+                    if (dayStemIndex !== -1 && dayStemIndex !== null && sel.hour !== null) {
                         const startStem = (dayStemIndex % 5) * 2;
-                        const hourStemIndex = (startStem + selection.hour) % 10;
+                        const hourStemIndex = (startStem + sel.hour) % 10;
                         stems.hourly = HEAVENLY_STEMS[hourStemIndex];
                     }
                 }
@@ -208,9 +194,13 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 console.error("Error calculating daily/hourly stems:", e);
             }
         }
-
         return stems;
-    }, [horoscope, palaces, selection, basicInfo.gender]);
+    };
+
+    // Memoize active stems for UI rendering
+    const activeStems = useMemo(() => {
+        return calculateActiveStems(selection, horoscope, basicInfo);
+    }, [horoscope, selection, basicInfo]);
 
     // Helper to get Si Hua for a star from active stems
     const getActiveSiHua = (starName) => {
@@ -299,21 +289,23 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                                     star.mutagen === '科' ? 'text-amber-600' :
                                         'text-slate-800'; // Default dark grey
 
+                        // Get all active Si Hua for this star (including original and layered)
+                        const activeSiHua = getActiveSiHua(star.name);
+
                         return (
                             <div key={idx} className={`flex items-center gap-0.5 font-serif font-bold text-sm ${starColor}`}>
                                 <span>{star.name}</span>
                                 <span className="text-[9px] font-normal text-gray-400 scale-75 origin-left">{star.brightness}</span>
-                                {star.mutagen && (
-                                    <span className={`
-                                        text-[9px] px-0.5 rounded-sm text-white scale-90 origin-left
-                                        ${star.mutagen === '禄' ? 'bg-green-600' : ''}
-                                        ${star.mutagen === '权' ? 'bg-blue-600' : ''}
-                                        ${star.mutagen === '科' ? 'bg-amber-500' : ''}
-                                        ${star.mutagen === '忌' ? 'bg-red-600' : ''}
+
+                                {/* Render Si Hua Badges */}
+                                {activeSiHua.map((badge, bIdx) => (
+                                    <span key={bIdx} className={`
+                                        text-[9px] px-0.5 rounded-sm text-white scale-90 origin-left shadow-sm
+                                        ${badge.color}
                                     `}>
-                                        {star.mutagen}
+                                        {badge.type}
                                     </span>
-                                )}
+                                ))}
                             </div>
                         );
                     })}
@@ -442,7 +434,44 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
         } else if (type === 'wealth') {
             prompt = `${WEALTH_PROMPT_TEMPLATE} \n${basicInfoData} \n${scumbagData} `;
         } else if (['yearly', 'monthly', 'daily', 'hourly'].includes(type)) {
-            prompt = generateFortunePromptText(type, selection, activeStems, basicInfo, horoscope, palaces, SI_HUA_MAP);
+
+            let currentSelection = { ...selection };
+            let currentStems = activeStems;
+
+            // Auto-fill for Daily/Hourly if missing
+            if ((type === 'daily' && !currentSelection.day) || (type === 'hourly' && !currentSelection.hour) || (type === 'monthly' && !currentSelection.month) || (type === 'yearly' && !currentSelection.year)) {
+                // Get current Lunar Date
+                const now = new Date();
+                const currentHoroscope = astro.bySolar(now.toISOString(), 0, 'male', true, 'zh-CN');
+
+                if (currentHoroscope && currentHoroscope.lunarDate) {
+                    // Update selection with current time
+                    if (!currentSelection.year) currentSelection.year = currentHoroscope.lunarDate.year;
+                    if (!currentSelection.month) currentSelection.month = currentHoroscope.lunarDate.month;
+                    if (!currentSelection.day) currentSelection.day = currentHoroscope.lunarDate.day;
+
+                    const hourIndex = Math.floor((now.getHours() + 1) / 2) % 12;
+                    if (currentSelection.hour === null) currentSelection.hour = hourIndex;
+
+                    // Update UI selection
+                    setSelection(currentSelection);
+
+                    // Recalculate stems for this new selection
+                    currentStems = calculateActiveStems(currentSelection, horoscope, basicInfo);
+
+                    // Also enable relevant layers
+                    setActiveLayers(prev => ({
+                        ...prev,
+                        yearly: true,
+                        monthly: ['monthly', 'daily', 'hourly'].includes(type) ? true : prev.monthly,
+                        daily: ['daily', 'hourly'].includes(type) ? true : prev.daily,
+                        hourly: type === 'hourly' ? true : prev.hourly
+                    }));
+                }
+            }
+
+            prompt = generateFortunePromptText(type, currentSelection, currentStems, basicInfo, horoscope, palaces, SI_HUA_MAP);
+
             if (!prompt) {
                 alert(`请先选择${type === 'yearly' ? '流年' : type === 'monthly' ? '流月' : type === 'daily' ? '流日' : '流时'}！`);
                 return;
@@ -599,14 +628,24 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                         <div className="text-center text-black font-bold text-xs mb-1">运限层级开关</div>
 
                         <div className="grid grid-cols-3 gap-1 text-[10px]">
-                            {['origin', 'decadal', 'yearly', 'monthly', 'daily', 'hourly'].map(layer => (
+
+                            {[
+                                { key: 'origin', label: '本', color: 'text-red-600' },
+                                { key: 'decadal', label: '限', color: 'text-green-600' },
+                                { key: 'yearly', label: '年', color: 'text-blue-600' },
+                                { key: 'monthly', label: '月', color: 'text-yellow-600' },
+                                { key: 'daily', label: '日', color: 'text-purple-600' },
+                                { key: 'hourly', label: '时', color: 'text-cyan-600' }
+                            ].map(layer => (
                                 <button
-                                    key={layer}
-                                    className={`border rounded px - 1 py - 0.5 ${activeLayers[layer] ? 'bg-indigo-100 border-indigo-300 text-indigo-700' : 'bg-gray-50 border-gray-200 text-gray-400'} `}
-                                    onClick={() => setActiveLayers(prev => ({ ...prev, [layer]: !prev[layer] }))}
+                                    key={layer.key}
+                                    className={`border rounded px-1 py-0.5 flex items-center justify-center gap-1
+                                        ${activeLayers[layer.key] ? 'bg-stone-100 border-stone-300 shadow-inner' : 'bg-stone-50 border-stone-200 text-gray-300'}
+                                    `}
+                                    onClick={() => setActiveLayers(prev => ({ ...prev, [layer.key]: !prev[layer.key] }))}
                                 >
-                                    {layer === 'origin' ? '本' : layer === 'decadal' ? '限' : layer === 'yearly' ? '年' : layer === 'monthly' ? '月' : layer === 'daily' ? '日' : '时'}
-                                    {activeStems[layer] && <span className="ml-1 font-bold">{activeStems[layer]}</span>}
+                                    <span className={`font-bold ${activeLayers[layer.key] ? layer.color : ''}`}>{layer.label}</span>
+                                    {activeStems[layer.key] && <span className="font-mono text-stone-500">{activeStems[layer.key]}</span>}
                                 </button>
                             ))}
                         </div>
