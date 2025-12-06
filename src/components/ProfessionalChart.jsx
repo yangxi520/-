@@ -6,7 +6,8 @@ import {
     WEALTH_PROMPT_TEMPLATE,
     MARRIAGE_PROMPT_TEMPLATE,
     generateScumbagPrompt,
-    generateFortunePromptText
+    generateFortunePromptText,
+    generateBabyPrompt
 } from '../utils/aiPrompts';
 import { Sparkles, HelpCircle } from "lucide-react";
 
@@ -728,6 +729,20 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                         </button>
                         <button onClick={() => handleGeneratePrompt('hourly')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-cyan-300 border border-transparent hover:border-cyan-500/30 transition-all">
                             <span className="text-xl">⏰</span> 今时运势
+                        </button>
+                        <div className="h-px bg-white/10 my-2"></div>
+                        <div className="px-4 py-1 text-xs text-gray-400 font-bold">👶 备孕择吉 (起居注)</div>
+                        <button onClick={() => handleGeneratePrompt('baby_leader')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-yellow-500 border border-transparent hover:border-yellow-500/30 transition-all">
+                            <span className="text-xl">👑</span> 领导型宝宝
+                        </button>
+                        <button onClick={() => handleGeneratePrompt('baby_iq')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-blue-400 border border-transparent hover:border-blue-500/30 transition-all">
+                            <span className="text-xl">🧠</span> 高IQ宝宝
+                        </button>
+                        <button onClick={() => handleGeneratePrompt('baby_sport')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-red-400 border border-transparent hover:border-red-500/30 transition-all">
+                            <span className="text-xl">🏅</span> 体育型宝宝
+                        </button>
+                        <button onClick={() => handleGeneratePrompt('baby_wealth')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-green-400 border border-transparent hover:border-green-500/30 transition-all">
+                            <span className="text-xl">💰</span> 搞钱型宝宝
                         </button>
                     </div>
                 </div>
