@@ -8,7 +8,7 @@ import {
     generateScumbagPrompt,
     generateFortunePromptText
 } from '../utils/aiPrompts';
-import { Sparkles } from "lucide-react";
+import { Sparkles, HelpCircle } from "lucide-react";
 
 // Helper to get palace position in 4x4 grid (0-11 index to grid coordinates)
 // Standard Ziwei grid:
@@ -108,6 +108,8 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
 
     // AI Menu State
     const [showAiMenu, setShowAiMenu] = React.useState(false);
+    // Lunar Tip State
+    const [showLunarTip, setShowLunarTip] = React.useState(false);
 
     // Calculate Stems for each layer based on selection
     // Calculate Stems for each layer based on selection using iztro for accuracy
@@ -610,7 +612,23 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                         {/* Liu Yue Row (Only if Year selected) */}
                         {selection.year && (
                             <tr className="border-b border-gray-200">
-                                <td className="bg-gray-100 font-bold p-1 border-r">流月</td>
+
+                                <td className="bg-gray-100 font-bold p-1 border-r relative">
+                                    <div className="flex items-center justify-center gap-1 cursor-pointer hover:text-blue-600" onClick={() => setShowLunarTip(!showLunarTip)}>
+                                        流月 <HelpCircle size={10} />
+                                    </div>
+                                    {showLunarTip && (
+                                        <div className="absolute left-0 top-full mt-1 z-50 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg text-left font-normal leading-relaxed">
+                                            <div className="font-bold text-yellow-400 mb-1">⚠️ 农历提醒</div>
+                                            紫微斗数均按农历排盘。
+                                            <br />
+                                            例如：今日阳历12月6日，对应农历十月，请选择【10月】。
+                                            <div className="mt-2 text-right">
+                                                <button className="text-blue-300 underline" onClick={(e) => { e.stopPropagation(); setShowLunarTip(false); }}>知道了</button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </td>
                                 <td className="p-1">
                                     <div className="grid grid-cols-6 gap-1">
                                         {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
