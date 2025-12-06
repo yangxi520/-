@@ -474,7 +474,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 const prompt = generateBabyPrompt(selectedBabyType, basicInfo, horoscope, partnerHoroscope, bestDates);
 
                 navigator.clipboard.writeText(prompt).then(() => {
-                    alert(`✅ 已生成【${selectedBabyType === 'leader' ? '帝王' : selectedBabyType === 'iq' ? '文昌' : selectedBabyType === 'sport' ? '武曲' : '陶朱'} 起居注】指令！\n\n已为您筛选出未来120天内Top3最佳受孕时机。\n请发送给AI获取详细解读。`);
+                    alert(`✅ 已生成【${selectedBabyType === 'leader' ? '帝王' : selectedBabyType === 'iq' ? '文昌' : selectedBabyType === 'sport' ? '武曲' : '陶朱'}起居注】指令！\n\n已为您筛选出未来14天内Top3最佳受孕时机。\n请发送给AI获取详细解读。`);
                     setShowPartnerModal(false);
                 }).catch(err => {
                     console.error('Failed to copy:', err);
@@ -905,7 +905,7 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                                 {isCalculating ? (
                                     <>
                                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                        <span>正在遍历未来120天命盘...</span>
+                                        <span>正在遍历未来14天命盘...</span>
                                     </>
                                 ) : (
                                     <span>生成双人分析指令</span>

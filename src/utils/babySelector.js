@@ -10,29 +10,34 @@ const SCORING_RULES = {
     'leader': (horoscope) => {
         let score = 0;
         const ming = horoscope.palaces.find(p => p.name === '命宫');
+        console.log("Scoring Leader:", ming.majorStars.map(s => s.name));
         const guan = horoscope.palaces.find(p => p.name === '官禄宫');
         const cai = horoscope.palaces.find(p => p.name === '财帛宫');
         const qian = horoscope.palaces.find(p => p.name === '迁移宫');
 
         // 1. Major Stars (Emperor Vibe)
-        if (hasStar(ming.majorStars, '紫微')) score += 20;
-        if (hasStar(ming.majorStars, '天府')) score += 15;
-        if (hasBrightness(ming.majorStars, '太阳', ['庙', '旺'])) score += 15;
-        if (hasStar(ming.majorStars, '天相')) score += 10;
+        if (ming && hasStar(ming.majorStars, '紫微')) score += 20;
+        if (ming && hasStar(ming.majorStars, '天府')) score += 15;
+        if (ming && hasBrightness(ming.majorStars, '太阳', ['庙', '旺'])) score += 15;
+        if (ming && hasStar(ming.majorStars, '天相')) score += 10;
 
         // 2. Si Hua (Power)
-        if (ming.majorStars.some(s => s.mutagen === '权')) score += 25;
-        if (guan.majorStars.some(s => s.mutagen === '权')) score += 20;
+        if (ming && ming.majorStars.some(s => s.mutagen === '权')) score += 25;
+        if (guan && guan.majorStars.some(s => s.mutagen === '权')) score += 20;
 
         // 3. Aux Stars (Support)
-        const sanFang = [...ming.minorStars, ...guan.minorStars, ...cai.minorStars, ...qian.minorStars];
+        const sanFang = [];
+        if (ming) sanFang.push(...ming.minorStars);
+        if (guan) sanFang.push(...guan.minorStars);
+        if (cai) sanFang.push(...cai.minorStars);
+        if (qian) sanFang.push(...qian.minorStars);
         if (hasStar(sanFang, '左辅')) score += 10;
         if (hasStar(sanFang, '右弼')) score += 10;
         if (hasStar(sanFang, '天魁')) score += 5;
         if (hasStar(sanFang, '天钺')) score += 5;
 
         // 4. Avoid Bad Stars in Ming
-        if (hasStar(ming.minorStars, '地空') || hasStar(ming.minorStars, '地劫')) score -= 15;
+        if (ming && (hasStar(ming.minorStars, '地空') || hasStar(ming.minorStars, '地劫'))) score -= 15;
 
         return { score, desc: '紫府坐命/百官朝拱/权禄巡逢' };
     },
@@ -42,17 +47,22 @@ const SCORING_RULES = {
         const guan = horoscope.palaces.find(p => p.name === '官禄宫');
 
         // 1. Major Stars (Intelligence)
-        if (hasStar(ming.majorStars, '天机')) score += 20;
-        if (hasStar(ming.majorStars, '天梁')) score += 15;
-        if (hasStar(ming.majorStars, '太阴')) score += 15;
-        if (hasStar(ming.majorStars, '巨门')) score += 10;
+        if (ming && hasStar(ming.majorStars, '天机')) score += 20;
+        if (ming && hasStar(ming.majorStars, '天梁')) score += 15;
+        if (ming && hasStar(ming.majorStars, '太阴')) score += 15;
+        if (ming && hasStar(ming.majorStars, '巨门')) score += 10;
 
         // 2. Si Hua (Fame/Exam)
-        if (ming.majorStars.some(s => s.mutagen === '科')) score += 25;
-        if (guan.majorStars.some(s => s.mutagen === '科')) score += 20;
+        if (ming && ming.majorStars.some(s => s.mutagen === '科')) score += 25;
+        if (guan && guan.majorStars.some(s => s.mutagen === '科')) score += 20;
 
         // 3. Aux Stars (Literary)
-        const sanFang = [...ming.minorStars, ...guan.minorStars, ...horoscope.palaces.find(p => p.name === '财帛宫').minorStars];
+        const sanFang = [];
+        if (ming) sanFang.push(...ming.minorStars);
+        if (guan) sanFang.push(...guan.minorStars);
+        const cai = horoscope.palaces.find(p => p.name === '财帛宫');
+        if (cai) sanFang.push(...cai.minorStars);
+
         if (hasStar(sanFang, '文昌')) score += 15;
         if (hasStar(sanFang, '文曲')) score += 15;
         if (hasStar(sanFang, '天魁')) score += 10; // Nobleman help
@@ -64,18 +74,18 @@ const SCORING_RULES = {
         const ming = horoscope.palaces.find(p => p.name === '命宫');
 
         // 1. Major Stars (Action/Power)
-        if (hasStar(ming.majorStars, '七杀')) score += 20;
-        if (hasStar(ming.majorStars, '破军')) score += 20;
-        if (hasStar(ming.majorStars, '贪狼')) score += 20;
-        if (hasStar(ming.majorStars, '武曲')) score += 15;
+        if (ming && hasStar(ming.majorStars, '七杀')) score += 20;
+        if (ming && hasStar(ming.majorStars, '破军')) score += 20;
+        if (ming && hasStar(ming.majorStars, '贪狼')) score += 20;
+        if (ming && hasStar(ming.majorStars, '武曲')) score += 15;
 
         // 2. Si Hua (Force)
-        if (ming.majorStars.some(s => s.mutagen === '权')) score += 20;
+        if (ming && ming.majorStars.some(s => s.mutagen === '权')) score += 20;
 
         // 3. Special (Explosive Power)
-        if (hasStar(ming.minorStars, '火星')) score += 10;
-        if (hasStar(ming.minorStars, '铃星')) score += 10;
-        if (hasStar(ming.minorStars, '擎羊')) score += 10; // Competitiveness
+        if (ming && hasStar(ming.minorStars, '火星')) score += 10;
+        if (ming && hasStar(ming.minorStars, '铃星')) score += 10;
+        if (ming && hasStar(ming.minorStars, '擎羊')) score += 10; // Competitiveness
 
         return { score, desc: '杀破狼/武贪格/火贪格' };
     },
@@ -86,23 +96,23 @@ const SCORING_RULES = {
         const tian = horoscope.palaces.find(p => p.name === '田宅宫');
 
         // 1. Major Stars (Wealth)
-        if (hasStar(ming.majorStars, '武曲')) score += 20;
-        if (hasStar(ming.majorStars, '太阴')) score += 15;
-        if (hasStar(ming.majorStars, '天府')) score += 15;
-        if (hasStar(ming.majorStars, '贪狼')) score += 10;
+        if (ming && hasStar(ming.majorStars, '武曲')) score += 20;
+        if (ming && hasStar(ming.majorStars, '太阴')) score += 15;
+        if (ming && hasStar(ming.majorStars, '天府')) score += 15;
+        if (ming && hasStar(ming.majorStars, '贪狼')) score += 10;
 
         // 2. Si Hua (Money Flow)
-        if (ming.majorStars.some(s => s.mutagen === '禄')) score += 25;
-        if (cai.majorStars.some(s => s.mutagen === '禄')) score += 25;
-        if (hasStar(ming.minorStars, '禄存')) score += 20;
-        if (hasStar(cai.minorStars, '禄存')) score += 20;
-        if (hasStar(tian.minorStars, '禄存')) score += 15;
+        if (ming && ming.majorStars.some(s => s.mutagen === '禄')) score += 25;
+        if (cai && cai.majorStars.some(s => s.mutagen === '禄')) score += 25;
+        if (ming && hasStar(ming.minorStars, '禄存')) score += 20;
+        if (cai && hasStar(cai.minorStars, '禄存')) score += 20;
+        if (tian && hasStar(tian.minorStars, '禄存')) score += 15;
 
         // 3. Special (Windfall)
-        if (hasStar(ming.majorStars, '贪狼') && (hasStar(ming.minorStars, '火星') || hasStar(ming.minorStars, '铃星'))) score += 30;
+        if (ming && hasStar(ming.majorStars, '贪狼') && (hasStar(ming.minorStars, '火星') || hasStar(ming.minorStars, '铃星'))) score += 30;
 
         // 4. Avoid Leakage
-        if (hasStar(cai.minorStars, '地空') || hasStar(cai.minorStars, '地劫')) score -= 50; // Critical hit
+        if (cai && (hasStar(cai.minorStars, '地空') || hasStar(cai.minorStars, '地劫'))) score -= 50; // Critical hit
 
         return { score, desc: '武贪格/火贪格/双禄交流/财荫夹印' };
     }
@@ -117,7 +127,7 @@ export const findBestConceptionDates = async (type, limit = 3) => {
     // Optimization: Don't scan every single day if it's too slow. 
     // But for 180 days it's ~2000 checks. JS is fast enough.
 
-    const scanDays = 120; // Scan 4 months window
+    const scanDays = 14; // Scan 2 weeks window (User requested "today or recent few days")
 
     for (let i = 0; i < scanDays; i += 2) { // Step by 2 days to save time
         const conceptionDate = new Date(today);
@@ -135,19 +145,23 @@ export const findBestConceptionDates = async (type, limit = 3) => {
 
                 const scorer = SCORING_RULES[type] || SCORING_RULES['leader'];
                 const { score, desc } = scorer(horoscope);
+                // console.log(`Date: ${dateStr}, Score: ${score}`);
 
-                if (score > 60) { // Threshold
+                // Always push, then sort later. Or keep a small heap if memory is concern.
+                // Since we scan ~1440 charts, keeping all in memory is fine (JS objects are small).
+                // But to be safe, let's just keep if score > 0.
+                if (score > 0) {
                     results.push({
                         conceptionDate: conceptionDate.toLocaleDateString(),
                         birthDate: birthDate.toLocaleDateString(),
                         birthTimeIndex: h / 2,
                         score,
                         desc,
-                        horoscope // Keep for reference if needed, but heavy
+                        // horoscope // Remove heavy object to save memory, we don't use it in the list
                     });
                 }
             } catch (e) {
-                // Ignore errors
+                console.error("Error in loop:", e);
             }
         }
     }
