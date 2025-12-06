@@ -312,7 +312,7 @@ export const generateBabyPrompt = (type, basicInfo, horoscope, partnerHoroscope,
       bestDatesList += `**方案 ${i + 1}：**\n`;
       bestDatesList += `   - **建议受孕日期：** ${d.conceptionDate}\n`;
       bestDatesList += `   - **预产期 (参考)：** ${d.birthDate}\n`;
-      bestDatesList += `   - **核心格局得分：** ${d.score}分\n`;
+      bestDatesList += `   - **核心格局评分：** ${d.stars} (综合得分: ${d.score})\n`;
       bestDatesList += `   - **命盘特征：** ${d.desc}\n\n`;
     });
   } else {

@@ -147,17 +147,27 @@ export const findBestConceptionDates = async (type, limit = 3) => {
                 const { score, desc } = scorer(horoscope);
                 // console.log(`Date: ${dateStr}, Score: ${score}`);
 
-                // Always push, then sort later. Or keep a small heap if memory is concern.
-                // Since we scan ~1440 charts, keeping all in memory is fine (JS objects are small).
-                // But to be safe, let's just keep if score > 0.
+                // Calculate Rating (1-5 Stars) based on raw score
+                // Raw score typically 20-60 for good charts.
+                let rating = 1;
+                if (score >= 50) rating = 5;
+                else if (score >= 40) rating = 4;
+                else if (score >= 30) rating = 3;
+                else if (score >= 20) rating = 2;
+
+                const stars = "⭐".repeat(rating);
+
+                // Always push, then sort later.
                 if (score > 0) {
                     results.push({
                         conceptionDate: conceptionDate.toLocaleDateString(),
                         birthDate: birthDate.toLocaleDateString(),
                         birthTimeIndex: h / 2,
                         score,
+                        rating,
+                        stars,
                         desc,
-                        // horoscope // Remove heavy object to save memory, we don't use it in the list
+                        // horoscope // Remove heavy object
                     });
                 }
             } catch (e) {
