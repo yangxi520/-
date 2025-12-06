@@ -160,24 +160,31 @@ export const findBestConceptionDates = async (type, limit = 3) => {
                 // Always push, then sort later.
                 if (score > 0) {
                     results.push({
-                        conceptionDate: conceptionDate.toLocaleDateString(),
-                        birthDate: birthDate.toLocaleDateString(),
-                        birthTimeIndex: h / 2,
+                        date: conceptionDate.toISOString().split('T')[0],
+                        timeIndex: h / 2, // 0-11
+                        timeRange: TIME_RANGES[h / 2],
                         score,
                         rating,
                         stars,
                         desc,
-                        // horoscope // Remove heavy object
+                        birthDate: dateStr
                     });
                 }
+
             } catch (e) {
-                console.error("Error in loop:", e);
+                console.error(e);
             }
         }
     }
 
-    // Sort by score desc
+    // Sort by Score DESC
     results.sort((a, b) => b.score - a.score);
 
     return results.slice(0, limit);
 };
+
+const TIME_RANGES = [
+    "23:00-01:00", "01:00-03:00", "03:00-05:00", "05:00-07:00",
+    "07:00-09:00", "09:00-11:00", "11:00-13:00", "13:00-15:00",
+    "15:00-17:00", "17:00-19:00", "19:00-21:00", "21:00-23:00"
+];
