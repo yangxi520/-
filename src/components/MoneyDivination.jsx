@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { Canvas, useFrame, useLoader } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { Physics, useCylinder, usePlane } from '@react-three/cannon';
-import { TextureLoader } from 'three';
+import { useTexture } from '@react-three/drei';
 import { ArrowLeft, RotateCcw } from 'lucide-react';
 import * as THREE from 'three';
 
@@ -39,8 +38,8 @@ const Coin = ({ position, onSettle, isThrowing, index }) => {
         }
     }));
 
-    // Textures
-    const [yangMap, yinMap] = useLoader(TextureLoader, [coinYangTexture, coinYinTexture]);
+    // Textures using useTexture (simpler and more robust)
+    const [yangMap, yinMap] = useTexture([coinYangTexture, coinYinTexture]);
 
     // State to track if this coin has settled
     const velocity = useRef([0, 0, 0]);
@@ -243,6 +242,13 @@ export default function MoneyDivination({ onBack }) {
                         </Suspense>
                     </Physics>
                 </Canvas>
+
+                {/* Loading Indicator (Visible when Suspense is active) */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                    {/* This is a trick: Suspense fallback in Canvas is for 3D objects. 
+                     If we want a 2D loader, we should wrap the whole Canvas or use a separate loader.
+                     But for now, let's just ensure the background is visible. */}
+                </div>
             </div>
 
             {/* UI Overlay */}
@@ -283,10 +289,10 @@ export default function MoneyDivination({ onBack }) {
                         onClick={throwCoins}
                         disabled={isThrowing}
                         className={`relative group px-12 py-4 rounded-full font-bold text-xl shadow-[0_0_20px_rgba(234,179,8,0.3)] transition-all transform active:scale-95 overflow-hidden ${isThrowing
-                                ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                                : lines.length >= 6
-                                    ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]'
-                                    : 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white hover:shadow-[0_0_30px_rgba(245,158,11,0.5)]'
+                            ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
+                            : lines.length >= 6
+                                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]'
+                                : 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white hover:shadow-[0_0_30px_rgba(245,158,11,0.5)]'
                             }`}
                     >
                         <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
