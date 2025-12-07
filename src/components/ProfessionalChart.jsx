@@ -934,6 +934,27 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                                 </div>
                             </div>
 
+                            <button
+                                onClick={() => {
+                                    setMenuView('baby');
+                                    setShowAiMenu(false);
+                                }}
+                                className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white p-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 font-bold"
+                            >
+                                <span className="text-xl">👶</span>
+                                <span>紫微备孕 (起居注)</span>
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    alert('金钱卦功能即将上线，敬请期待！\n(Money Divination coming soon!)');
+                                }}
+                                className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-600 hover:to-amber-700 text-white p-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 font-bold border border-yellow-300"
+                            >
+                                <span className="text-xl">🪙</span>
+                                <span>金钱卦 (财运占卜)</span>
+                            </button>
+
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-gray-700">出生日期 (阳历)</label>
                                 <input
