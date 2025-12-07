@@ -1,9 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { useSpring, animated, config } from '@react-spring/three';
-import { useTexture, OrbitControls } from '@react-three/drei';
-import { ArrowLeft, RotateCcw } from 'lucide-react';
-import ErrorBoundary from './ErrorBoundary';
+import { useSpring, animated } from '@react-spring/three';
 import * as THREE from 'three';
 
 // --- Assets ---
