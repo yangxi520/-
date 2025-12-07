@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import ProfessionalChart from "./components/ProfessionalChart";
-import MoneyDivination from "./components/MoneyDivination";
 import { ArrowLeft } from "lucide-react";
 import * as iztro from "iztro";
+
+// Lazy load the heavy 3D component
+const MoneyDivination = lazy(() => import("./components/MoneyDivination"));
 
 const getTimeDescription = (time) => {
   const timeMap = {
@@ -266,7 +268,16 @@ export default function App() {
           </div>
         ) : view === 'money' ? (
           // --- MONEY DIVINATION VIEW ---
-          <MoneyDivination onBack={() => setView('home')} />
+          <Suspense fallback={
+            <div className="flex-1 flex items-center justify-center text-white">
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p>正在加载 3D 引擎...</p>
+              </div>
+            </div>
+          }>
+            <MoneyDivination onBack={() => setView('home')} />
+          </Suspense>
         ) : (
           // --- CHART VIEW ---
           <div className="flex-1 relative overflow-hidden flex flex-col">
