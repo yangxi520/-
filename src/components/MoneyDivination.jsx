@@ -220,6 +220,28 @@ export default function MoneyDivination({ onBack }) {
         setIsThrowing(false);
     };
 
+    // --- MINIMAL TEST MODE ---
+    // If true, renders a simple box to test WebGL only.
+    const TEST_MODE = true;
+
+    if (TEST_MODE) {
+        return (
+            <div className="w-full h-full relative bg-gray-900">
+                <div style={{ position: 'fixed', top: 0, left: 0, background: 'lime', zIndex: 99999, padding: 10 }}>
+                    ✅ React Running | 🧪 TEST MODE
+                </div>
+                <Canvas>
+                    <ambientLight intensity={1} />
+                    <pointLight position={[10, 10, 10]} />
+                    <mesh rotation={[0.5, 0.5, 0]}>
+                        <boxGeometry args={[2, 2, 2]} />
+                        <meshStandardMaterial color="red" />
+                    </mesh>
+                </Canvas>
+            </div>
+        );
+    }
+
     // Mobile detection for performance optimization
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
 
