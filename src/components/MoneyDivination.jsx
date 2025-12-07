@@ -3,6 +3,7 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Physics, useCylinder, usePlane } from '@react-three/cannon';
 import { useTexture } from '@react-three/drei';
 import { ArrowLeft, RotateCcw } from 'lucide-react';
+import ErrorBoundary from './ErrorBoundary';
 import * as THREE from 'three';
 
 // --- Assets ---
