@@ -21,50 +21,50 @@ const createAudioContext = () => {
 
 const playThrowSound = (audioContext) => {
     if (!audioContext) return;
-    
+
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
-    
+
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
-    
+
     // Throw sound - quick whoosh
     oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
     oscillator.type = 'sawtooth';
-    
+
     gainNode.gain.setValueAtTime(0, audioContext.currentTime);
     gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.02);
     gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.15);
-    
+
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.15);
 };
 
 const playLandSound = (audioContext, delay = 0) => {
     if (!audioContext) return;
-    
+
     setTimeout(() => {
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
         const filter = audioContext.createBiquadFilter();
-        
+
         oscillator.connect(filter);
         filter.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        
+
         // Landing sound - metallic clink
         oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.2);
         oscillator.type = 'triangle';
-        
+
         filter.type = 'highpass';
         filter.frequency.setValueAtTime(300, audioContext.currentTime);
-        
+
         gainNode.gain.setValueAtTime(0, audioContext.currentTime);
         gainNode.gain.linearRampToValueAtTime(0.4, audioContext.currentTime + 0.01);
         gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
-        
+
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.3);
     }, delay);
@@ -74,10 +74,12 @@ const playLandSound = (audioContext, delay = 0) => {
 function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
     const [started, setStarted] = useState(false);
     const [finalRotation, setFinalRotation] = useState(0);
+    const [hasReported, setHasReported] = useState(false); // Prevent duplicate reporting
     const [yangMap, yinMap] = useTexture([coinYangTexture, coinYinTexture]);
 
     useEffect(() => {
         if (isThrown) {
+            setHasReported(false); // Reset reporting state
             const timer = setTimeout(() => {
                 const isHeads = Math.random() > 0.5;
                 // Heads (Yang/Flower) = 0, Tails (Yin/Characters) = PI
@@ -101,10 +103,11 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
             : [0, 0, 0],
         config: { mass: 2, tension: 120, friction: 14 },
         onRest: () => {
-            if (started) {
+            if (started && !hasReported) {
+                setHasReported(true);
                 // Play landing sound
                 playLandSound(audioContext, index * 50);
-                
+
                 // Determine final side based on rotation
                 const normalizedRotation = finalRotation % (Math.PI * 2);
                 const isHeads = normalizedRotation < Math.PI / 2 || normalizedRotation > Math.PI * 1.5;
@@ -149,22 +152,27 @@ export default function MoneyDivination({ onBack }) {
     const [currentThrow, setCurrentThrow] = useState(1); // Track which throw (1-6)
     const [hexagramLines, setHexagramLines] = useState([]); // Store 6 lines
     const [finalHexagram, setFinalHexagram] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false); // Prevent duplicate processing
     const audioContextRef = useRef(null);
 
     const handleThrow = () => {
+        // Boundary check
+        if (hexagramLines.length >= 6 || finalHexagram) return;
+
         // Initialize audio context on first interaction (required for browsers)
         if (!audioContextRef.current) {
             audioContextRef.current = createAudioContext();
         }
-        
+
         // Play throw sound
         if (audioContextRef.current?.state === 'suspended') {
             audioContextRef.current.resume();
         }
         playThrowSound(audioContextRef.current);
-        
+
         setIsThrown(false);
         setResults({});
+        setIsProcessing(false); // Reset processing state
         // Short delay to reset animation state
         setTimeout(() => setIsThrown(true), 100);
     };
@@ -182,11 +190,15 @@ export default function MoneyDivination({ onBack }) {
     };
 
     const calculateYao = (finalResults) => {
+        // Prevent duplicate processing for the same throw
+        if (isProcessing) return;
+        setIsProcessing(true);
+
         const headsCount = Object.values(finalResults).filter(r => r === 'heads').length;
         let yaoType = '';
         let yaoSymbol = '';
         let isMoving = false;
-        
+
         // Traditional Money Divination:
         // 3 Heads (Yang) -> Old Yang (Moving) -> Value 9
         // 2 Heads (Yang) + 1 Tail (Yin) -> Young Yin -> Value 8
@@ -213,27 +225,36 @@ export default function MoneyDivination({ onBack }) {
 
         // Add this line to hexagram (from bottom up - 初爻 to 上爻)
         const newLine = { type: yaoType, symbol: yaoSymbol, isMoving, headsCount };
-        setHexagramLines(prev => [...prev, newLine]);
 
-        // If this is the 6th throw, calculate final hexagram
-        if (currentThrow === 6) {
-            const allLines = [...hexagramLines, newLine];
-            calculateFinalHexagram(allLines);
-            setCurrentThrow(1); // Reset for next divination
-        } else {
-            setCurrentThrow(prev => prev + 1);
-        }
+        // Use functional state update to ensure we have the latest lines
+        setHexagramLines(prev => {
+            // Strict boundary check inside state update
+            if (prev.length >= 6) return prev;
+
+            const updatedLines = [...prev, newLine];
+
+            // If this is the 6th throw, calculate final hexagram
+            if (updatedLines.length === 6) {
+                setTimeout(() => {
+                    calculateFinalHexagram(updatedLines);
+                }, 100);
+            } else {
+                setCurrentThrow(prevCount => Math.min(prevCount + 1, 6));
+            }
+
+            return updatedLines;
+        });
     };
 
     const calculateFinalHexagram = (lines) => {
         const lineNames = ['初爻', '二爻', '三爻', '四爻', '五爻', '上爻'];
-        const hexagramDisplay = lines.map((line, index) => 
+        const hexagramDisplay = lines.map((line, index) =>
             `${lineNames[index]}: ${line.symbol} (${line.type})`
         ).join('\n');
-        
+
         const movingLines = lines.filter(line => line.isMoving);
         const hasMovingLines = movingLines.length > 0;
-        
+
         setFinalHexagram({
             lines: hexagramDisplay,
             hasMovingLines,
@@ -247,6 +268,7 @@ export default function MoneyDivination({ onBack }) {
         setFinalHexagram(null);
         setResults({});
         setIsThrown(false);
+        setIsProcessing(false);
     };
 
     return (
@@ -314,7 +336,7 @@ export default function MoneyDivination({ onBack }) {
                         marginBottom: '10px',
                         textShadow: '0 2px 4px rgba(0,0,0,0.5)'
                     }}>
-                        第 {currentThrow} 爻 / 共 6 爻
+                        第 {Math.min(currentThrow, 6)} 爻 / 共 6 爻
                     </div>
                 )}
 
@@ -329,7 +351,7 @@ export default function MoneyDivination({ onBack }) {
                         color: '#fff'
                     }}>
                         <div style={{ fontSize: '16px', marginBottom: '10px', color: '#ffd700' }}>
-                            已完成的爻:
+                            已完成的爻 ({hexagramLines.length}/6):
                         </div>
                         {hexagramLines.slice().reverse().map((line, index) => (
                             <div key={index} style={{
@@ -361,12 +383,12 @@ export default function MoneyDivination({ onBack }) {
                             🎯 六爻成卦完成！
                         </div>
                         <div style={{ fontSize: '14px', marginBottom: '10px' }}>
-                            {finalHexagram.hasMovingLines ? 
-                                `包含 ${finalHexagram.movingCount} 个动爻` : 
+                            {finalHexagram.hasMovingLines ?
+                                `包含 ${finalHexagram.movingCount} 个动爻` :
                                 '静卦（无动爻）'
                             }
                         </div>
-                        <button 
+                        <button
                             onClick={resetDivination}
                             style={{
                                 padding: '8px 16px',
@@ -386,7 +408,7 @@ export default function MoneyDivination({ onBack }) {
             </div>
 
             {/* Shake Button */}
-            {!finalHexagram && (
+            {!finalHexagram && hexagramLines.length < 6 && (
                 <button
                     onClick={handleThrow}
                     disabled={isThrown && Object.keys(results).length < 3}
@@ -409,8 +431,8 @@ export default function MoneyDivination({ onBack }) {
                         opacity: isThrown && Object.keys(results).length < 3 ? 0.7 : 1
                     }}
                 >
-                    {isThrown && Object.keys(results).length < 3 ? 
-                        `演算第${currentThrow}爻...` : 
+                    {isThrown && Object.keys(results).length < 3 ?
+                        `演算第${currentThrow}爻...` :
                         `摇第${currentThrow}爻`
                     }
                 </button>
