@@ -1,5 +1,6 @@
 import React, { useState, Suspense, lazy } from 'react';
 import ProfessionalChart from "./components/ProfessionalChart";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { ArrowLeft } from "lucide-react";
 import * as iztro from "iztro";
 
@@ -268,16 +269,18 @@ export default function App() {
           </div>
         ) : view === 'money' ? (
           // --- MONEY DIVINATION VIEW ---
-          <Suspense fallback={
-            <div className="flex-1 flex items-center justify-center text-white">
-              <div className="text-center">
-                <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p>正在加载 3D 引擎...</p>
+          <ErrorBoundary>
+            <Suspense fallback={
+              <div className="flex-1 flex items-center justify-center text-white">
+                <div className="text-center">
+                  <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p>正在加载 3D 引擎...</p>
+                </div>
               </div>
-            </div>
-          }>
-            <MoneyDivination onBack={() => setView('home')} />
-          </Suspense>
+            }>
+              <MoneyDivination onBack={() => setView('home')} />
+            </Suspense>
+          </ErrorBoundary>
         ) : (
           // --- CHART VIEW ---
           <div className="flex-1 relative overflow-hidden flex flex-col">
