@@ -10,8 +10,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@react-three/cannon": "^6.6.0",
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.4.2",
     "@tailwindcss/postcss": "^4.1.17",
     "@tailwindcss/vite": "^4.1.17",
+    "@types/three": "^0.181.0",
     "autoprefixer": "^10.4.22",
     "iztro": "^2.5.3",
     "lucide-react": "^0.554.0",
@@ -19,7 +23,8 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-iztro": "^1.4.2",
-    "tailwindcss": "^4.1.17"
+    "tailwindcss": "^4.1.17",
+    "three": "^0.181.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
