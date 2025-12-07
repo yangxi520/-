@@ -247,8 +247,9 @@ export default function MoneyDivination({ onBack }) {
             </div>
 
             {/* Loading Indicator (Visible when Suspense is active) */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-                {/* Placeholder for loading state if needed */}
+            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0">
+                <div className="w-12 h-12 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin mb-4"></div>
+                <div className="text-yellow-500 font-mono animate-pulse">正在加载 3D 引擎...</div>
             </div>
 
             {/* UI Overlay */}
