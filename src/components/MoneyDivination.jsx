@@ -229,7 +229,8 @@ export default function MoneyDivination({ onBack }) {
 
             {/* 3D Scene */}
             <div className="absolute inset-0 z-10">
-                <Canvas shadows camera={{ position: [0, 12, 8], fov: 45 }}>
+                <Canvas shadows camera={{ position: [0, 12, 8], fov: 45 }} gl={{ alpha: true }}>
+                    {/* Removed opaque background color to let CSS bg show through */}
                     <ambientLight intensity={0.4} />
                     <spotLight position={[5, 15, 5]} angle={0.4} penumbra={1} intensity={1.5} castShadow color="#ffaa00" />
                     <pointLight position={[-5, 5, -5]} intensity={0.5} color="#00ffff" />
@@ -243,13 +244,11 @@ export default function MoneyDivination({ onBack }) {
                         </Suspense>
                     </Physics>
                 </Canvas>
+            </div>
 
-                {/* Loading Indicator (Visible when Suspense is active) */}
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-                    {/* This is a trick: Suspense fallback in Canvas is for 3D objects. 
-                     If we want a 2D loader, we should wrap the whole Canvas or use a separate loader.
-                     But for now, let's just ensure the background is visible. */}
-                </div>
+            {/* Loading Indicator (Visible when Suspense is active) */}
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
+                {/* Placeholder for loading state if needed */}
             </div>
 
             {/* UI Overlay */}
