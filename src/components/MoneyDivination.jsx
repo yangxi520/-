@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, Suspense } from 'react';
+import React from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useSpring, animated, config } from '@react-spring/three';
 import { useTexture, OrbitControls } from '@react-three/drei';
@@ -150,198 +150,55 @@ const HexagramLine = ({ line, index }) => {
 
 // --- Main Component ---
 export default function MoneyDivination({ onBack }) {
-    const [lines, setLines] = useState([]); // Array of 6 lines
-    const [isThrowing, setIsThrowing] = useState(false);
-    const [currentThrowResults, setCurrentThrowResults] = useState({});
-
-    const throwCoins = () => {
-        if (lines.length >= 6) {
-            setLines([]);
-            return;
-        }
-
-        // Reset current results
-        setCurrentThrowResults({});
-
-        // Trigger animation
-        setIsThrowing(false);
-        // Small delay to allow reset
-        setTimeout(() => setIsThrowing(true), 50);
-    };
-
-    const handleCoinResult = (index, result) => {
-        setCurrentThrowResults(prev => {
-            const newResults = { ...prev, [index]: result };
-
-            // Check if we have all 3 results
-            if (Object.keys(newResults).length === 3) {
-                calculateGua(newResults);
-            }
-            return newResults;
-        });
-    };
-
-    const calculateGua = (results) => {
-        // Count heads (Yang/Flower) and tails (Yin/Characters)
-        // In this implementation:
-        // 'heads' = Flower (Yang)
-        // 'tails' = Characters (Yin)
-
-        // Traditional Money Divination Logic:
-        // 1 Back (Heads/Flower) + 2 Fronts (Tails/Characters) -> Shaoyang (Young Yang) - Value 7
-        // 2 Backs (Heads/Flower) + 1 Front (Tails/Characters) -> Shaoyin (Young Yin) - Value 8
-        // 3 Backs (Heads/Flower) -> Laoyang (Old Yang) - Value 9 (Moving)
-        // 3 Fronts (Tails/Characters) -> Laoyin (Old Yin) - Value 6 (Moving)
-
-        // Wait, let's verify the mapping:
-        // Usually:
-        // 1 Head (Yang) + 2 Tails (Yin) = Shao Yang (7) -- Solid line
-        // 2 Heads (Yang) + 1 Tail (Yin) = Shao Yin (8) -- Broken line
-        // 3 Heads (Yang) = Lao Yang (9) -- Solid Moving
-        // 3 Tails (Yin) = Lao Yin (6) -- Broken Moving
-
-        let headsCount = 0;
-        Object.values(results).forEach(r => {
-            if (r === 'heads') headsCount++;
-        });
-
-        let resultValue = 0;
-        if (headsCount === 1) resultValue = 7; // 少阳
-        else if (headsCount === 2) resultValue = 8; // 少阴
-        else if (headsCount === 3) resultValue = 9; // 老阳
-        else if (headsCount === 0) resultValue = 6; // 老阴
-
-        const result = HEXAGRAM_LOOKUP[resultValue];
-
-        // Add to lines after a short delay for visual pacing
-        setTimeout(() => {
-            setLines(prev => [...prev, result]);
-            setIsThrowing(false);
-        }, 500);
-    };
-
-    // Mobile detection
-    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
-
     return (
-        <div className="w-full h-full relative bg-black overflow-hidden">
-            {/* Debug Green Box */}
+        <div style={{ width: '100vw', height: '100vh', background: '#000' }}>
+            {/* Back Button (to allow exit) */}
+            <button
+                onClick={onBack}
+                style={{
+                    position: 'fixed',
+                    top: 20,
+                    right: 20,
+                    padding: '10px 20px',
+                    background: 'white',
+                    color: 'black',
+                    zIndex: 10000
+                }}
+            >
+                Back
+            </button>
+
+            {/* Test 1: HTML Display */}
             <div style={{
                 position: 'fixed',
-                top: 0,
-                left: 0,
-                background: 'lime',
-                color: 'black',
-                padding: '10px',
-                zIndex: 99999,
-                fontSize: '16px',
-                fontWeight: 'bold',
-                pointerEvents: 'none',
-                opacity: 0.5
+                top: 20,
+                left: 20,
+                background: 'red',
+                color: 'white',
+                padding: 20,
+                zIndex: 9999,
+                fontSize: 24,
+                fontWeight: 'bold'
             }}>
-                ✅ React Running | 🌸 SPRING ANIMATION
+                🔴 HTML 正常 | Minimal Test
             </div>
 
-            {/* Background Image */}
-            <div
-                className="absolute inset-0 z-0 bg-cover bg-center opacity-60"
-                style={{ backgroundImage: `url(${bgTexture})` }}
-            ></div>
-
-            {/* 3D Scene */}
-            <div className="absolute inset-0 z-10">
-                <ErrorBoundary fallback={<div className="absolute inset-0 flex items-center justify-center bg-red-900/80 text-white text-lg z-50">Error loading 3D scene. Please refresh.</div>}>
-                    <Canvas
-                        shadows
-                        camera={{ position: [0, 12, 8], fov: 45 }}
-                        gl={{
-                            alpha: true,
-                            powerPreference: "high-performance",
-                            antialias: !isMobile
-                        }}
-                        onCreated={({ gl }) => {
-                            gl.domElement.addEventListener('webglcontextlost', (e) => {
-                                console.error('WebGL context lost!', e);
-                                e.preventDefault();
-                            });
-                        }}
-                    >
-                        <ambientLight intensity={1.5} />
-                        <directionalLight position={[5, 5, 5]} intensity={2} />
-                        <pointLight position={[0, 5, 0]} intensity={1} />
-
-                        <Suspense fallback={null}>
-                            {[0, 1, 2].map(i => (
-                                <AnimatedCoin
-                                    key={i}
-                                    index={i}
-                                    isThrown={isThrowing}
-                                    delay={i * 150} // Stagger start
-                                    onResult={handleCoinResult}
-                                />
-                            ))}
-                        </Suspense>
-
-                        <OrbitControls enableZoom={false} enablePan={false} minPolarAngle={0} maxPolarAngle={Math.PI / 2.5} />
-                    </Canvas>
-                </ErrorBoundary>
-            </div>
-
-            {/* Loading Indicator */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0">
-                <div className="w-12 h-12 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin mb-4"></div>
-                <div className="text-yellow-500 font-mono animate-pulse">正在加载 3D 引擎...</div>
-            </div>
-
-            {/* UI Overlay */}
-            <div className="absolute inset-0 z-20 pointer-events-none flex flex-col justify-between p-4 md:p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between pointer-events-auto">
-                    <button onClick={onBack} className="p-3 bg-black/40 backdrop-blur-md border border-white/10 rounded-full text-white hover:bg-white/10 transition-colors">
-                        <ArrowLeft className="w-6 h-6" />
-                    </button>
-                    <div className="text-center">
-                        <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600 font-orbitron drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
-                            金钱卦
-                        </h2>
-                        <p className="text-xs text-yellow-500/60 tracking-widest">DIVINATION</p>
-                    </div>
-                    <div className="w-12"></div>
-                </div>
-
-                {/* Hexagram Display */}
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col-reverse gap-3 p-4 bg-black/40 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl">
-                    {Array.from({ length: 6 }).map((_, i) => (
-                        <div key={i} className="w-24 md:w-32">
-                            <HexagramLine line={lines[i]} index={i} />
-                        </div>
-                    ))}
-                </div>
-
-                {/* Controls */}
-                <div className="flex flex-col items-center gap-6 pointer-events-auto pb-8">
-                    <div className="text-yellow-400 font-mono text-shadow-sm">
-                        {isThrowing ? '天机演算中...' : lines.length === 6 ? '卦象已成' : `第 ${lines.length + 1} 爻`}
-                    </div>
-
-                    <button
-                        onClick={throwCoins}
-                        disabled={isThrowing}
-                        className={`relative group px-12 py-4 rounded-full font-bold text-xl shadow-[0_0_20px_rgba(234,179,8,0.3)] transition-all transform active:scale-95 overflow-hidden ${isThrowing
-                            ? 'bg-gray-800 text-gray-500 cursor-not-allowed'
-                            : lines.length >= 6
-                                ? 'bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:shadow-[0_0_30px_rgba(16,185,129,0.5)]'
-                                : 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white hover:shadow-[0_0_30px_rgba(245,158,11,0.5)]'
-                            }`}
-                    >
-                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-                        <span className="relative flex items-center gap-2">
-                            {lines.length >= 6 ? <RotateCcw className="w-5 h-5" /> : null}
-                            {lines.length >= 6 ? '重新起卦' : isThrowing ? '...' : '摇 卦'}
-                        </span>
-                    </button>
-                </div>
-            </div>
+            {/* Test 2: Canvas Initialization */}
+            <Canvas
+                style={{ background: 'blue' }}
+                onCreated={() => {
+                    console.log('✅ Canvas Created');
+                }}
+                onError={(e) => {
+                    console.error('❌ Canvas Error', e);
+                }}
+            >
+                <ambientLight />
+                <mesh>
+                    <boxGeometry />
+                    <meshBasicMaterial color="yellow" />
+                </mesh>
+            </Canvas>
         </div>
     );
 }
