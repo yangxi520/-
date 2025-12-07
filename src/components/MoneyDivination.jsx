@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Physics, useCylinder, usePlane } from '@react-three/cannon';
-import { useTexture } from '@react-three/drei';
+import { useTexture, OrbitControls } from '@react-three/drei';
 import { ArrowLeft, RotateCcw } from 'lucide-react';
 import ErrorBoundary from './ErrorBoundary';
 import * as THREE from 'three';
@@ -228,15 +228,24 @@ export default function MoneyDivination({ onBack }) {
         return (
             <div className="w-full h-full relative bg-gray-900">
                 <div style={{ position: 'fixed', top: 0, left: 0, background: 'lime', zIndex: 99999, padding: 10 }}>
-                    ✅ React Running | 🧪 TEST MODE: Golden Cylinder
+                    ✅ React Running | 🧪 TEST MODE: Bright Golden Cylinder
                 </div>
-                <Canvas>
-                    <ambientLight intensity={1} />
-                    <pointLight position={[10, 10, 10]} />
-                    <mesh rotation={[Math.PI / 2, 0, 0]}>
+                <Canvas camera={{ position: [0, 3, 8], fov: 50 }}>
+                    <ambientLight intensity={1.5} />
+                    <directionalLight position={[5, 5, 5]} intensity={2} />
+                    <pointLight position={[0, 5, 0]} intensity={1} />
+
+                    <mesh rotation={[Math.PI / 3, 0, 0]}>
                         <cylinderGeometry args={[1, 1, 0.2, 32]} />
-                        <meshStandardMaterial color="#DAA520" metalness={0.8} roughness={0.2} />
+                        <meshStandardMaterial
+                            color="#FFD700"
+                            metalness={0.6}
+                            roughness={0.4}
+                            emissive="#886600"
+                            emissiveIntensity={0.3}
+                        />
                     </mesh>
+                    <OrbitControls />
                 </Canvas>
             </div>
         );
