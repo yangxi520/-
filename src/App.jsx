@@ -97,12 +97,21 @@ export default function App() {
               古书派·紫微
             </h1>
           </div>
-          <button
-            onClick={handleInstallClick}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-900/50 to-purple-900/50 border border-cyan-500/30 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)]"
-          >
-            📲 下载APP
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => alert('金钱卦功能即将上线，敬请期待！\n(Money Divination coming soon!)')}
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 hover:from-yellow-500/30 hover:to-amber-500/30 border border-yellow-500/30 rounded-full transition-all group"
+            >
+              <span className="text-lg group-hover:scale-110 transition-transform">🪙</span>
+              <span className="text-sm font-bold text-yellow-500">金钱卦</span>
+            </button>
+            <button
+              onClick={handleInstallClick}
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-900/50 to-purple-900/50 border border-cyan-500/30 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+            >
+              📲 下载APP
+            </button>
+          </div>
         </div>
       </header>
 
