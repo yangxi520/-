@@ -29,18 +29,12 @@ const Coin = ({ position, onSettle, isThrowing, index }) => {
         mass: 1,
         args: [COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 32],
         position,
-        material: { friction: 0.3, restitution: 0.5 }, // Bouncy but not too slippery
+        material: { friction: 0.3, restitution: 0.5 },
         allowSleep: true,
-        sleepSpeedLimit: 0.5, // Sleep when slow
+        sleepSpeedLimit: 0.5,
         sleepTimeLimit: 0.5,
         onCollide: (e) => {
             // Optional: Add sound effect here
-        },
-        onSleep: () => {
-            isSleeping.current = true;
-        },
-        onWake: () => {
-            isSleeping.current = false;
         }
     }));
 
@@ -48,9 +42,35 @@ const Coin = ({ position, onSettle, isThrowing, index }) => {
     const [yangMap, yinMap] = useLoader(TextureLoader, [coinYangTexture, coinYinTexture]);
 
     // State to track if this coin has settled
-    const isSleeping = useRef(false);
+    const velocity = useRef([0, 0, 0]);
+    const angularVelocity = useRef([0, 0, 0]);
 
-    // Removed invalid subscription logic
+    // Subscribe to velocity to detect sleep manually
+    useEffect(() => {
+        const unsubVelocity = api.velocity.subscribe((v) => (velocity.current = v));
+        const unsubAngular = api.angularVelocity.subscribe((v) => (angularVelocity.current = v));
+        return () => {
+            unsubVelocity();
+            unsubAngular();
+        };
+    }, [api]);
+
+    // Expose "isSleeping" check to parent via ref or just let parent poll
+    // We'll use a simple approach: The parent waits for a timeout in this MVP, 
+    // OR we can check velocity in the parent if we exposed the API.
+    // But since the parent already has the API via onSettle(index, api, ref),
+    // the parent can subscribe to velocity itself!
+
+    // Actually, the previous code had the parent calling `checkSettled` which used a timeout.
+    // Let's stick to the timeout for robustness for now, but ensure we don't crash.
+    // The parent's `checkSettled` function in the previous version was:
+    // setTimeout(() => { calculateResult(); }, 4000);
+    // This is safe and doesn't rely on complex event subscriptions.
+
+    // So for this fix, I just need to REMOVE the offending callbacks.
+    // I will keep the velocity subscription code here just in case we want to use it later,
+    // or just remove it to be clean. 
+    // Let's just remove the callbacks to fix the crash first.
 
     // Check orientation when settled
     useFrame(() => {
