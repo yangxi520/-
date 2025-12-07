@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Physics, RigidBody, CuboidCollider, CylinderCollider } from '@react-three/rapier';
+import { useSpring, animated, config } from '@react-spring/three';
 import { useTexture, OrbitControls } from '@react-three/drei';
 import { ArrowLeft, RotateCcw } from 'lucide-react';
 import ErrorBoundary from './ErrorBoundary';
@@ -14,7 +14,6 @@ import bgTexture from '../assets/divination_bg.png';
 // --- Constants ---
 const COIN_RADIUS = 1.5;
 const COIN_THICKNESS = 0.2;
-const THROW_HEIGHT = 8;
 
 // --- Helper: Hexagram Logic ---
 const HEXAGRAM_LOOKUP = {
@@ -24,63 +23,87 @@ const HEXAGRAM_LOOKUP = {
     '6': { name: '老阴', symbol: '- - X', value: 6, type: 'yin_moving' }
 };
 
-// --- Component: Coin ---
-const Coin = ({ position, onSettle, isThrowing, index }) => {
-    const rigidBody = useRef();
+// --- Component: Animated Coin ---
+const AnimatedCoin = ({ index, isThrown, onResult, delay = 0 }) => {
+    const [started, setStarted] = useState(false);
+
+    // Load textures
     const [yangMap, yinMap] = useTexture([coinYangTexture, coinYinTexture]);
 
-    // Expose API to parent via onSettle callback (used for registration)
+    // Determine final result for this throw
+    // We need to generate this when isThrown becomes true
+    const [finalResult, setFinalResult] = useState('heads');
+
     useEffect(() => {
-        if (onSettle && rigidBody.current) {
-            onSettle(index, rigidBody.current);
+        if (isThrown) {
+            // Reset start state
+            setStarted(false);
+
+            // Generate new result
+            const result = Math.random() > 0.5 ? 'heads' : 'tails';
+            setFinalResult(result);
+
+            // Start animation after delay
+            const timer = setTimeout(() => {
+                setStarted(true);
+            }, delay);
+
+            return () => clearTimeout(timer);
         }
-    }, [index, onSettle]);
+    }, [isThrown, delay]);
+
+    // Target rotation based on result
+    // Heads (Yang/Flower) = 0 (or 2PI)
+    // Tails (Yin/Characters) = PI
+    // We add extra rotations for the spin effect
+    const targetRotationX = finalResult === 'heads' ? Math.PI * 8 : Math.PI * 9;
+
+    const { position, rotation } = useSpring({
+        from: {
+            position: [index * 3.5 - 3.5, 5, 0], // Start high
+            rotation: [0, 0, 0]
+        },
+        to: started ? {
+            position: [index * 3.5 - 3.5, 0.1, 0], // Land on floor
+            rotation: [
+                targetRotationX,
+                Math.PI * 4 + (Math.random() * 0.5), // Add some random yaw
+                (Math.random() - 0.5) * 0.5 // Slight tilt
+            ]
+        } : {
+            // Reset position when not started (or before throw)
+            position: [index * 3.5 - 3.5, 5, 0],
+            rotation: [0, 0, 0]
+        },
+        config: {
+            mass: 2,
+            tension: 120,
+            friction: 14
+        },
+        onRest: () => {
+            if (started) {
+                onResult(index, finalResult);
+            }
+        }
+    });
 
     return (
-        <RigidBody
-            ref={rigidBody}
-            position={position}
-            colliders="hull"
-            restitution={0.5}
-            friction={0.3}
-            linearDamping={0.5}
-            angularDamping={0.5}
-            // Use onSleep to detect when coin settles? 
-            // Actually, we'll just wait a fixed time or check velocity in parent for simplicity first.
-            // Rapier's sleep threshold can be tuned.
-            canSleep={true}
-        >
-            <group>
-                <mesh castShadow receiveShadow>
-                    <cylinderGeometry args={[COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 32]} />
-                    <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.3} />
-                </mesh>
-                {/* Top Face (Yin - Characters) - Local Y+ */}
-                <mesh position={[0, COIN_THICKNESS / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                    <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
-                    <meshStandardMaterial map={yinMap} transparent alphaTest={0.5} />
-                </mesh>
-                {/* Bottom Face (Yang - Flower) - Local Y- */}
-                <mesh position={[0, -COIN_THICKNESS / 2 - 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                    <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
-                    <meshStandardMaterial map={yangMap} transparent alphaTest={0.5} />
-                </mesh>
-            </group>
-        </RigidBody>
-    );
-};
-
-// --- Component: Floor ---
-const Floor = () => {
-    return (
-        <RigidBody type="fixed" restitution={0.5} friction={0.3}>
-            <CuboidCollider args={[50, 1, 50]} position={[0, -1, 0]} />
-            {/* Visual Floor (Invisible, relying on background) */}
-            <mesh position={[0, -1, 0]} visible={false}>
-                <boxGeometry args={[100, 2, 100]} />
-                <meshStandardMaterial color="#1a1a1a" />
+        <animated.group position={position} rotation={rotation}>
+            <mesh castShadow receiveShadow>
+                <cylinderGeometry args={[COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 32]} />
+                <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.3} />
             </mesh>
-        </RigidBody>
+            {/* Top Face (Yin - Characters) - Local Y+ */}
+            <mesh position={[0, COIN_THICKNESS / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
+                <meshStandardMaterial map={yinMap} transparent alphaTest={0.5} />
+            </mesh>
+            {/* Bottom Face (Yang - Flower) - Local Y- */}
+            <mesh position={[0, -COIN_THICKNESS / 2 - 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
+                <meshStandardMaterial map={yangMap} transparent alphaTest={0.5} />
+            </mesh>
+        </animated.group>
     );
 };
 
@@ -129,13 +152,7 @@ const HexagramLine = ({ line, index }) => {
 export default function MoneyDivination({ onBack }) {
     const [lines, setLines] = useState([]); // Array of 6 lines
     const [isThrowing, setIsThrowing] = useState(false);
-
-    // Refs to access coin rigid bodies
-    const coinRefs = useRef([]);
-
-    const registerCoin = (index, ref) => {
-        coinRefs.current[index] = ref;
-    };
+    const [currentThrowResults, setCurrentThrowResults] = useState({});
 
     const throwCoins = () => {
         if (lines.length >= 6) {
@@ -143,71 +160,64 @@ export default function MoneyDivination({ onBack }) {
             return;
         }
 
-        setIsThrowing(true);
+        // Reset current results
+        setCurrentThrowResults({});
 
-        coinRefs.current.forEach((ref, i) => {
-            if (!ref) return;
-
-            // 1. Reset Position & Velocity
-            ref.setTranslation({ x: (Math.random() - 0.5) * 2, y: THROW_HEIGHT + i * 0.5, z: (Math.random() - 0.5) * 2 }, true);
-            ref.setLinvel({ x: 0, y: 0, z: 0 }, true);
-            ref.setAngvel({ x: 0, y: 0, z: 0 }, true);
-            ref.setRotation({ x: Math.random(), y: Math.random(), z: Math.random(), w: 1 }, true);
-
-            // 2. Wake up (Rapier handles this automatically on impulse, but good to be sure)
-            ref.wakeUp();
-
-            // 3. Apply Impulse & Torque
-            // Rapier uses applyImpulse({x,y,z}, true) - true means wake up
-            ref.applyImpulse({
-                x: (Math.random() - 0.5) * 5,
-                y: 5 + Math.random() * 5,
-                z: (Math.random() - 0.5) * 5
-            }, true);
-
-            ref.applyTorqueImpulse({
-                x: Math.random() * 2,
-                y: Math.random() * 2,
-                z: Math.random() * 2
-            }, true);
-        });
-
-        // Wait for settle
-        setTimeout(() => {
-            calculateResult();
-        }, 3500);
+        // Trigger animation
+        setIsThrowing(false);
+        // Small delay to allow reset
+        setTimeout(() => setIsThrowing(true), 50);
     };
 
-    const calculateResult = () => {
-        let yangCount = 0;
-        let yinCount = 0;
+    const handleCoinResult = (index, result) => {
+        setCurrentThrowResults(prev => {
+            const newResults = { ...prev, [index]: result };
 
-        coinRefs.current.forEach((ref) => {
-            if (!ref) return;
-
-            // Get current rotation
-            const rotation = ref.rotation();
-            const quaternion = new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
-
-            const localUp = new THREE.Vector3(0, 1, 0);
-            localUp.applyQuaternion(quaternion);
-
-            if (localUp.y > 0) {
-                yinCount++;
-            } else {
-                yangCount++;
+            // Check if we have all 3 results
+            if (Object.keys(newResults).length === 3) {
+                calculateGua(newResults);
             }
+            return newResults;
+        });
+    };
+
+    const calculateGua = (results) => {
+        // Count heads (Yang/Flower) and tails (Yin/Characters)
+        // In this implementation:
+        // 'heads' = Flower (Yang)
+        // 'tails' = Characters (Yin)
+
+        // Traditional Money Divination Logic:
+        // 1 Back (Heads/Flower) + 2 Fronts (Tails/Characters) -> Shaoyang (Young Yang) - Value 7
+        // 2 Backs (Heads/Flower) + 1 Front (Tails/Characters) -> Shaoyin (Young Yin) - Value 8
+        // 3 Backs (Heads/Flower) -> Laoyang (Old Yang) - Value 9 (Moving)
+        // 3 Fronts (Tails/Characters) -> Laoyin (Old Yin) - Value 6 (Moving)
+
+        // Wait, let's verify the mapping:
+        // Usually:
+        // 1 Head (Yang) + 2 Tails (Yin) = Shao Yang (7) -- Solid line
+        // 2 Heads (Yang) + 1 Tail (Yin) = Shao Yin (8) -- Broken line
+        // 3 Heads (Yang) = Lao Yang (9) -- Solid Moving
+        // 3 Tails (Yin) = Lao Yin (6) -- Broken Moving
+
+        let headsCount = 0;
+        Object.values(results).forEach(r => {
+            if (r === 'heads') headsCount++;
         });
 
         let resultValue = 0;
-        if (yangCount === 1 && yinCount === 2) resultValue = 7; // 少阳
-        else if (yangCount === 2 && yinCount === 1) resultValue = 8; // 少阴
-        else if (yangCount === 3 && yinCount === 0) resultValue = 9; // 老阳
-        else if (yangCount === 0 && yinCount === 3) resultValue = 6; // 老阴
+        if (headsCount === 1) resultValue = 7; // 少阳
+        else if (headsCount === 2) resultValue = 8; // 少阴
+        else if (headsCount === 3) resultValue = 9; // 老阳
+        else if (headsCount === 0) resultValue = 6; // 老阴
 
         const result = HEXAGRAM_LOOKUP[resultValue];
-        setLines(prev => [...prev, result]);
-        setIsThrowing(false);
+
+        // Add to lines after a short delay for visual pacing
+        setTimeout(() => {
+            setLines(prev => [...prev, result]);
+            setIsThrowing(false);
+        }, 500);
     };
 
     // Mobile detection
@@ -229,7 +239,7 @@ export default function MoneyDivination({ onBack }) {
                 pointerEvents: 'none',
                 opacity: 0.5
             }}>
-                ✅ React Running | ⚡ RAPIER PHYSICS
+                ✅ React Running | 🌸 SPRING ANIMATION
             </div>
 
             {/* Background Image */}
@@ -256,17 +266,20 @@ export default function MoneyDivination({ onBack }) {
                             });
                         }}
                     >
-                        <ambientLight intensity={0.4} />
-                        <spotLight position={[5, 15, 5]} angle={0.4} penumbra={1} intensity={1.5} castShadow color="#ffaa00" />
-                        <pointLight position={[-5, 5, -5]} intensity={0.5} color="#00ffff" />
+                        <ambientLight intensity={1.5} />
+                        <directionalLight position={[5, 5, 5]} intensity={2} />
+                        <pointLight position={[0, 5, 0]} intensity={1} />
 
                         <Suspense fallback={null}>
-                            <Physics gravity={[0, -12, 0]}>
-                                <Floor />
-                                <Coin index={0} position={[-1.5, 5, 0]} onSettle={registerCoin} isThrowing={isThrowing} />
-                                <Coin index={1} position={[0, 6, 0]} onSettle={registerCoin} isThrowing={isThrowing} />
-                                <Coin index={2} position={[1.5, 5, 0]} onSettle={registerCoin} isThrowing={isThrowing} />
-                            </Physics>
+                            {[0, 1, 2].map(i => (
+                                <AnimatedCoin
+                                    key={i}
+                                    index={i}
+                                    isThrown={isThrowing}
+                                    delay={i * 150} // Stagger start
+                                    onResult={handleCoinResult}
+                                />
+                            ))}
                         </Suspense>
 
                         <OrbitControls enableZoom={false} enablePan={false} minPolarAngle={0} maxPolarAngle={Math.PI / 2.5} />
