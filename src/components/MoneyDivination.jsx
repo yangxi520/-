@@ -148,11 +148,28 @@ const HexagramLine = ({ line, index }) => {
     );
 };
 
-// --- Main Component ---
+function SimpleCoin() {
+    const [drop, setDrop] = useState(false);
+
+    const { position } = useSpring({
+        position: drop ? [0, 0, 0] : [0, 5, 0],
+        config: { mass: 1, tension: 170, friction: 26 }
+    });
+
+    return (
+        <animated.mesh position={position}>
+            <cylinderGeometry args={[1, 1, 0.2, 32]} />
+            <meshStandardMaterial color="gold" />
+        </animated.mesh>
+    );
+}
+
 export default function MoneyDivination({ onBack }) {
+    const [drop, setDrop] = useState(false);
+
     return (
         <div style={{ width: '100vw', height: '100vh', background: '#000' }}>
-            {/* Back Button (to allow exit) */}
+            {/* Back Button */}
             <button
                 onClick={onBack}
                 style={{
@@ -180,25 +197,58 @@ export default function MoneyDivination({ onBack }) {
                 fontSize: 24,
                 fontWeight: 'bold'
             }}>
-                🔴 HTML 正常 | Minimal Test
+                🔴 HTML 正常 | Phase 1: Simple Animation
             </div>
 
-            {/* Test 2: Canvas Initialization */}
-            <Canvas
-                style={{ background: 'blue' }}
-                onCreated={() => {
-                    console.log('✅ Canvas Created');
-                }}
-                onError={(e) => {
-                    console.error('❌ Canvas Error', e);
+            {/* Test Control */}
+            <button
+                onClick={() => setDrop(!drop)}
+                style={{
+                    position: 'fixed',
+                    bottom: 50,
+                    left: '50%',
+                    transform: 'translateX(-50%)',
+                    padding: '15px 30px',
+                    fontSize: '20px',
+                    zIndex: 9999,
+                    background: 'white',
+                    color: 'black'
                 }}
             >
-                <ambientLight />
-                <mesh>
-                    <boxGeometry />
-                    <meshBasicMaterial color="yellow" />
-                </mesh>
+                测试动画 (Drop)
+            </button>
+
+            {/* Test 2: Canvas */}
+            <Canvas
+                style={{ background: 'blue' }}
+                onCreated={() => console.log('✅ Canvas Created')}
+            >
+                <ambientLight intensity={1.5} />
+                <directionalLight position={[5, 5, 5]} intensity={2} />
+
+                {/* Pass drop state to a component wrapper if needed,
+                    but here we can just render the component which manages its own state
+                    OR lift state up. Let's lift state up for the button to work.
+                    Wait, the previous example had the button inside the component returning fragment.
+                    Let's follow that pattern or pass props.
+                    Actually, let's just pass the prop for simplicity.
+                */}
+                <SimpleCoinWrapper drop={drop} />
             </Canvas>
         </div>
+    );
+}
+
+function SimpleCoinWrapper({ drop }) {
+    const { position } = useSpring({
+        position: drop ? [0, 0, 0] : [0, 5, 0],
+        config: { mass: 1, tension: 170, friction: 26 }
+    });
+
+    return (
+        <animated.mesh position={position}>
+            <cylinderGeometry args={[1, 1, 0.2, 32]} />
+            <meshStandardMaterial color="gold" />
+        </animated.mesh>
     );
 }
