@@ -147,13 +147,13 @@ const HexagramLine = ({ line, index }) => {
 };
 
 // --- Component: Phase 2 Textured Coin ---
-function TexturedCoin({ drop }) {
+function TexturedCoin({ drop, targetRotationX }) {
     const [yangMap, yinMap] = useTexture([coinYangTexture, coinYinTexture]);
 
     const { position, rotation } = useSpring({
         position: drop ? [0, 0.2, 0] : [0, 5, 0],
         rotation: drop
-            ? [Math.PI * 4, Math.PI * 3, 0]
+            ? [targetRotationX, Math.PI * 3, 0]
             : [0, 0, 0],
         config: { mass: 2, tension: 120, friction: 14 }
     });
@@ -183,6 +183,19 @@ function TexturedCoin({ drop }) {
 
 export default function MoneyDivination({ onBack }) {
     const [drop, setDrop] = useState(false);
+    const [targetRotationX, setTargetRotationX] = useState(0);
+
+    const handleDrop = () => {
+        if (!drop) {
+            // About to drop: Calculate random result
+            const isHeads = Math.random() > 0.5;
+            // Heads (Yang/Flower) = 0, Tails (Yin/Characters) = PI
+            const baseRotation = isHeads ? 0 : Math.PI;
+            // Add 8 full spins (16 * PI)
+            setTargetRotationX(baseRotation + Math.PI * 16);
+        }
+        setDrop(!drop);
+    };
 
     return (
         <div style={{ width: '100vw', height: '100vh', background: '#000' }}>
@@ -214,12 +227,12 @@ export default function MoneyDivination({ onBack }) {
                 fontSize: 24,
                 fontWeight: 'bold'
             }}>
-                🔴 HTML 正常 | Phase 2: Textures + Rotation
+                🔴 HTML 正常 | Phase 2.5: Randomization
             </div>
 
             {/* Test Control */}
             <button
-                onClick={() => setDrop(!drop)}
+                onClick={handleDrop}
                 style={{
                     position: 'fixed',
                     bottom: 50,
@@ -232,7 +245,7 @@ export default function MoneyDivination({ onBack }) {
                     color: 'black'
                 }}
             >
-                {drop ? '重置 (Reset)' : '测试动画 (Drop)'}
+                {drop ? '重置 (Reset)' : '测试随机 (Drop)'}
             </button>
 
             {/* Test 2: Canvas */}
@@ -244,7 +257,7 @@ export default function MoneyDivination({ onBack }) {
                 <directionalLight position={[5, 5, 5]} intensity={2} />
 
                 <React.Suspense fallback={null}>
-                    <TexturedCoin drop={drop} />
+                    <TexturedCoin drop={drop} targetRotationX={targetRotationX} />
                 </React.Suspense>
             </Canvas>
         </div>
