@@ -114,6 +114,8 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
     // State for AI Menu
     const [showAiMenu, setShowAiMenu] = React.useState(false);
     const [menuView, setMenuView] = React.useState('main'); // 'main', 'fortune', 'baby'
+    // Lunar Tip State
+    const [showLunarTip, setShowLunarTip] = React.useState(false);
 
     // State for Partner Modal (Conception Planner)
     const [showPartnerModal, setShowPartnerModal] = React.useState(false);
