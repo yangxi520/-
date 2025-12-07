@@ -23,7 +23,7 @@ const getTimeDescription = (time) => {
 };
 
 export default function App() {
-  const [view, setView] = useState('input'); // 'input' or 'chart'
+  const [view, setView] = useState('home'); // 'home', 'input', 'chart', 'money'
   const [calendarType, setCalendarType] = useState('solar');
   const [gender, setGender] = useState('male');
   const [name, setName] = useState('');
@@ -85,8 +85,14 @@ export default function App() {
       <header className="relative z-50 border-b border-white/10 bg-black/50 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            {view === 'chart' && (
-              <button onClick={() => setView('input')} className="p-2 hover:bg-white/10 rounded-full transition-colors">
+            {view !== 'home' && (
+              <button
+                onClick={() => {
+                  if (view === 'chart') setView('input');
+                  else setView('home');
+                }}
+                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+              >
                 <ArrowLeft className="w-5 h-5 text-cyan-400" />
               </button>
             )}
@@ -99,13 +105,6 @@ export default function App() {
           </div>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => alert('金钱卦功能即将上线，敬请期待！\n(Money Divination coming soon!)')}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-yellow-500/20 to-amber-500/20 hover:from-yellow-500/30 hover:to-amber-500/30 border border-yellow-500/30 rounded-full transition-all group"
-            >
-              <span className="text-lg group-hover:scale-110 transition-transform">🪙</span>
-              <span className="text-sm font-bold text-yellow-500">金钱卦</span>
-            </button>
-            <button
               onClick={handleInstallClick}
               className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-900/50 to-purple-900/50 border border-cyan-500/30 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)]"
             >
@@ -117,7 +116,69 @@ export default function App() {
 
       {/* Main Content */}
       <main className="flex-1 relative z-10 overflow-hidden flex flex-col">
-        {view === 'input' ? (
+        {view === 'home' ? (
+          // --- HOME PORTAL VIEW ---
+          <div className="flex-1 flex flex-col items-center justify-center p-6 gap-8 animate-in fade-in zoom-in duration-500">
+            <div className="text-center space-y-4 max-w-2xl">
+              <h2 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 font-orbitron">
+                探索命运的玄机
+              </h2>
+              <p className="text-gray-400 text-lg">
+                融合古老智慧与现代科技，为您揭示生命的奥秘。
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mt-8">
+              {/* Ziwei Entry Card */}
+              <button
+                onClick={() => setView('input')}
+                className="group relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-900/40 to-black p-8 text-left transition-all hover:scale-[1.02] hover:border-purple-500/60 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)]"
+              >
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl group-hover:bg-purple-500/30 transition-all"></div>
+
+                <div className="relative z-10 flex flex-col h-full justify-between gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30 group-hover:scale-110 transition-transform">
+                    <span className="text-2xl">🔮</span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-purple-300 transition-colors">紫微斗数</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      排盘定命，洞察流年。通过生辰八字，全方位解析您的人生轨迹、事业财富与情感姻缘。
+                    </p>
+                  </div>
+                  <div className="flex items-center text-purple-400 text-sm font-bold mt-2 group-hover:translate-x-2 transition-transform">
+                    开始排盘 <ArrowLeft className="w-4 h-4 ml-1 rotate-180" />
+                  </div>
+                </div>
+              </button>
+
+              {/* Money Divination Entry Card */}
+              <button
+                onClick={() => setView('money')}
+                className="group relative overflow-hidden rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-900/40 to-black p-8 text-left transition-all hover:scale-[1.02] hover:border-yellow-500/60 hover:shadow-[0_0_30px_rgba(234,179,8,0.3)]"
+              >
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-yellow-500/20 rounded-full blur-3xl group-hover:bg-yellow-500/30 transition-all"></div>
+
+                <div className="relative z-10 flex flex-col h-full justify-between gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center border border-yellow-500/30 group-hover:scale-110 transition-transform">
+                    <span className="text-2xl">🪙</span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-yellow-300 transition-colors">金钱卦</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      六爻预测，指点迷津。针对具体财运、投资或决策问题，提供即时的占卜指引。
+                    </p>
+                  </div>
+                  <div className="flex items-center text-yellow-400 text-sm font-bold mt-2 group-hover:translate-x-2 transition-transform">
+                    立即占卜 <ArrowLeft className="w-4 h-4 ml-1 rotate-180" />
+                  </div>
+                </div>
+              </button>
+            </div>
+          </div>
+        ) : view === 'input' ? (
           // --- INPUT VIEW ---
           <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
             <div className="w-full max-w-md bg-[#0a0a0a]/90 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl p-6 md:p-8 space-y-8 animate-in fade-in zoom-in duration-500">
@@ -173,6 +234,26 @@ export default function App() {
               {/* Start Button */}
               <button onClick={handleStartScan} className="w-full py-4 bg-gradient-to-r from-cyan-600 to-purple-600 text-white font-bold text-lg uppercase tracking-widest hover:from-cyan-500 hover:to-purple-500 transition-all shadow-lg shadow-cyan-500/20 rounded">
                 开始排盘
+              </button>
+            </div>
+          </div>
+        ) : view === 'money' ? (
+          // --- MONEY DIVINATION VIEW ---
+          <div className="flex-1 flex items-center justify-center p-4">
+            <div className="text-center space-y-6 max-w-md animate-in fade-in zoom-in duration-500">
+              <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-500 to-amber-700 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(234,179,8,0.4)]">
+                <span className="text-5xl">🪙</span>
+              </div>
+              <h2 className="text-3xl font-bold text-yellow-500">金钱卦功能开发中</h2>
+              <p className="text-gray-400 leading-relaxed">
+                六爻排盘与AI解卦功能正在紧张开发中。<br />
+                我们将为您提供最专业的财运指引，敬请期待！
+              </p>
+              <button
+                onClick={() => setView('home')}
+                className="px-8 py-3 bg-white/10 hover:bg-white/20 border border-white/10 rounded-full transition-all text-sm font-bold"
+              >
+                返回首页
               </button>
             </div>
           </div>
