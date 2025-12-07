@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useSpring, animated } from '@react-spring/three';
+import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 
 // --- Assets ---
@@ -145,19 +146,38 @@ const HexagramLine = ({ line, index }) => {
     );
 };
 
-function SimpleCoin() {
-    const [drop, setDrop] = useState(false);
+// --- Component: Phase 2 Textured Coin ---
+function TexturedCoin({ drop }) {
+    const [yangMap, yinMap] = useTexture([coinYangTexture, coinYinTexture]);
 
-    const { position } = useSpring({
-        position: drop ? [0, 0, 0] : [0, 5, 0],
-        config: { mass: 1, tension: 170, friction: 26 }
+    const { position, rotation } = useSpring({
+        position: drop ? [0, 0.2, 0] : [0, 5, 0],
+        rotation: drop
+            ? [Math.PI * 4, Math.PI * 3, 0]
+            : [0, 0, 0],
+        config: { mass: 2, tension: 120, friction: 14 }
     });
 
     return (
-        <animated.mesh position={position}>
-            <cylinderGeometry args={[1, 1, 0.2, 32]} />
-            <meshStandardMaterial color="gold" />
-        </animated.mesh>
+        <animated.group position={position} rotation={rotation}>
+            {/* Main Cylinder Body */}
+            <mesh castShadow receiveShadow>
+                <cylinderGeometry args={[COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 32]} />
+                <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.3} />
+            </mesh>
+
+            {/* Top Face (Yin - Characters) - Local Y+ */}
+            <mesh position={[0, COIN_THICKNESS / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
+                <meshStandardMaterial map={yinMap} transparent alphaTest={0.5} />
+            </mesh>
+
+            {/* Bottom Face (Yang - Flower) - Local Y- */}
+            <mesh position={[0, -COIN_THICKNESS / 2 - 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
+                <meshStandardMaterial map={yangMap} transparent alphaTest={0.5} />
+            </mesh>
+        </animated.group>
     );
 }
 
@@ -194,7 +214,7 @@ export default function MoneyDivination({ onBack }) {
                 fontSize: 24,
                 fontWeight: 'bold'
             }}>
-                🔴 HTML 正常 | Phase 1: Simple Animation
+                🔴 HTML 正常 | Phase 2: Textures + Rotation
             </div>
 
             {/* Test Control */}
@@ -212,7 +232,7 @@ export default function MoneyDivination({ onBack }) {
                     color: 'black'
                 }}
             >
-                测试动画 (Drop)
+                {drop ? '重置 (Reset)' : '测试动画 (Drop)'}
             </button>
 
             {/* Test 2: Canvas */}
@@ -223,29 +243,10 @@ export default function MoneyDivination({ onBack }) {
                 <ambientLight intensity={1.5} />
                 <directionalLight position={[5, 5, 5]} intensity={2} />
 
-                {/* Pass drop state to a component wrapper if needed,
-                    but here we can just render the component which manages its own state
-                    OR lift state up. Let's lift state up for the button to work.
-                    Wait, the previous example had the button inside the component returning fragment.
-                    Let's follow that pattern or pass props.
-                    Actually, let's just pass the prop for simplicity.
-                */}
-                <SimpleCoinWrapper drop={drop} />
+                <React.Suspense fallback={null}>
+                    <TexturedCoin drop={drop} />
+                </React.Suspense>
             </Canvas>
         </div>
-    );
-}
-
-function SimpleCoinWrapper({ drop }) {
-    const { position } = useSpring({
-        position: drop ? [0, 0, 0] : [0, 5, 0],
-        config: { mass: 1, tension: 170, friction: 26 }
-    });
-
-    return (
-        <animated.mesh position={position}>
-            <cylinderGeometry args={[1, 1, 0.2, 32]} />
-            <meshStandardMaterial color="gold" />
-        </animated.mesh>
     );
 }
