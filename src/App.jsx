@@ -182,6 +182,27 @@ export default function App() {
                   </div>
                 </div>
               </button>
+              {/* Version Footer */}
+              <div className="mt-8 text-center">
+                <p className="text-white/20 text-xs font-mono">v1.2.0 (3D Physics Enabled)</p>
+                <button
+                  onClick={() => {
+                    if ('serviceWorker' in navigator) {
+                      navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                        for (let registration of registrations) {
+                          registration.unregister();
+                        }
+                        window.location.reload();
+                      });
+                    } else {
+                      window.location.reload();
+                    }
+                  }}
+                  className="mt-2 text-cyan-500/50 text-[10px] hover:text-cyan-400 underline cursor-pointer"
+                >
+                  强制更新 / Force Update
+                </button>
+              </div>
             </div>
           </div>
         ) : view === 'input' ? (
