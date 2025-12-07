@@ -35,6 +35,12 @@ const Coin = ({ position, onSettle, isThrowing, index }) => {
         sleepTimeLimit: 0.5,
         onCollide: (e) => {
             // Optional: Add sound effect here
+        },
+        onSleep: () => {
+            isSleeping.current = true;
+        },
+        onWake: () => {
+            isSleeping.current = false;
         }
     }));
 
@@ -44,28 +50,7 @@ const Coin = ({ position, onSettle, isThrowing, index }) => {
     // State to track if this coin has settled
     const isSleeping = useRef(false);
 
-    // Subscribe to sleep events
-    useEffect(() => {
-        const unsubscribeSleep = api.sleep.subscribe(() => {
-            isSleeping.current = true;
-            // Get current rotation to determine face
-            const quaternion = new THREE.Quaternion();
-            // We need to read the current quaternion from the body. 
-            // Cannon-es worker doesn't sync instantly, but on sleep it should be stable.
-            // However, the best way is to subscribe to rotation changes or just read it now.
-            // Let's use a ref to store latest rotation from useFrame if needed, 
-            // but api.rotation.subscribe is better.
-        });
-
-        const unsubscribeWake = api.wake.subscribe(() => {
-            isSleeping.current = false;
-        });
-
-        return () => {
-            unsubscribeSleep();
-            unsubscribeWake();
-        };
-    }, [api]);
+    // Removed invalid subscription logic
 
     // Check orientation when settled
     useFrame(() => {
@@ -315,10 +300,10 @@ export default function MoneyDivination({ onBack }) {
                         onClick={throwCoins}
                         disabled={isThrowing || lines.length >= 6}
                         className={`px-12 py-4 rounded-full font-bold text-xl shadow-lg transition-all transform active:scale-95 ${isThrowing
-                                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
-                                : lines.length >= 6
-                                    ? 'bg-green-600 text-white hover:bg-green-500'
-                                    : 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white hover:from-yellow-500 hover:to-amber-500 shadow-yellow-500/20'
+                            ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                            : lines.length >= 6
+                                ? 'bg-green-600 text-white hover:bg-green-500'
+                                : 'bg-gradient-to-r from-yellow-600 to-amber-600 text-white hover:from-yellow-500 hover:to-amber-500 shadow-yellow-500/20'
                             }`}
                     >
                         {lines.length >= 6 ? '重新起卦' : isThrowing ? '计算中...' : '摇 卦'}
