@@ -163,7 +163,12 @@ export default function App() {
 
                 <div className="relative z-10 flex flex-col h-full justify-between gap-4">
                   <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center border border-yellow-500/30 group-hover:scale-110 transition-transform">
-                    <span className="text-2xl">🪙</span>
+                    {/* Chinese Copper Coin SVG */}
+                    <svg viewBox="0 0 100 100" className="w-8 h-8 text-yellow-500 fill-current">
+                      <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="5" fill="none" />
+                      <rect x="32" y="32" width="36" height="36" stroke="currentColor" strokeWidth="5" fill="none" />
+                      <path d="M50 5 L50 25 M50 75 L50 95 M5 50 L25 50 M75 50 L95 50" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+                    </svg>
                   </div>
                   <div>
                     <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-yellow-300 transition-colors">金钱卦</h3>
@@ -242,7 +247,12 @@ export default function App() {
           <div className="flex-1 flex items-center justify-center p-4">
             <div className="text-center space-y-6 max-w-md animate-in fade-in zoom-in duration-500">
               <div className="w-24 h-24 mx-auto bg-gradient-to-br from-yellow-500 to-amber-700 rounded-full flex items-center justify-center shadow-[0_0_50px_rgba(234,179,8,0.4)]">
-                <span className="text-5xl">🪙</span>
+                {/* Chinese Copper Coin SVG (Large) */}
+                <svg viewBox="0 0 100 100" className="w-16 h-16 text-white fill-current">
+                  <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="5" fill="none" />
+                  <rect x="32" y="32" width="36" height="36" stroke="currentColor" strokeWidth="5" fill="none" />
+                  <path d="M50 5 L50 25 M50 75 L50 95 M5 50 L25 50 M75 50 L95 50" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
+                </svg>
               </div>
               <h2 className="text-3xl font-bold text-yellow-500">金钱卦功能开发中</h2>
               <p className="text-gray-400 leading-relaxed">
