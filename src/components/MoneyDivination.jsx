@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Physics, useCylinder, usePlane } from '@react-three/cannon';
+import { Canvas } from '@react-three/fiber';
+import { Physics, RigidBody, CuboidCollider, CylinderCollider } from '@react-three/rapier';
 import { useTexture, OrbitControls } from '@react-three/drei';
 import { ArrowLeft, RotateCcw } from 'lucide-react';
 import ErrorBoundary from './ErrorBoundary';
-import { TestCoin } from './TestCoin';
 import * as THREE from 'three';
 
 // --- Assets ---
@@ -27,77 +26,61 @@ const HEXAGRAM_LOOKUP = {
 
 // --- Component: Coin ---
 const Coin = ({ position, onSettle, isThrowing, index }) => {
-    // Physics Body
-    const [ref, api] = useCylinder(() => ({
-        mass: 1,
-        args: [COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 32],
-        position,
-        material: { friction: 0.3, restitution: 0.5 },
-        allowSleep: true,
-        sleepSpeedLimit: 0.5,
-        sleepTimeLimit: 0.5,
-        onCollide: (e) => {
-            // Optional: Add sound effect here
-        }
-    }));
-
-    // Textures using useTexture (simpler and more robust)
+    const rigidBody = useRef();
     const [yangMap, yinMap] = useTexture([coinYangTexture, coinYinTexture]);
 
-    // State to track if this coin has settled
-    const velocity = useRef([0, 0, 0]);
-    const angularVelocity = useRef([0, 0, 0]);
-
-    // Subscribe to velocity to detect sleep manually
+    // Expose API to parent via onSettle callback (used for registration)
     useEffect(() => {
-        const unsubVelocity = api.velocity.subscribe((v) => (velocity.current = v));
-        const unsubAngular = api.angularVelocity.subscribe((v) => (angularVelocity.current = v));
-        return () => {
-            unsubVelocity();
-            unsubAngular();
-        };
-    }, [api]);
-
-    // Expose API to parent
-    useEffect(() => {
-        if (onSettle) {
-            onSettle(index, api, ref);
+        if (onSettle && rigidBody.current) {
+            onSettle(index, rigidBody.current);
         }
-    }, [index, onSettle, api, ref]);
+    }, [index, onSettle]);
 
     return (
-        <group ref={ref}>
-            <mesh castShadow receiveShadow>
-                <cylinderGeometry args={[COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 32]} />
-                <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.3} />
-            </mesh>
-            {/* Top Face (Yin - Characters) - Local Y+ */}
-            <mesh position={[0, COIN_THICKNESS / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
-                <meshStandardMaterial map={yinMap} transparent alphaTest={0.5} />
-            </mesh>
-            {/* Bottom Face (Yang - Flower) - Local Y- */}
-            <mesh position={[0, -COIN_THICKNESS / 2 - 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
-                <meshStandardMaterial map={yangMap} transparent alphaTest={0.5} />
-            </mesh>
-        </group>
+        <RigidBody
+            ref={rigidBody}
+            position={position}
+            colliders="hull"
+            restitution={0.5}
+            friction={0.3}
+            linearDamping={0.5}
+            angularDamping={0.5}
+            // Use onSleep to detect when coin settles? 
+            // Actually, we'll just wait a fixed time or check velocity in parent for simplicity first.
+            // Rapier's sleep threshold can be tuned.
+            canSleep={true}
+        >
+            <group>
+                <mesh castShadow receiveShadow>
+                    <cylinderGeometry args={[COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 32]} />
+                    <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.3} />
+                </mesh>
+                {/* Top Face (Yin - Characters) - Local Y+ */}
+                <mesh position={[0, COIN_THICKNESS / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+                    <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
+                    <meshStandardMaterial map={yinMap} transparent alphaTest={0.5} />
+                </mesh>
+                {/* Bottom Face (Yang - Flower) - Local Y- */}
+                <mesh position={[0, -COIN_THICKNESS / 2 - 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
+                    <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
+                    <meshStandardMaterial map={yangMap} transparent alphaTest={0.5} />
+                </mesh>
+            </group>
+        </RigidBody>
     );
 };
 
 // --- Component: Floor ---
 const Floor = () => {
-    const [ref] = usePlane(() => ({
-        rotation: [-Math.PI / 2, 0, 0],
-        position: [0, 0, 0],
-        material: { friction: 0.3, restitution: 0.5 }
-    }));
-    // Invisible floor for physics, visual floor is the background image
     return (
-        <mesh ref={ref} receiveShadow visible={false}>
-            <planeGeometry args={[100, 100]} />
-            <meshStandardMaterial color="#1a1a1a" />
-        </mesh>
+        <RigidBody type="fixed" restitution={0.5} friction={0.3}>
+            <CuboidCollider args={[50, 1, 50]} position={[0, -1, 0]} />
+            {/* Visual Floor (Invisible, relying on background) */}
+            <mesh position={[0, -1, 0]} visible={false}>
+                <boxGeometry args={[100, 2, 100]} />
+                <meshStandardMaterial color="#1a1a1a" />
+            </mesh>
+        </RigidBody>
     );
 };
 
@@ -146,45 +129,47 @@ const HexagramLine = ({ line, index }) => {
 export default function MoneyDivination({ onBack }) {
     const [lines, setLines] = useState([]); // Array of 6 lines
     const [isThrowing, setIsThrowing] = useState(false);
-    const [showResult, setShowResult] = useState(false);
 
-    // Refs to access coin physics APIs
-    const coinApis = useRef([]);
+    // Refs to access coin rigid bodies
     const coinRefs = useRef([]);
 
-    const registerCoin = (index, api, ref) => {
-        coinApis.current[index] = api;
+    const registerCoin = (index, ref) => {
         coinRefs.current[index] = ref;
     };
 
     const throwCoins = () => {
         if (lines.length >= 6) {
             setLines([]);
-            setShowResult(false);
             return;
         }
 
         setIsThrowing(true);
 
-        coinApis.current.forEach((api, i) => {
-            // 1. Reset Position
-            api.position.set((Math.random() - 0.5) * 2, THROW_HEIGHT + i * 0.5, (Math.random() - 0.5) * 2);
-            api.velocity.set(0, 0, 0);
-            api.angularVelocity.set(0, 0, 0);
-            api.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+        coinRefs.current.forEach((ref, i) => {
+            if (!ref) return;
 
-            // 2. Wake up
-            api.wakeUp();
+            // 1. Reset Position & Velocity
+            ref.setTranslation({ x: (Math.random() - 0.5) * 2, y: THROW_HEIGHT + i * 0.5, z: (Math.random() - 0.5) * 2 }, true);
+            ref.setLinvel({ x: 0, y: 0, z: 0 }, true);
+            ref.setAngvel({ x: 0, y: 0, z: 0 }, true);
+            ref.setRotation({ x: Math.random(), y: Math.random(), z: Math.random(), w: 1 }, true);
 
-            // 3. Apply Force & Torque
-            // Increased randomness to avoid "All Old Yin" bias
-            api.applyImpulse(
-                [(Math.random() - 0.5) * 8, 8 + Math.random() * 5, (Math.random() - 0.5) * 8],
-                [0, 0, 0]
-            );
-            api.applyTorque(
-                [Math.random() * 20, Math.random() * 20, Math.random() * 20]
-            );
+            // 2. Wake up (Rapier handles this automatically on impulse, but good to be sure)
+            ref.wakeUp();
+
+            // 3. Apply Impulse & Torque
+            // Rapier uses applyImpulse({x,y,z}, true) - true means wake up
+            ref.applyImpulse({
+                x: (Math.random() - 0.5) * 5,
+                y: 5 + Math.random() * 5,
+                z: (Math.random() - 0.5) * 5
+            }, true);
+
+            ref.applyTorqueImpulse({
+                x: Math.random() * 2,
+                y: Math.random() * 2,
+                z: Math.random() * 2
+            }, true);
         });
 
         // Wait for settle
@@ -198,8 +183,12 @@ export default function MoneyDivination({ onBack }) {
         let yinCount = 0;
 
         coinRefs.current.forEach((ref) => {
-            if (!ref.current) return;
-            const quaternion = ref.current.quaternion;
+            if (!ref) return;
+
+            // Get current rotation
+            const rotation = ref.rotation();
+            const quaternion = new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w);
+
             const localUp = new THREE.Vector3(0, 1, 0);
             localUp.applyQuaternion(quaternion);
 
@@ -221,36 +210,12 @@ export default function MoneyDivination({ onBack }) {
         setIsThrowing(false);
     };
 
-    // --- MINIMAL TEST MODE ---
-    // If true, renders a simple box to test WebGL only.
-    const TEST_MODE = false;
-
-    if (TEST_MODE) {
-        return (
-            <div className="w-full h-full relative bg-gray-900">
-                <div style={{ position: 'fixed', top: 0, left: 0, background: 'lime', zIndex: 99999, padding: 10 }}>
-                    ✅ React Running | 🧪 TEST MODE: Textured Coin
-                </div>
-                <Canvas camera={{ position: [0, 3, 8], fov: 50 }}>
-                    <ambientLight intensity={1.5} />
-                    <directionalLight position={[5, 5, 5]} intensity={2} />
-                    <pointLight position={[0, 5, 0]} intensity={1} />
-
-                    <Suspense fallback={<mesh><boxGeometry /><meshBasicMaterial color="red" wireframe /></mesh>}>
-                        <TestCoin />
-                    </Suspense>
-                    <OrbitControls />
-                </Canvas>
-            </div>
-        );
-    }
-
-    // Mobile detection for performance optimization
+    // Mobile detection
     const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
 
     return (
         <div className="w-full h-full relative bg-black overflow-hidden">
-            {/* Debug Green Box - To verify React is mounting */}
+            {/* Debug Green Box */}
             <div style={{
                 position: 'fixed',
                 top: 0,
@@ -262,9 +227,9 @@ export default function MoneyDivination({ onBack }) {
                 fontSize: '16px',
                 fontWeight: 'bold',
                 pointerEvents: 'none',
-                opacity: 0.5 // Make it less obtrusive
+                opacity: 0.5
             }}>
-                ✅ React Running | 🚀 PHYSICS MODE
+                ✅ React Running | ⚡ RAPIER PHYSICS
             </div>
 
             {/* Background Image */}
@@ -295,25 +260,21 @@ export default function MoneyDivination({ onBack }) {
                         <spotLight position={[5, 15, 5]} angle={0.4} penumbra={1} intensity={1.5} castShadow color="#ffaa00" />
                         <pointLight position={[-5, 5, -5]} intensity={0.5} color="#00ffff" />
 
-                        <Physics
-                            gravity={[0, -12, 0]}
-                            allowSleep
-                            iterations={isMobile ? 5 : 10}
-                            tolerance={isMobile ? 0.01 : 0.001}
-                            broadphase="SAP"
-                        >
-                            <Floor />
-                            <Suspense fallback={null}>
+                        <Suspense fallback={null}>
+                            <Physics gravity={[0, -12, 0]}>
+                                <Floor />
                                 <Coin index={0} position={[-1.5, 5, 0]} onSettle={registerCoin} isThrowing={isThrowing} />
                                 <Coin index={1} position={[0, 6, 0]} onSettle={registerCoin} isThrowing={isThrowing} />
                                 <Coin index={2} position={[1.5, 5, 0]} onSettle={registerCoin} isThrowing={isThrowing} />
-                            </Suspense>
-                        </Physics>
+                            </Physics>
+                        </Suspense>
+
+                        <OrbitControls enableZoom={false} enablePan={false} minPolarAngle={0} maxPolarAngle={Math.PI / 2.5} />
                     </Canvas>
                 </ErrorBoundary>
             </div>
 
-            {/* Loading Indicator (Visible when Suspense is active) */}
+            {/* Loading Indicator */}
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-0">
                 <div className="w-12 h-12 border-4 border-yellow-500/30 border-t-yellow-500 rounded-full animate-spin mb-4"></div>
                 <div className="text-yellow-500 font-mono animate-pulse">正在加载 3D 引擎...</div>
@@ -335,11 +296,8 @@ export default function MoneyDivination({ onBack }) {
                     <div className="w-12"></div>
                 </div>
 
-                {/* Hexagram Display (Right Side) */}
-                {/* Fixed: Use flex-col-reverse correctly and ensure container height is sufficient */}
+                {/* Hexagram Display */}
                 <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col-reverse gap-3 p-4 bg-black/40 backdrop-blur-md rounded-xl border border-white/10 shadow-2xl">
-                    {/* We render 6 slots. Index 0 is bottom line. Index 5 is top line. */}
-                    {/* flex-col-reverse puts the first child (index 0) at the bottom. */}
                     {Array.from({ length: 6 }).map((_, i) => (
                         <div key={i} className="w-24 md:w-32">
                             <HexagramLine line={lines[i]} index={i} />
@@ -347,7 +305,7 @@ export default function MoneyDivination({ onBack }) {
                     ))}
                 </div>
 
-                {/* Controls (Bottom) */}
+                {/* Controls */}
                 <div className="flex flex-col items-center gap-6 pointer-events-auto pb-8">
                     <div className="text-yellow-400 font-mono text-shadow-sm">
                         {isThrowing ? '天机演算中...' : lines.length === 6 ? '卦象已成' : `第 ${lines.length + 1} 爻`}
