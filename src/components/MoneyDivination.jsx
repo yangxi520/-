@@ -219,6 +219,9 @@ export default function MoneyDivination({ onBack }) {
         setIsThrowing(false);
     };
 
+    // Mobile detection for performance optimization
+    const isMobile = /iPhone|iPad|Android/i.test(navigator.userAgent);
+
     return (
         <div className="w-full h-full relative bg-black overflow-hidden">
             {/* Background Image */}
@@ -229,13 +232,32 @@ export default function MoneyDivination({ onBack }) {
 
             {/* 3D Scene */}
             <div className="absolute inset-0 z-10">
-                <Canvas shadows camera={{ position: [0, 12, 8], fov: 45 }} gl={{ alpha: true }}>
+                <Canvas
+                    shadows
+                    camera={{ position: [0, 12, 8], fov: 45 }}
+                    gl={{
+                        alpha: true,
+                        powerPreference: "high-performance",
+                        antialias: !isMobile // Disable antialiasing on mobile for performance
+                    }}
+                    onCreated={({ gl }) => {
+                        gl.domElement.addEventListener('webglcontextlost', (e) => {
+                            console.error('WebGL context lost!', e);
+                            e.preventDefault();
+                        });
+                    }}
+                >
                     {/* Removed opaque background color to let CSS bg show through */}
                     <ambientLight intensity={0.4} />
                     <spotLight position={[5, 15, 5]} angle={0.4} penumbra={1} intensity={1.5} castShadow color="#ffaa00" />
                     <pointLight position={[-5, 5, -5]} intensity={0.5} color="#00ffff" />
 
-                    <Physics gravity={[0, -12, 0]} allowSleep>
+                    <Physics
+                        gravity={[0, -12, 0]}
+                        allowSleep
+                        iterations={isMobile ? 5 : 10} // Lower iterations on mobile
+                        tolerance={isMobile ? 0.01 : 0.001}
+                    >
                         <Floor />
                         <Suspense fallback={null}>
                             <Coin index={0} position={[-1.5, 5, 0]} onSettle={registerCoin} isThrowing={isThrowing} />
