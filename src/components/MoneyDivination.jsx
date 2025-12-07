@@ -225,6 +225,22 @@ export default function MoneyDivination({ onBack }) {
 
     return (
         <div className="w-full h-full relative bg-black overflow-hidden">
+            {/* Debug Green Box - To verify React is mounting */}
+            <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                background: 'lime',
+                color: 'black',
+                padding: '10px',
+                zIndex: 99999,
+                fontSize: '16px',
+                fontWeight: 'bold',
+                pointerEvents: 'none'
+            }}>
+                ✅ 测试：React 正常运行
+            </div>
+
             {/* Background Image */}
             <div
                 className="absolute inset-0 z-0 bg-cover bg-center opacity-60"
