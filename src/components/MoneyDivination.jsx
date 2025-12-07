@@ -1,3 +1,4 @@
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Physics, useCylinder, usePlane } from '@react-three/cannon';
 import { useTexture } from '@react-three/drei';
