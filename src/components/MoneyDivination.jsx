@@ -228,14 +228,14 @@ export default function MoneyDivination({ onBack }) {
         return (
             <div className="w-full h-full relative bg-gray-900">
                 <div style={{ position: 'fixed', top: 0, left: 0, background: 'lime', zIndex: 99999, padding: 10 }}>
-                    ✅ React Running | 🧪 TEST MODE
+                    ✅ React Running | 🧪 TEST MODE: Golden Cylinder
                 </div>
                 <Canvas>
                     <ambientLight intensity={1} />
                     <pointLight position={[10, 10, 10]} />
-                    <mesh rotation={[0.5, 0.5, 0]}>
-                        <boxGeometry args={[2, 2, 2]} />
-                        <meshStandardMaterial color="red" />
+                    <mesh rotation={[Math.PI / 2, 0, 0]}>
+                        <cylinderGeometry args={[1, 1, 0.2, 32]} />
+                        <meshStandardMaterial color="#DAA520" metalness={0.8} roughness={0.2} />
                     </mesh>
                 </Canvas>
             </div>
