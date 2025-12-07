@@ -223,7 +223,7 @@ export default function MoneyDivination({ onBack }) {
 
     // --- MINIMAL TEST MODE ---
     // If true, renders a simple box to test WebGL only.
-    const TEST_MODE = true;
+    const TEST_MODE = false;
 
     if (TEST_MODE) {
         return (
@@ -261,9 +261,10 @@ export default function MoneyDivination({ onBack }) {
                 zIndex: 99999,
                 fontSize: '16px',
                 fontWeight: 'bold',
-                pointerEvents: 'none'
+                pointerEvents: 'none',
+                opacity: 0.5 // Make it less obtrusive
             }}>
-                ✅ 测试：React 正常运行
+                ✅ React Running | 🚀 PHYSICS MODE
             </div>
 
             {/* Background Image */}
