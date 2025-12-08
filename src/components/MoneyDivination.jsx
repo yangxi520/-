@@ -321,6 +321,18 @@ export default function MoneyDivination({ onBack }) {
     const isProcessingRef = useRef(false);
     const audioContextRef = useRef(null);
 
+    // --- Effects ---
+    useEffect(() => {
+        console.log('MoneyDivination Component Mounted - Version: 2025-12-08 v3 (Final Visuals)');
+        // 初始化音频上下文
+        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        return () => {
+            if (audioContextRef.current) {
+                audioContextRef.current.close();
+            }
+        };
+    }, []);
+
     // 🎲 开始摇卦 - 严格边界检查
     const handleThrow = () => {
         // 🚨 严格边界检查
@@ -329,9 +341,6 @@ export default function MoneyDivination({ onBack }) {
         }
 
         // 初始化音频
-        if (!audioContextRef.current) {
-            audioContextRef.current = createAudioContext();
-        }
         if (audioContextRef.current?.state === 'suspended') {
             audioContextRef.current.resume();
         }
