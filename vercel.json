@@ -13,6 +13,11 @@
       "permanent": false
     },
     {
+      "source": "/test-redirect",
+      "destination": "https://google.com",
+      "permanent": false
+    },
+    {
       "source": "/",
       "missing": [
         {
