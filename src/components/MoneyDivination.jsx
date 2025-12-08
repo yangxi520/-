@@ -3,19 +3,58 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 // eslint-disable-next-line no-unused-vars
 import { useSpring, animated } from '@react-spring/three';
-import { useTexture, Text, Html } from '@react-three/drei';
+import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import { RefreshCw, ArrowLeft } from 'lucide-react';
-import { getHexagram } from '../utils/hexagramLogic'; // Import First Principles Logic
+import { ArrowLeft } from 'lucide-react';
+import { getHexagram } from '../utils/hexagramLogic';
 
 // --- Assets ---
-// Using AI-generated high-quality coin textures
 import coinYangTexture from '../assets/coin_yang_perfect.png';
-import coinYinTexture from '../assets/coin_yin_perfect.png';
+import coinYinTexture from '../assets/coin_yin_circular.png';
+import bgImage from '../assets/song_mist.png'; // Minimalist Mist Background
 
 // --- Constants ---
-const COIN_RADIUS = 1.8; // Larger for better visibility
-const COIN_THICKNESS = 0.3; // Much thicker for realism
+const COIN_RADIUS = 1.8;
+const COIN_THICKNESS = 0.3;
+
+// --- Helper: Ink Brush Stroke CSS ---
+const InkStroke = ({ type, width = '100%' }) => {
+    // type: 'yang' (solid) or 'yin' (broken)
+    const containerStyle = {
+        height: '16px',
+        width: width,
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        opacity: 0,
+        animation: 'strokeDraw 0.8s ease-out forwards'
+    };
+
+    const inkBarStyle = {
+        height: '100%',
+        backgroundColor: '#1a1a1a',
+        borderRadius: '2px',
+        background: 'linear-gradient(90deg, rgba(40,40,40,0.9) 0%, rgba(0,0,0,1) 20%, rgba(0,0,0,1) 80%, rgba(40,40,40,0.9) 100%)',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+        filter: 'blur(0.3px)'
+    };
+
+    if (type === 'yang') {
+        return (
+            <div style={containerStyle}>
+                <div style={{ ...inkBarStyle, width: '100%' }}></div>
+            </div>
+        );
+    } else {
+        return (
+            <div style={{ ...containerStyle, justifyContent: 'space-between' }}>
+                <div style={{ ...inkBarStyle, width: '42%' }}></div>
+                <div style={{ ...inkBarStyle, width: '42%' }}></div>
+            </div>
+        );
+    }
+};
 
 // --- Component: Animated Coin ---
 function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
@@ -29,7 +68,6 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
             setHasReported(false);
             const timer = setTimeout(() => {
                 const isHeads = Math.random() > 0.5;
-                // Heads (Yang) = 0, Tails (Yin) = PI
                 const baseRotation = isHeads ? 0 : Math.PI;
                 setFinalRotation(baseRotation + Math.PI * 16);
                 setStarted(true);
@@ -51,18 +89,16 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
     }, []);
 
     const { position, rotation } = useSpring({
-        position: started
-            ? [index * 3.5 - 3.5, 0.2, 0]
-            : [index * 3.5 - 3.5, 5, 0],
-        rotation: started
-            ? [finalRotation, randomRotations.x, randomRotations.y]
-            : [0, 0, 0],
-        config: { mass: 2, tension: 120, friction: 14 },
+        // Fix: Raise the resting position (Y) so coins don't clip into the "floor" or look cut off.
+        // Was 0.2, now 0 (aligned with camera center roughly)
+        // Dropping from 6 to 0
+        position: started ? [index * 4.0 - 4.0, 0, 0] : [index * 4.0 - 4.0, 6, 0],
+        rotation: started ? [finalRotation, randomRotations.x, randomRotations.y] : [0, 0, 0],
+        config: { mass: 2.5, tension: 120, friction: 14 },
         onRest: () => {
             if (started && !hasReported) {
                 setHasReported(true);
-                playLandSound(audioContext, index * 50);
-
+                playLandSound(audioContext, index * 60);
                 const normalizedRotation = finalRotation % (Math.PI * 2);
                 const isHeads = normalizedRotation < Math.PI / 2 || normalizedRotation > Math.PI * 1.5;
                 onResult(index, isHeads ? 'heads' : 'tails');
@@ -72,275 +108,161 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
 
     return (
         <animated.group position={position} rotation={rotation}>
-            {/* Coin Edge/Rim - Bronze cylinder */}
+            {/* Bronze Edge */}
             <mesh castShadow receiveShadow rotation={[Math.PI / 2, 0, 0]}>
                 <cylinderGeometry args={[COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 64]} />
                 <meshStandardMaterial
-                    color="#8B6914"
-                    metalness={0.7}
-                    roughness={0.5}
-                    envMapIntensity={0.5}
+                    color="#B8860B" // Dark Goldenrod
+                    metalness={0.8}
+                    roughness={0.4}
+                    envMapIntensity={0.8}
                 />
             </mesh>
-
-            {/* Top Face (Yin - Manchu) - Textured circle */}
+            {/* Faces */}
             <mesh position={[0, 0, COIN_THICKNESS / 2 + 0.002]} castShadow>
                 <circleGeometry args={[COIN_RADIUS, 64]} />
-                <meshStandardMaterial
-                    map={yinMap}
-                    transparent={true}
-                    alphaTest={0.5}
-                    metalness={0.4}
-                    roughness={0.6}
-                    envMapIntensity={0.3}
-                />
+                <meshStandardMaterial map={yinMap} transparent={true} alphaTest={0.5} metalness={0.5} roughness={0.5} />
             </mesh>
-
-            {/* Bottom Face (Yang - Qianlong) - Textured circle */}
             <mesh position={[0, 0, -COIN_THICKNESS / 2 - 0.002]} rotation={[0, Math.PI, 0]} castShadow>
                 <circleGeometry args={[COIN_RADIUS, 64]} />
-                <meshStandardMaterial
-                    map={yangMap}
-                    transparent={true}
-                    alphaTest={0.5}
-                    metalness={0.4}
-                    roughness={0.6}
-                    envMapIntensity={0.3}
-                />
+                <meshStandardMaterial map={yangMap} transparent={true} alphaTest={0.5} metalness={0.5} roughness={0.5} />
             </mesh>
         </animated.group>
     );
 }
 
-
-
+// --- Audio Functions ---
 const playLandSound = (audioContext, delay = 0) => {
     if (!audioContext) return;
-
     setTimeout(() => {
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        const filter = audioContext.createBiquadFilter();
+        const bufferSize = audioContext.sampleRate * 0.03;
+        const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.15)) * 0.3;
+        const noise = audioContext.createBufferSource();
+        noise.buffer = buffer;
+        const noiseGain = audioContext.createGain();
+        noise.connect(noiseGain);
+        noiseGain.connect(audioContext.destination);
+        noiseGain.gain.setValueAtTime(0.08, audioContext.currentTime);
+        noiseGain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.03);
+        noise.start(audioContext.currentTime);
 
-        oscillator.connect(filter);
-        filter.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-        oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.2);
-        oscillator.type = 'triangle';
-
-        filter.type = 'highpass';
-        filter.frequency.setValueAtTime(300, audioContext.currentTime);
-
-        gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.4, audioContext.currentTime + 0.01);
-        gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
-
-        oscillator.stop(audioContext.currentTime + 0.3);
+        const osc1 = audioContext.createOscillator();
+        const gain1 = audioContext.createGain();
+        osc1.connect(gain1);
+        gain1.connect(audioContext.destination);
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(1400, audioContext.currentTime);
+        osc1.frequency.exponentialRampToValueAtTime(1200, audioContext.currentTime + 0.12);
+        gain1.gain.setValueAtTime(0.12, audioContext.currentTime);
+        gain1.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.15);
+        osc1.start(audioContext.currentTime);
+        osc1.stop(audioContext.currentTime + 0.15);
     }, delay);
 };
 
 const playThrowSound = (audioContext) => {
     if (!audioContext) return;
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.1);
-
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.1);
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(500, audioContext.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(300, audioContext.currentTime + 0.06);
+    gain.gain.setValueAtTime(0.08, audioContext.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.06);
+    osc.start();
+    osc.stop(audioContext.currentTime + 0.06);
 };
-
-
 
 // --- Main Component ---
 export default function MoneyDivination({ onBack }) {
-    // 🎯 简化的状态管理
-    const [currentThrow, setCurrentThrow] = useState(1); // 当前第几次摇卦 (1-6)
-    const [yaos, setYaos] = useState([]); // 已完成的爻列表
-    const [finalHexagram, setFinalHexagram] = useState(null); // 最终卦象
-
-    // 3D动画状态
+    const [currentThrow, setCurrentThrow] = useState(1);
+    const [yaos, setYaos] = useState([]);
+    const [finalHexagram, setFinalHexagram] = useState(null);
     const [isThrown, setIsThrown] = useState(false);
     const [coinResults, setCoinResults] = useState({});
     const [isProcessing, setIsProcessing] = useState(false);
-
-    // 🔒 使用 Ref 来解决闭包和竞态问题 (关键修复)
     const isProcessingRef = useRef(false);
     const audioContextRef = useRef(null);
     const [audioContext, setAudioContext] = useState(null);
 
-    // --- Effects ---
     useEffect(() => {
-        console.log('MoneyDivination Component Mounted - Version: 2025-12-08 v3 (Final Visuals)');
-        // 初始化音频上下文
+        console.log('MoneyDivination Masterpiece Style v3 - Floating Fix');
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         audioContextRef.current = ctx;
         setAudioContext(ctx);
         return () => {
-            if (audioContextRef.current) {
-                audioContextRef.current.close();
-            }
+            if (audioContextRef.current) audioContextRef.current.close();
         };
     }, []);
 
-    // 🎲 开始摇卦 - 严格边界检查
     const handleThrow = () => {
-        // 🚨 严格边界检查
-        if (currentThrow > 6 || yaos.length >= 6 || finalHexagram || isProcessingRef.current) {
-            return;
-        }
-
-        // 初始化音频
-        if (audioContextRef.current?.state === 'suspended') {
-            audioContextRef.current.resume();
-        }
+        if (yaos.length >= 6 || finalHexagram || isProcessingRef.current) return;
+        if (audioContextRef.current?.state === 'suspended') audioContextRef.current.resume();
         playThrowSound(audioContextRef.current);
-
-        // 🔧 完全重置当前摇卦状态
         setCoinResults({});
         isProcessingRef.current = false;
         setIsProcessing(false);
         setIsThrown(false);
-
-        // 启动动画
-        setTimeout(() => {
-            setIsThrown(true);
-        }, 100);
+        setTimeout(() => setIsThrown(true), 100);
     };
 
-    // 🪙 铜钱落地结果收集 - 关键修复：防止重复生成爻
     const handleCoinResult = (index, result) => {
-        // 如果被锁定，直接忽略
-        if (isProcessingRef.current || currentThrow > 6 || finalHexagram) {
-            return;
-        }
-
+        if (isProcessingRef.current || yaos.length >= 6 || finalHexagram) return;
         setCoinResults(prev => {
             const newResults = { ...prev, [index]: result };
-            const prevCount = Object.keys(prev).length;
-            const newCount = Object.keys(newResults).length;
-
-            // 🎯 关键修复：
-            // 1. 只有当数量从 <3 变为 3 时才触发 (防止重复触发)
-            // 2. 再次检查 Ref 锁
-            if (prevCount < 3 && newCount === 3) {
-                if (!isProcessingRef.current) {
-                    console.log('🎯 收集齐3个铜钱结果，锁定并处理...');
-                    isProcessingRef.current = true; // 立即锁定
-                    setIsProcessing(true); // 更新UI状态
-
-                    setTimeout(() => {
-                        generateYao(newResults);
-                    }, 500);
+            if (Object.keys(prev).length < 3 && Object.keys(newResults).length === 3) {
+                if (!isProcessingRef.current && yaos.length < 6) {
+                    isProcessingRef.current = true;
+                    setIsProcessing(true);
+                    setTimeout(() => generateYao(newResults), 500);
                 }
             }
-
             return newResults;
         });
     };
 
-    // 🎯 生成单个爻（核心逻辑）
     const generateYao = (results) => {
-        // 再次检查边界
-        if (yaos.length >= 6) {
-            isProcessingRef.current = false;
-            setIsProcessing(false);
-            return;
-        }
-
+        if (yaos.length >= 6) return;
         const headsCount = Object.values(results).filter(r => r === 'heads').length;
+        let yaoType, isMoving, binaryVal;
 
-        let yaoType = '';
-        let yaoSymbol = '';
-        let isMoving = false;
-        let binaryVal = 0;
+        if (headsCount === 3) { yaoType = '老阳'; isMoving = true; binaryVal = 1; }
+        else if (headsCount === 2) { yaoType = '少阴'; isMoving = false; binaryVal = 0; }
+        else if (headsCount === 1) { yaoType = '少阳'; isMoving = false; binaryVal = 1; }
+        else { yaoType = '老阴'; isMoving = true; binaryVal = 0; }
 
-        // 🎲 正确的金钱卦规则
-        if (headsCount === 3) {
-            yaoType = '老阳';
-            yaoSymbol = '━━━';
-            isMoving = true;
-            binaryVal = 1;
-        } else if (headsCount === 2) {
-            yaoType = '少阴';
-            yaoSymbol = '━ ━';
-            isMoving = false;
-            binaryVal = 0;
-        } else if (headsCount === 1) {
-            yaoType = '少阳';
-            yaoSymbol = '━━━';
-            isMoving = false;
-            binaryVal = 1;
-        } else { // 0个正面
-            yaoType = '老阴';
-            yaoSymbol = '━ ━';
-            isMoving = true;
-            binaryVal = 0;
-        }
-
-        // 🎯 创建新爻
-        const newYao = {
-            number: currentThrow,
-            type: yaoType,
-            symbol: yaoSymbol,
-            isMoving,
-            binaryVal,
-            headsCount
-        };
-
-        // 🔧 更新状态
+        const newYao = { number: yaos.length + 1, type: yaoType, isMoving, binaryVal, headsCount };
         setYaos(prev => {
             if (prev.length >= 6) return prev;
-
             const updated = [...prev, newYao];
-
-            // 检查是否完成6爻
             if (updated.length === 6) {
-                setTimeout(() => {
-                    generateFinalHexagram(updated);
-                }, 500);
+                setTimeout(() => generateFinalHexagram(updated), 500);
             } else {
-                // 准备下一次摇卦
-                setCurrentThrow(prev => prev + 1);
-
-                // 解锁，允许下一次点击
+                setCurrentThrow(updated.length + 1);
                 isProcessingRef.current = false;
                 setIsProcessing(false);
-                setIsThrown(false); // 🔧 关键修复：重置投掷状态，使硬币回到上方，按钮恢复可用
+                setIsThrown(false);
                 setCoinResults({});
             }
-
             return updated;
         });
     };
 
-    // 🔮 生成最终卦象
     const generateFinalHexagram = (allYaos) => {
-        // Use First Principles Logic
         const hexagramInfo = getHexagram(allYaos.map(yao => yao.binaryVal));
-
         const movingYaos = allYaos.filter(yao => yao.isMoving);
-
         setFinalHexagram({
             name: hexagramInfo.name,
             desc: hexagramInfo.desc,
             hasMovingYaos: movingYaos.length > 0,
-            movingCount: movingYaos.length,
-            // Store binary key for debugging if needed
-            binaryKey: allYaos.map(yao => yao.binaryVal).reverse().join('')
+            movingCount: movingYaos.length
         });
     };
 
-    // 🔄 重新占卜 - 完全清空所有状态
     const resetDivination = () => {
         setCurrentThrow(1);
         setYaos([]);
@@ -355,188 +277,282 @@ export default function MoneyDivination({ onBack }) {
         <div style={{
             width: '100vw',
             height: '100vh',
-            background: 'linear-gradient(to bottom, #1a1a2e, #16213e)',
+            backgroundImage: `url(${bgImage})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
             position: 'relative',
-            overflow: 'hidden'
+            overflow: 'hidden',
+            fontFamily: '"Noto Serif SC", "Songti SC", "KaiTi", "STKaiti", serif',
+            color: '#2b2b2b',
         }}>
+            {/* Soft Ambient Overlay */}
+            <div style={{
+                position: 'absolute',
+                inset: 0,
+                background: 'rgba(240, 230, 220, 0.2)',
+                pointerEvents: 'none'
+            }} />
+
             {/* Header */}
             <div style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                width: '100%',
-                padding: '20px',
+                position: 'absolute',
+                top: 50,
+                left: 60,
+                writingMode: 'vertical-rl',
+                textOrientation: 'upright',
+                zIndex: 50,
                 display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 999
+                gap: '20px',
+                height: 'auto'
             }}>
-                <button
-                    onClick={onBack}
-                    style={{
-                        position: 'absolute',
-                        left: 20,
-                        background: 'rgba(255,255,255,0.1)',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '40px',
-                        height: '40px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'white',
-                        cursor: 'pointer'
-                    }}
-                >
-                    <ArrowLeft size={24} />
-                </button>
+                {/* Title Seal */}
                 <div style={{
-                    color: '#fff',
-                    fontSize: '24px',
+                    width: '36px',
+                    height: '36px',
+                    border: '2px solid #a83232',
+                    color: '#a83232',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '18px',
                     fontWeight: 'bold',
-                    textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                    borderRadius: '4px',
+                    marginBottom: '10px',
+                    writingMode: 'horizontal-tb'
                 }}>
-                    金钱卦 🪙
+                    吉
+                </div>
+
+                <div style={{
+                    fontSize: '42px',
+                    fontWeight: 900,
+                    color: '#1a1a1a',
+                    letterSpacing: '8px',
+                    fontFamily: '"STKaiti", "KaiTi", serif',
+                    opacity: 0.9
+                }}>
+                    金钱卦
+                </div>
+
+                <div style={{
+                    fontSize: '16px',
+                    color: '#666',
+                    fontStyle: 'normal',
+                    marginTop: '20px',
+                    letterSpacing: '4px',
+                    borderRight: '1px solid #999',
+                    paddingRight: '15px'
+                }}>
+                    问道于心・诚则灵
                 </div>
             </div>
 
-            {/* Progress and Results */}
+            {/* Back Button */}
+            <button
+                onClick={onBack}
+                style={{
+                    position: 'absolute',
+                    top: 30,
+                    right: 40,
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    border: '1px solid #888',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#555',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    zIndex: 100,
+                    transition: 'all 0.3s'
+                }}
+                onMouseOver={e => { e.target.style.borderColor = '#1a1a1a'; e.target.style.color = '#000'; }}
+                onMouseOut={e => { e.target.style.borderColor = '#888'; e.target.style.color = '#555'; }}
+            >
+                <ArrowLeft size={16} />
+            </button>
+
+            {/* RIGHT PANEL - FLOATING INK */}
             <div style={{
-                position: 'fixed',
-                top: 80,
-                width: '100%',
-                textAlign: 'center',
-                zIndex: 999
+                position: 'absolute',
+                top: '50%',
+                right: '8%',
+                transform: 'translateY(-50%)',
+                width: '300px',
+                minHeight: '400px',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                zIndex: 50,
             }}>
-                {/* Progress */}
                 {!finalHexagram && (
                     <div style={{
-                        color: '#fff',
-                        fontSize: '18px',
-                        marginBottom: '10px',
-                        textShadow: '0 2px 4px rgba(0,0,0,0.5)'
+                        marginBottom: '30px',
+                        fontSize: '14px',
+                        color: '#8b4513',
+                        letterSpacing: '2px',
+                        borderBottom: '1px solid rgba(139, 69, 19, 0.3)',
+                        paddingBottom: '5px'
                     }}>
-                        第 {currentThrow} 爻 / 共 6 爻
+                        演算第 {currentThrow} 爻
                     </div>
                 )}
 
-                {/* Completed Yaos */}
-                {yaos.length > 0 && (
-                    <div style={{
-                        background: 'rgba(0,0,0,0.7)',
-                        borderRadius: '10px',
-                        padding: '15px',
-                        margin: '10px auto',
-                        maxWidth: '300px',
-                        color: '#fff'
-                    }}>
-                        <div style={{ fontSize: '16px', marginBottom: '10px', color: '#ffd700' }}>
-                            已完成的爻 ({yaos.length}/6):
-                        </div>
-                        {yaos.slice().reverse().map((yao, index) => (
-                            <div key={index} style={{
-                                fontSize: '20px',
-                                fontFamily: 'monospace',
-                                margin: '5px 0',
-                                color: yao.isMoving ? '#ff6b6b' : '#69db7c'
-                            }}>
-                                {yao.symbol} ({yao.type})
+                {/* Yao List - RESTORED TEXT LABELS */}
+                <div style={{ width: '100%', display: 'flex', flexDirection: 'column-reverse', gap: '18px', flex: 1, justifyContent: 'center' }}>
+                    {yaos.length === 0 && Array(6).fill(0).map((_, i) => (
+                        <div key={i} style={{
+                            height: '1px',
+                            width: '100%',
+                            margin: '12px 0'
+                        }}></div>
+                    ))}
+
+                    {yaos.map((yao, index) => (
+                        <div key={index} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px' }}>
+                            {/* Ink Stroke */}
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
+                                <InkStroke type={yao.binaryVal === 1 ? 'yang' : 'yin'} width="100%" />
                             </div>
-                        ))}
-                    </div>
-                )}
+
+                            {/* Text Info (Right Side) */}
+                            <div style={{ width: '60px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                                <span style={{ fontSize: '14px', color: '#1a1a1a', fontWeight: 'bold' }}>{yao.type}</span>
+                                {yao.isMoving && (
+                                    <span style={{ fontSize: '10px', color: '#c0392b', fontWeight: 'bold' }}>动爻</span>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
 
                 {/* Final Result */}
                 {finalHexagram && (
                     <div style={{
-                        background: 'rgba(255,215,0,0.1)',
-                        border: '2px solid #ffd700',
-                        borderRadius: '15px',
-                        padding: '20px',
-                        margin: '10px auto',
-                        maxWidth: '350px',
-                        color: '#ffd700',
-                        textShadow: '0 0 15px rgba(255,215,0,0.6)',
-                        animation: 'fadeIn 0.5s ease-out'
+                        marginTop: '30px',
+                        textAlign: 'center',
+                        width: '100%',
+                        animation: 'fadeIn 1s ease',
+                        position: 'relative'
                     }}>
-                        <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '10px', color: '#fff' }}>
+                        <div style={{ width: '40px', height: '2px', background: '#333', margin: '0 auto 20px auto' }} />
+
+                        <div style={{
+                            fontSize: '48px',
+                            fontWeight: 'normal',
+                            marginBottom: '15px',
+                            color: '#1a1a1a',
+                            fontFamily: '"STKaiti", "KaiTi", serif',
+                            textShadow: '0 2px 10px rgba(255,255,255,0.8)'
+                        }}>
                             {finalHexagram.name}
                         </div>
-                        <div style={{ fontSize: '16px', marginBottom: '15px', fontStyle: 'italic', color: '#ddd' }}>
+
+                        <div style={{
+                            fontSize: '15px',
+                            color: '#444',
+                            lineHeight: '1.8',
+                            textAlign: 'justify',
+                            fontFamily: '"Noto Serif SC", serif'
+                        }}>
                             {finalHexagram.desc}
                         </div>
-                        <div style={{ fontSize: '14px', marginBottom: '10px' }}>
-                            {finalHexagram.hasMovingYaos ?
-                                `包含 ${finalHexagram.movingCount} 个动爻` :
-                                '静卦（无动爻）'
-                            }
-                        </div>
+
                         <button
                             onClick={resetDivination}
                             style={{
-                                padding: '8px 16px',
-                                background: '#ffd700',
-                                color: '#1a1a1a',
-                                border: 'none',
-                                borderRadius: '20px',
+                                marginTop: '40px',
+                                padding: '10px 30px',
+                                background: 'transparent',
+                                border: '1px solid #5d4037',
+                                color: '#5d4037',
+                                fontSize: '14px',
                                 cursor: 'pointer',
-                                fontWeight: 'bold',
-                                marginTop: '10px'
+                                transition: 'all 0.3s',
+                                letterSpacing: '2px'
                             }}
+                            onMouseOver={(e) => { e.target.style.background = '#5d4037'; e.target.style.color = '#fff'; }}
+                            onMouseOut={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#5d4037'; }}
                         >
-                            重新占卜
+                            再卜一卦
                         </button>
                     </div>
                 )}
             </div>
 
-            {/* Throw Button */}
-            {!finalHexagram && yaos.length < 6 && currentThrow <= 6 && (
+            {/* Shake Button */}
+            {!finalHexagram && yaos.length < 6 && (
                 <button
                     onClick={handleThrow}
                     disabled={isProcessing || (isThrown && Object.keys(coinResults).length < 3)}
                     style={{
                         position: 'fixed',
-                        bottom: 80,
+                        bottom: '10%',
                         left: '50%',
                         transform: 'translateX(-50%)',
-                        padding: '18px 60px',
-                        fontSize: '22px',
-                        fontWeight: 'bold',
-                        background: 'linear-gradient(135deg, #d4af37 0%, #f59e0b 100%)',
-                        color: '#1a1a1a',
+                        width: '90px',
+                        height: '90px',
+                        borderRadius: '12px',
+                        background: '#b71c1c',
+                        color: 'rgba(255,255,255,0.9)',
                         border: 'none',
-                        borderRadius: '50px',
+                        boxShadow: '0 8px 25px rgba(183, 28, 28, 0.4)',
+                        fontSize: '32px',
+                        fontFamily: '"STKaiti", "KaiTi", serif',
                         cursor: (isProcessing || (isThrown && Object.keys(coinResults).length < 3)) ? 'not-allowed' : 'pointer',
                         zIndex: 999,
-                        boxShadow: '0 4px 20px rgba(212, 175, 55, 0.4)',
-                        transition: 'all 0.2s',
-                        opacity: (isProcessing || (isThrown && Object.keys(coinResults).length < 3)) ? 0.7 : 1
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        transition: 'all 0.3s',
+                        filter: isProcessing ? 'grayscale(0.5)' : 'none'
                     }}
                 >
-                    {isProcessing ?
-                        `处理中...` :
-                        (isThrown && Object.keys(coinResults).length < 3) ?
-                            `演算第${currentThrow}爻...` :
-                            `摇第${currentThrow}爻`
-                    }
+                    <div style={{
+                        border: '2px solid rgba(255,255,255,0.3)',
+                        width: '85%',
+                        height: '85%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '8px'
+                    }}>
+                        {isProcessing ? '...' : <span style={{ writingMode: 'vertical-rl', textOrientation: 'upright', fontSize: '24px' }}>启动</span>}
+                    </div>
                 </button>
             )}
 
-            {/* 3D Scene */}
+            {/* 3D Scene - REMOVED FLOOR PLANE */}
             <Canvas
-                camera={{ position: [0, 8, 12], fov: 60 }}
+                shadows
+                camera={{ position: [0, 8, 12], fov: 45 }}
                 gl={{ alpha: true, antialias: true }}
                 onCreated={({ gl }) => {
                     gl.toneMapping = THREE.ACESFilmicToneMapping;
                     gl.outputColorSpace = THREE.SRGBColorSpace;
                 }}
             >
-                <ambientLight intensity={1.5} />
-                <directionalLight position={[5, 10, 5]} intensity={2} castShadow />
-                <pointLight position={[0, 5, 0]} intensity={1} color="#ffd700" />
+                <ambientLight intensity={1.5} color="#fffcf5" />
+                <directionalLight
+                    position={[5, 10, 5]}
+                    intensity={2.0}
+                    color="#fff8e1"
+                    castShadow
+                    shadow-mapSize={[1024, 1024]}
+                />
+                <spotLight
+                    position={[0, 10, 0]}
+                    angle={0.5}
+                    penumbra={1}
+                    intensity={1}
+                    color="#ffd700"
+                    castShadow
+                />
 
                 <React.Suspense fallback={null}>
+                    {/* FLOOR PLANE REMOVED to prevent clipping */}
                     {[0, 1, 2].map(i => (
                         <AnimatedCoin
                             key={i}
@@ -551,48 +567,18 @@ export default function MoneyDivination({ onBack }) {
             </Canvas>
 
             <style>{`
+                @keyframes strokeDraw {
+                    from { width: 0; opacity: 0; }
+                    to { width: 100%; opacity: 1; }
+                }
                 @keyframes fadeIn {
-                    from { opacity: 0; transform: translateY(-20px); }
+                    from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
             `}</style>
-            {/* 强制刷新按钮 (用于解决缓存问题) */}
-            <div className="absolute top-4 right-4 z-50">
-                <button
-                    onClick={async () => {
-                        if (window.confirm('确定要强制清除缓存并刷新吗？这将解决看不到最新更新的问题。')) {
-                            try {
-                                // 1. 注销所有 Service Workers
-                                if ('serviceWorker' in navigator) {
-                                    const registrations = await navigator.serviceWorker.getRegistrations();
-                                    for (const registration of registrations) {
-                                        await registration.unregister();
-                                    }
-                                }
-                                // 2. 清除所有缓存
-                                if ('caches' in window) {
-                                    const keys = await caches.keys();
-                                    for (const key of keys) {
-                                        await caches.delete(key);
-                                    }
-                                }
-                                // 3. 强制刷新
-                                window.location.reload(true);
-                            } catch (error) {
-                                console.error('清除缓存失败:', error);
-                                window.location.reload();
-                            }
-                        }
-                    }}
-                    className="bg-red-500/20 hover:bg-red-500/40 text-red-200 text-xs px-2 py-1 rounded border border-red-500/30 backdrop-blur-sm transition-colors"
-                >
-                    修复显示问题 (强制刷新)
-                </button>
-            </div>
-            {/* 版本号显示 */}
-            <div className="absolute bottom-2 right-2 text-white/20 text-xs pointer-events-none z-50">
-                v2025.12.08.4
+            <div className="absolute bottom-2 right-2 text-gray-500/30 text-[10px] pointer-events-none z-50">
+                Song Dynasty Remastered v3
             </div>
         </div>
     );
-}// Hexagram display fix applied Mon Dec  8 15:16:16 CST 2025
+}
