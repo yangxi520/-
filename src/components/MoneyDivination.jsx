@@ -6,14 +6,107 @@ import * as THREE from 'three';
 import { ArrowLeft } from 'lucide-react';
 
 // --- Assets ---
-import coinYangTexture from '../assets/coin_yang.png';
-import coinYinTexture from '../assets/coin_yin.png';
+import coinYangTexture from '../assets/coin_yang_processed.png';
+import coinYinTexture from '../assets/coin_yin_processed.png';
 
 // --- Constants ---
 const COIN_RADIUS = 1.5;
-const COIN_THICKNESS = 0.2;
+const COIN_THICKNESS = 0.15; // Slightly thinner for realism
+const HOLE_SIZE = 0.45; // Size of the square hole
 
-// --- 64 Hexagrams Lookup Table ---
+// --- Component: Animated Coin ---
+function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
+    const [started, setStarted] = useState(false);
+    const [finalRotation, setFinalRotation] = useState(0);
+    const [hasReported, setHasReported] = useState(false);
+    const [yangMap, yinMap] = useTexture([coinYangTexture, coinYinTexture]);
+
+    // Create Coin Geometry with Hole
+    const coinGeometry = React.useMemo(() => {
+        const shape = new THREE.Shape();
+        shape.absarc(0, 0, COIN_RADIUS, 0, Math.PI * 2, false);
+
+        const hole = new THREE.Path();
+        const h = HOLE_SIZE;
+        hole.moveTo(-h, -h);
+        hole.lineTo(h, -h);
+        hole.lineTo(h, h);
+        hole.lineTo(-h, h);
+        hole.lineTo(-h, -h);
+        shape.holes.push(hole);
+
+        const extrudeSettings = {
+            depth: COIN_THICKNESS,
+            bevelEnabled: true,
+            bevelThickness: 0.05,
+            bevelSize: 0.05,
+            bevelSegments: 5
+        };
+
+        return new THREE.ExtrudeGeometry(shape, extrudeSettings);
+    }, []);
+
+    useEffect(() => {
+        if (isThrown) {
+            setHasReported(false);
+            const timer = setTimeout(() => {
+                const isHeads = Math.random() > 0.5;
+                // Heads (Yang) = 0, Tails (Yin) = PI
+                const baseRotation = isHeads ? 0 : Math.PI;
+                setFinalRotation(baseRotation + Math.PI * 16);
+                setStarted(true);
+            }, delay);
+            return () => clearTimeout(timer);
+        } else {
+            setStarted(false);
+            setHasReported(false);
+        }
+    }, [isThrown, delay]);
+
+    const { position, rotation } = useSpring({
+        position: started
+            ? [index * 3.5 - 3.5, 0.2, 0]
+            : [index * 3.5 - 3.5, 5, 0],
+        rotation: started
+            ? [finalRotation, Math.PI * 3 + (Math.random() * 0.5), (Math.random() - 0.5) * 0.5]
+            : [0, 0, 0],
+        config: { mass: 2, tension: 120, friction: 14 },
+        onRest: () => {
+            if (started && !hasReported) {
+                setHasReported(true);
+                playLandSound(audioContext, index * 50);
+
+                const normalizedRotation = finalRotation % (Math.PI * 2);
+                const isHeads = normalizedRotation < Math.PI / 2 || normalizedRotation > Math.PI * 1.5;
+                onResult(index, isHeads ? 'heads' : 'tails');
+            }
+        }
+    });
+
+    return (
+        <animated.group position={position} rotation={rotation}>
+            {/* Coin Body (Gold Metal) */}
+            <mesh geometry={coinGeometry} castShadow receiveShadow>
+                <meshStandardMaterial color="#e6c200" metalness={1} roughness={0.3} />
+            </mesh>
+
+            {/* Top Face (Yin - Characters) - Local Z+ (Extrude goes Z+) */}
+            {/* Note: ExtrudeGeometry starts at Z=0 and goes to Z=depth. We need to position faces accordingly. */}
+
+            {/* Face 1: Front (Z = depth + bevel) */}
+            <mesh position={[0, 0, COIN_THICKNESS + 0.06]} rotation={[0, 0, 0]}>
+                <planeGeometry args={[COIN_RADIUS * 2.2, COIN_RADIUS * 2.2]} />
+                <meshStandardMaterial map={yinMap} transparent alphaTest={0.5} roughness={0.8} />
+            </mesh>
+
+            {/* Face 2: Back (Z = -bevel) */}
+            <mesh position={[0, 0, -0.06]} rotation={[0, Math.PI, 0]}>
+                <planeGeometry args={[COIN_RADIUS * 2.2, COIN_RADIUS * 2.2]} />
+                <meshStandardMaterial map={yangMap} transparent alphaTest={0.5} roughness={0.8} />
+            </mesh>
+        </animated.group>
+    );
+}
 const HEXAGRAMS = {
     '111111': { name: '乾为天', desc: '元亨利贞。大吉大利，万事如意。' },
     '000000': { name: '坤为地', desc: '元亨，利牝马之贞。柔顺包容，厚德载物。' },
