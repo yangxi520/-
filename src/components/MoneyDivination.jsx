@@ -610,4 +610,4 @@ export default function MoneyDivination({ onBack }) {
             </div>
         </div>
     );
-}
+}// Hexagram display fix applied Mon Dec  8 15:16:16 CST 2025
