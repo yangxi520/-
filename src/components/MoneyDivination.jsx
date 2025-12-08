@@ -212,12 +212,15 @@ export default function MoneyDivination({ onBack }) {
     const [isProcessing, setIsProcessing] = useState(false);
     const audioContextRef = useRef(null);
 
-    // 🎲 开始摇卦
+    // 🎲 开始摇卦 - 严格边界检查
     const handleThrow = () => {
-        // 边界检查
-        if (currentThrow > 6 || finalHexagram || isProcessing) {
+        // 🚨 严格边界检查
+        if (currentThrow > 6 || yaos.length >= 6 || finalHexagram || isProcessing) {
+            console.log('🚨 摇卦被阻止：currentThrow=', currentThrow, ', yaos.length=', yaos.length, ', finalHexagram=', !!finalHexagram, ', isProcessing=', isProcessing);
             return;
         }
+
+        console.log('🎲 开始第', currentThrow, '次摇卦，当前已有', yaos.length, '个爻');
 
         // 初始化音频
         if (!audioContextRef.current) {
@@ -228,34 +231,50 @@ export default function MoneyDivination({ onBack }) {
         }
         playThrowSound(audioContextRef.current);
 
-        // 重置状态并开始动画
+        // 🔧 完全重置当前摇卦状态
         setCoinResults({});
         setIsProcessing(false);
         setIsThrown(false);
-        setTimeout(() => setIsThrown(true), 100);
+        
+        // 启动动画
+        setTimeout(() => {
+            setIsThrown(true);
+        }, 100);
     };
 
-    // 🪙 铜钱落地结果收集
+    // 🪙 铜钱落地结果收集 - 关键修复：防止重复生成爻
     const handleCoinResult = (index, result) => {
-        if (isProcessing) return;
+        if (isProcessing || currentThrow > 6 || finalHexagram) {
+            return; // 如果已经在处理或超过6爻，直接返回
+        }
 
         setCoinResults(prev => {
             const newResults = { ...prev, [index]: result };
             
-            // 🎯 当3枚铜钱都落地时，生成1个爻
-            if (Object.keys(newResults).length === 3) {
+            // 🎯 关键修复：只有当收集齐3个结果且未在处理时，才生成1个爻
+            if (Object.keys(newResults).length === 3 && !isProcessing) {
+                console.log('🎯 收集齐3个铜钱结果，准备生成第', currentThrow, '个爻');
                 setIsProcessing(true);
                 setTimeout(() => {
                     generateYao(newResults);
-                }, 500); // 给动画留点时间
+                }, 500);
             }
             
             return newResults;
         });
     };
 
-    // 🎯 生成单个爻（核心逻辑）
+    // 🎯 生成单个爻（核心逻辑）- 严格防止重复
     const generateYao = (results) => {
+        // 🚨 关键检查：如果已经有6个爻或正在处理，直接返回
+        if (yaos.length >= 6 || currentThrow > 6 || finalHexagram) {
+            console.log('🚨 防止重复生成爻：当前爻数=', yaos.length, '，当前摇卦次数=', currentThrow);
+            setIsProcessing(false);
+            return;
+        }
+
+        console.log('🎯 开始生成第', currentThrow, '个爻，当前已有爻数：', yaos.length);
+        
         const headsCount = Object.values(results).filter(r => r === 'heads').length;
         
         let yaoType = '';
@@ -286,7 +305,7 @@ export default function MoneyDivination({ onBack }) {
             binaryVal = 0;
         }
 
-        // 添加到爻列表
+        // 🎯 创建新爻
         const newYao = {
             number: currentThrow,
             type: yaoType,
@@ -296,18 +315,32 @@ export default function MoneyDivination({ onBack }) {
             headsCount
         };
 
+        console.log('🎯 生成新爻：', newYao);
+
+        // 🔧 关键修复：使用函数式更新，确保不重复
         setYaos(prev => {
+            // 再次检查防止重复
+            if (prev.length >= 6) {
+                console.log('🚨 爻数已满，停止添加');
+                setIsProcessing(false);
+                return prev;
+            }
+
             const updated = [...prev, newYao];
+            console.log('🎯 更新后爻列表长度：', updated.length);
             
             // 检查是否完成6爻
             if (updated.length === 6) {
+                console.log('🎉 完成6爻，生成最终卦象');
                 setTimeout(() => {
                     generateFinalHexagram(updated);
                 }, 500);
             } else {
                 // 准备下一次摇卦
+                console.log('🎯 准备下一次摇卦，当前第', currentThrow, '爻完成');
                 setCurrentThrow(prev => prev + 1);
                 setIsProcessing(false);
+                setCoinResults({}); // 🔧 关键：清空铜钱结果
             }
             
             return updated;
@@ -331,14 +364,19 @@ export default function MoneyDivination({ onBack }) {
         });
     };
 
-    // 🔄 重新占卜
+    // 🔄 重新占卜 - 完全清空所有状态
     const resetDivination = () => {
+        console.log('🔄 重新占卜：清空所有状态');
         setCurrentThrow(1);
         setYaos([]);
         setFinalHexagram(null);
         setCoinResults({});
         setIsThrown(false);
         setIsProcessing(false);
+        // 确保铜钱动画也重置
+        setTimeout(() => {
+            console.log('🔄 状态重置完成');
+        }, 100);
     };
 
     return (
@@ -480,11 +518,11 @@ export default function MoneyDivination({ onBack }) {
                 )}
             </div>
 
-            {/* Throw Button */}
-            {!finalHexagram && currentThrow <= 6 && (
+            {/* Throw Button - 严格控制显示条件 */}
+            {!finalHexagram && yaos.length < 6 && currentThrow <= 6 && (
                 <button
                     onClick={handleThrow}
-                    disabled={isThrown && Object.keys(coinResults).length < 3}
+                    disabled={isProcessing || (isThrown && Object.keys(coinResults).length < 3)}
                     style={{
                         position: 'fixed',
                         bottom: 80,
@@ -497,14 +535,16 @@ export default function MoneyDivination({ onBack }) {
                         color: '#1a1a1a',
                         border: 'none',
                         borderRadius: '50px',
-                        cursor: isThrown && Object.keys(coinResults).length < 3 ? 'not-allowed' : 'pointer',
+                        cursor: (isProcessing || (isThrown && Object.keys(coinResults).length < 3)) ? 'not-allowed' : 'pointer',
                         zIndex: 999,
                         boxShadow: '0 4px 20px rgba(212, 175, 55, 0.4)',
                         transition: 'all 0.2s',
-                        opacity: isThrown && Object.keys(coinResults).length < 3 ? 0.7 : 1
+                        opacity: (isProcessing || (isThrown && Object.keys(coinResults).length < 3)) ? 0.7 : 1
                     }}
                 >
-                    {isThrown && Object.keys(coinResults).length < 3 ?
+                    {isProcessing ? 
+                        `处理中...` :
+                        (isThrown && Object.keys(coinResults).length < 3) ?
                         `演算第${currentThrow}爻...` :
                         `摇第${currentThrow}爻`
                     }
