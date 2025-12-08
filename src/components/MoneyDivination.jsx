@@ -89,48 +89,48 @@ const createAudioContext = () => {
 
 const playThrowSound = (audioContext) => {
     if (!audioContext) return;
-    
+
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
-    
+
     oscillator.connect(gainNode);
     gainNode.connect(audioContext.destination);
-    
+
     oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
     oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
     oscillator.type = 'sawtooth';
-    
+
     gainNode.gain.setValueAtTime(0, audioContext.currentTime);
     gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.02);
     gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.15);
-    
+
     oscillator.start(audioContext.currentTime);
     oscillator.stop(audioContext.currentTime + 0.15);
 };
 
 const playLandSound = (audioContext, delay = 0) => {
     if (!audioContext) return;
-    
+
     setTimeout(() => {
         const oscillator = audioContext.createOscillator();
         const gainNode = audioContext.createGain();
         const filter = audioContext.createBiquadFilter();
-        
+
         oscillator.connect(filter);
         filter.connect(gainNode);
         gainNode.connect(audioContext.destination);
-        
+
         oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
         oscillator.frequency.exponentialRampToValueAtTime(200, audioContext.currentTime + 0.2);
         oscillator.type = 'triangle';
-        
+
         filter.type = 'highpass';
         filter.frequency.setValueAtTime(300, audioContext.currentTime);
-        
+
         gainNode.gain.setValueAtTime(0, audioContext.currentTime);
         gainNode.gain.linearRampToValueAtTime(0.4, audioContext.currentTime + 0.01);
         gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
-        
+
         oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.3);
     }, delay);
@@ -171,7 +171,7 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
             if (started && !hasReported) {
                 setHasReported(true);
                 playLandSound(audioContext, index * 50);
-                
+
                 const normalizedRotation = finalRotation % (Math.PI * 2);
                 const isHeads = normalizedRotation < Math.PI / 2 || normalizedRotation > Math.PI * 1.5;
                 onResult(index, isHeads ? 'heads' : 'tails');
@@ -205,22 +205,22 @@ export default function MoneyDivination({ onBack }) {
     const [currentThrow, setCurrentThrow] = useState(1); // 当前第几次摇卦 (1-6)
     const [yaos, setYaos] = useState([]); // 已完成的爻列表
     const [finalHexagram, setFinalHexagram] = useState(null); // 最终卦象
-    
+
     // 3D动画状态
     const [isThrown, setIsThrown] = useState(false);
     const [coinResults, setCoinResults] = useState({});
     const [isProcessing, setIsProcessing] = useState(false);
+
+    // 🔒 使用 Ref 来解决闭包和竞态问题 (关键修复)
+    const isProcessingRef = useRef(false);
     const audioContextRef = useRef(null);
 
     // 🎲 开始摇卦 - 严格边界检查
     const handleThrow = () => {
         // 🚨 严格边界检查
-        if (currentThrow > 6 || yaos.length >= 6 || finalHexagram || isProcessing) {
-            console.log('🚨 摇卦被阻止：currentThrow=', currentThrow, ', yaos.length=', yaos.length, ', finalHexagram=', !!finalHexagram, ', isProcessing=', isProcessing);
+        if (currentThrow > 6 || yaos.length >= 6 || finalHexagram || isProcessingRef.current) {
             return;
         }
-
-        console.log('🎲 开始第', currentThrow, '次摇卦，当前已有', yaos.length, '个爻');
 
         // 初始化音频
         if (!audioContextRef.current) {
@@ -233,9 +233,10 @@ export default function MoneyDivination({ onBack }) {
 
         // 🔧 完全重置当前摇卦状态
         setCoinResults({});
+        isProcessingRef.current = false;
         setIsProcessing(false);
         setIsThrown(false);
-        
+
         // 启动动画
         setTimeout(() => {
             setIsThrown(true);
@@ -244,39 +245,46 @@ export default function MoneyDivination({ onBack }) {
 
     // 🪙 铜钱落地结果收集 - 关键修复：防止重复生成爻
     const handleCoinResult = (index, result) => {
-        if (isProcessing || currentThrow > 6 || finalHexagram) {
-            return; // 如果已经在处理或超过6爻，直接返回
+        // 如果被锁定，直接忽略
+        if (isProcessingRef.current || currentThrow > 6 || finalHexagram) {
+            return;
         }
 
         setCoinResults(prev => {
             const newResults = { ...prev, [index]: result };
-            
-            // 🎯 关键修复：只有当收集齐3个结果且未在处理时，才生成1个爻
-            if (Object.keys(newResults).length === 3 && !isProcessing) {
-                console.log('🎯 收集齐3个铜钱结果，准备生成第', currentThrow, '个爻');
-                setIsProcessing(true);
-                setTimeout(() => {
-                    generateYao(newResults);
-                }, 500);
+            const prevCount = Object.keys(prev).length;
+            const newCount = Object.keys(newResults).length;
+
+            // 🎯 关键修复：
+            // 1. 只有当数量从 <3 变为 3 时才触发 (防止重复触发)
+            // 2. 再次检查 Ref 锁
+            if (prevCount < 3 && newCount === 3) {
+                if (!isProcessingRef.current) {
+                    console.log('🎯 收集齐3个铜钱结果，锁定并处理...');
+                    isProcessingRef.current = true; // 立即锁定
+                    setIsProcessing(true); // 更新UI状态
+
+                    setTimeout(() => {
+                        generateYao(newResults);
+                    }, 500);
+                }
             }
-            
+
             return newResults;
         });
     };
 
-    // 🎯 生成单个爻（核心逻辑）- 严格防止重复
+    // 🎯 生成单个爻（核心逻辑）
     const generateYao = (results) => {
-        // 🚨 关键检查：如果已经有6个爻或正在处理，直接返回
-        if (yaos.length >= 6 || currentThrow > 6 || finalHexagram) {
-            console.log('🚨 防止重复生成爻：当前爻数=', yaos.length, '，当前摇卦次数=', currentThrow);
+        // 再次检查边界
+        if (yaos.length >= 6) {
+            isProcessingRef.current = false;
             setIsProcessing(false);
             return;
         }
 
-        console.log('🎯 开始生成第', currentThrow, '个爻，当前已有爻数：', yaos.length);
-        
         const headsCount = Object.values(results).filter(r => r === 'heads').length;
-        
+
         let yaoType = '';
         let yaoSymbol = '';
         let isMoving = false;
@@ -315,34 +323,27 @@ export default function MoneyDivination({ onBack }) {
             headsCount
         };
 
-        console.log('🎯 生成新爻：', newYao);
-
-        // 🔧 关键修复：使用函数式更新，确保不重复
+        // 🔧 更新状态
         setYaos(prev => {
-            // 再次检查防止重复
-            if (prev.length >= 6) {
-                console.log('🚨 爻数已满，停止添加');
-                setIsProcessing(false);
-                return prev;
-            }
+            if (prev.length >= 6) return prev;
 
             const updated = [...prev, newYao];
-            console.log('🎯 更新后爻列表长度：', updated.length);
-            
+
             // 检查是否完成6爻
             if (updated.length === 6) {
-                console.log('🎉 完成6爻，生成最终卦象');
                 setTimeout(() => {
                     generateFinalHexagram(updated);
                 }, 500);
             } else {
                 // 准备下一次摇卦
-                console.log('🎯 准备下一次摇卦，当前第', currentThrow, '爻完成');
                 setCurrentThrow(prev => prev + 1);
+
+                // 解锁，允许下一次点击
+                isProcessingRef.current = false;
                 setIsProcessing(false);
-                setCoinResults({}); // 🔧 关键：清空铜钱结果
+                setCoinResults({});
             }
-            
+
             return updated;
         });
     };
@@ -352,9 +353,9 @@ export default function MoneyDivination({ onBack }) {
         // 从下往上构建二进制码 (上爻到初爻)
         const binaryKey = allYaos.map(yao => yao.binaryVal).reverse().join('');
         const hexagramInfo = HEXAGRAMS[binaryKey] || { name: '未知卦', desc: '暂无解释' };
-        
+
         const movingYaos = allYaos.filter(yao => yao.isMoving);
-        
+
         setFinalHexagram({
             name: hexagramInfo.name,
             desc: hexagramInfo.desc,
@@ -366,17 +367,13 @@ export default function MoneyDivination({ onBack }) {
 
     // 🔄 重新占卜 - 完全清空所有状态
     const resetDivination = () => {
-        console.log('🔄 重新占卜：清空所有状态');
         setCurrentThrow(1);
         setYaos([]);
         setFinalHexagram(null);
         setCoinResults({});
         setIsThrown(false);
+        isProcessingRef.current = false;
         setIsProcessing(false);
-        // 确保铜钱动画也重置
-        setTimeout(() => {
-            console.log('🔄 状态重置完成');
-        }, 100);
     };
 
     return (
@@ -518,7 +515,7 @@ export default function MoneyDivination({ onBack }) {
                 )}
             </div>
 
-            {/* Throw Button - 严格控制显示条件 */}
+            {/* Throw Button */}
             {!finalHexagram && yaos.length < 6 && currentThrow <= 6 && (
                 <button
                     onClick={handleThrow}
@@ -542,11 +539,11 @@ export default function MoneyDivination({ onBack }) {
                         opacity: (isProcessing || (isThrown && Object.keys(coinResults).length < 3)) ? 0.7 : 1
                     }}
                 >
-                    {isProcessing ? 
+                    {isProcessing ?
                         `处理中...` :
                         (isThrown && Object.keys(coinResults).length < 3) ?
-                        `演算第${currentThrow}爻...` :
-                        `摇第${currentThrow}爻`
+                            `演算第${currentThrow}爻...` :
+                            `摇第${currentThrow}爻`
                     }
                 </button>
             )}
