@@ -697,6 +697,39 @@ export default function MoneyDivination({ onBack }) {
                     to { opacity: 1; transform: translateY(0); }
                 }
             `}</style>
+            {/* 强制刷新按钮 (用于解决缓存问题) */}
+            <div className="absolute top-4 right-4 z-50">
+                <button
+                    onClick={async () => {
+                        if (window.confirm('确定要强制清除缓存并刷新吗？这将解决看不到最新更新的问题。')) {
+                            try {
+                                // 1. 注销所有 Service Workers
+                                if ('serviceWorker' in navigator) {
+                                    const registrations = await navigator.serviceWorker.getRegistrations();
+                                    for (const registration of registrations) {
+                                        await registration.unregister();
+                                    }
+                                }
+                                // 2. 清除所有缓存
+                                if ('caches' in window) {
+                                    const keys = await caches.keys();
+                                    for (const key of keys) {
+                                        await caches.delete(key);
+                                    }
+                                }
+                                // 3. 强制刷新
+                                window.location.reload(true);
+                            } catch (error) {
+                                console.error('清除缓存失败:', error);
+                                window.location.reload();
+                            }
+                        }
+                    }}
+                    className="bg-red-500/20 hover:bg-red-500/40 text-red-200 text-xs px-2 py-1 rounded border border-red-500/30 backdrop-blur-sm transition-colors"
+                >
+                    修复显示问题 (强制刷新)
+                </button>
+            </div>
         </div>
     );
 }
