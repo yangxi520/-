@@ -261,15 +261,15 @@ export default function MoneyDivination({ onBack }) {
             isMoving = true;
             binaryVal = 1;
         } else if (headsCount === 2) {
-            yaoType = '少阳';
-            yaoSymbol = '━━━';
-            isMoving = false;
-            binaryVal = 1;
-        } else if (headsCount === 1) {
             yaoType = '少阴';
             yaoSymbol = '━ ━';
             isMoving = false;
             binaryVal = 0;
+        } else if (headsCount === 1) {
+            yaoType = '少阳';
+            yaoSymbol = '━━━';
+            isMoving = false;
+            binaryVal = 1;
         } else { // 0个正面
             yaoType = '老阴';
             yaoSymbol = '━ ━';
