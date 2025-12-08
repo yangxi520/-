@@ -6,8 +6,8 @@ import * as THREE from 'three';
 import { ArrowLeft } from 'lucide-react';
 
 // --- Assets ---
-import coinYangTexture from '../assets/coin_yang_processed.png';
-import coinYinTexture from '../assets/coin_yin_processed.png';
+import coinYangTexture from '../assets/coin_yang_final.png';
+import coinYinTexture from '../assets/coin_yin_final.png';
 
 // --- Constants ---
 const COIN_RADIUS = 1.5;
@@ -90,19 +90,32 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
                 <meshStandardMaterial color="#e6c200" metalness={1} roughness={0.3} />
             </mesh>
 
-            {/* Top Face (Yin - Characters) - Local Z+ (Extrude goes Z+) */}
-            {/* Note: ExtrudeGeometry starts at Z=0 and goes to Z=depth. We need to position faces accordingly. */}
-
-            {/* Face 1: Front (Z = depth + bevel) */}
-            <mesh position={[0, 0, COIN_THICKNESS + 0.06]} rotation={[0, 0, 0]}>
-                <planeGeometry args={[COIN_RADIUS * 2.2, COIN_RADIUS * 2.2]} />
-                <meshStandardMaterial map={yinMap} transparent alphaTest={0.5} roughness={0.8} />
+            {/* Top Face (Yin - Manchu) - Local Z+ (Extrude goes Z+) */}
+            {/* Position: thickness + bevel + tiny offset */}
+            <mesh position={[0, 0, COIN_THICKNESS + 0.051]} rotation={[0, 0, 0]}>
+                <planeGeometry args={[COIN_RADIUS * 2.05, COIN_RADIUS * 2.05]} />
+                <meshStandardMaterial
+                    map={yinMap}
+                    transparent
+                    alphaTest={0.1}
+                    roughness={0.8}
+                    polygonOffset
+                    polygonOffsetFactor={-1}
+                />
             </mesh>
 
-            {/* Face 2: Back (Z = -bevel) */}
-            <mesh position={[0, 0, -0.06]} rotation={[0, Math.PI, 0]}>
-                <planeGeometry args={[COIN_RADIUS * 2.2, COIN_RADIUS * 2.2]} />
-                <meshStandardMaterial map={yangMap} transparent alphaTest={0.5} roughness={0.8} />
+            {/* Bottom Face (Yang - Qianlong) - Local Z- (Back side) */}
+            {/* Position: -bevel - tiny offset */}
+            <mesh position={[0, 0, -0.051]} rotation={[0, Math.PI, 0]}>
+                <planeGeometry args={[COIN_RADIUS * 2.05, COIN_RADIUS * 2.05]} />
+                <meshStandardMaterial
+                    map={yangMap}
+                    transparent
+                    alphaTest={0.1}
+                    roughness={0.8}
+                    polygonOffset
+                    polygonOffsetFactor={-1}
+                />
             </mesh>
         </animated.group>
     );
