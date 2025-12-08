@@ -122,32 +122,7 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
     );
 }
 
-// --- Sound Effects ---
-const createAudioContext = () => {
-    if (typeof window === 'undefined') return null;
-    return new (window.AudioContext || window.webkitAudioContext)();
-};
 
-const playThrowSound = (audioContext) => {
-    if (!audioContext) return;
-
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-
-    oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
-    oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
-    oscillator.type = 'sawtooth';
-
-    gainNode.gain.setValueAtTime(0, audioContext.currentTime);
-    gainNode.gain.linearRampToValueAtTime(0.3, audioContext.currentTime + 0.02);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.15);
-
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.15);
-};
 
 const playLandSound = (audioContext, delay = 0) => {
     if (!audioContext) return;
@@ -340,9 +315,8 @@ export default function MoneyDivination({ onBack }) {
 
     // 🔮 生成最终卦象
     const generateFinalHexagram = (allYaos) => {
-        // 从下往上构建二进制码 (上爻到初爻)
-        const binaryKey = allYaos.map(yao => yao.binaryVal).reverse().join('');
-        const hexagramInfo = HEXAGRAMS[binaryKey] || { name: '未知卦', desc: '暂无解释' };
+        // Use First Principles Logic
+        const hexagramInfo = getHexagram(allYaos.map(yao => yao.binaryVal));
 
         const movingYaos = allYaos.filter(yao => yao.isMoving);
 
@@ -351,7 +325,8 @@ export default function MoneyDivination({ onBack }) {
             desc: hexagramInfo.desc,
             hasMovingYaos: movingYaos.length > 0,
             movingCount: movingYaos.length,
-            binaryKey: yaoValues.slice().reverse().join('')
+            // Store binary key for debugging if needed
+            binaryKey: allYaos.map(yao => yao.binaryVal).reverse().join('')
         });
     };
 
