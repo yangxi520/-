@@ -341,6 +341,7 @@ export default function MoneyDivination({ onBack }) {
                 // 解锁，允许下一次点击
                 isProcessingRef.current = false;
                 setIsProcessing(false);
+                setIsThrown(false); // 🔧 关键修复：重置投掷状态，使硬币回到上方，按钮恢复可用
                 setCoinResults({});
             }
 
