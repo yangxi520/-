@@ -1,4 +1,29 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "query",
+          "key": "v",
+          "value": "(?!nuclear).*"
+        }
+      ],
+      "destination": "/?v=nuclear",
+      "permanent": false
+    },
+    {
+      "source": "/",
+      "missing": [
+        {
+          "type": "query",
+          "key": "v"
+        }
+      ],
+      "destination": "/?v=nuclear",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/sw.js",
@@ -8,7 +33,7 @@
           "value": "no-cache, no-store, must-revalidate"
         },
         {
-          "key": "Pragma", 
+          "key": "Pragma",
           "value": "no-cache"
         },
         {
@@ -29,7 +54,7 @@
           "value": "no-cache"
         },
         {
-          "key": "Expires", 
+          "key": "Expires",
           "value": "0"
         }
       ]

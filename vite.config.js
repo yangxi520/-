@@ -45,7 +45,6 @@ export default defineConfig({
     })
   ],
   build: {
-    outDir: 'dist_new',
     rollupOptions: {
       output: {
         entryFileNames: `assets/[name].${Date.now()}.js`,
