@@ -210,7 +210,7 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
 // --- Main Component ---
 export default function MoneyDivination({ onBack }) {
     const [isThrown, setIsThrown] = useState(false);
-    const [results, setResults] = useState({}); // Store results by index
+    const [results, setResults] = useState({}); // Store results by index for current throw
     const [currentThrow, setCurrentThrow] = useState(1); // Track which throw (1-6)
     const [hexagramLines, setHexagramLines] = useState([]); // Store 6 lines
     const [finalHexagram, setFinalHexagram] = useState(null);
@@ -240,75 +240,90 @@ export default function MoneyDivination({ onBack }) {
     };
 
     const handleResult = (index, result) => {
+        // 🔧 防止重复处理和超过6爻
+        if (isProcessing || hexagramLines.length >= 6) {
+            return;
+        }
+
         setResults(prev => {
             const newResults = { ...prev, [index]: result };
 
-            // Check if we have all 3 results
-            if (Object.keys(newResults).length === 3) {
+            // 🎯 关键修复：只有当收集齐3枚铜钱的结果时，才生成1个爻
+            if (Object.keys(newResults).length === 3 && !isProcessing) {
+                setIsProcessing(true);
                 calculateYao(newResults);
             }
             return newResults;
         });
     };
 
-    const calculateYao = (finalResults) => {
-        // Prevent duplicate processing for the same throw
-        if (isProcessing) return;
-        setIsProcessing(true);
-
-        const headsCount = Object.values(finalResults).filter(r => r === 'heads').length;
+    const calculateYao = (coinResults) => {
+        // 已经在 handleResult 中检查过 isProcessing，这里直接处理
+        const headsCount = Object.values(coinResults).filter(r => r === 'heads').length;
         let yaoType = '';
         let yaoSymbol = '';
         let isMoving = false;
-        let binaryVal = 0; // 0 for Yin, 1 for Yang
+        let binaryVal = 0;
 
-        // Traditional Money Divination:
-        // 3 Heads (Yang) -> Old Yang (Moving) -> Value 9 (Yang)
-        // 2 Heads (Yang) + 1 Tail (Yin) -> Young Yin -> Value 8 (Yin)
-        // 1 Head (Yang) + 2 Tails (Yin) -> Young Yang -> Value 7 (Yang)
-        // 0 Heads (Yang) -> Old Yin (Moving) -> Value 6 (Yin)
+        // 🎲 正确的金钱卦规则：
+        // 3个正面 = 老阳（重阳）━━━ (动爻)
+        // 2个正面 = 少阳 ━━━ (静爻)  
+        // 1个正面 = 少阴 ━ ━ (静爻)
+        // 0个正面 = 老阴（重阴）━ ━ (动爻)
 
         if (headsCount === 3) {
             yaoType = '老阳';
             yaoSymbol = '━━━';
-            isMoving = true;
+            isMoving = true;  // 动爻
             binaryVal = 1;
         } else if (headsCount === 2) {
-            yaoType = '少阴';
-            yaoSymbol = '━ ━';
-            isMoving = false;
-            binaryVal = 0;
-        } else if (headsCount === 1) {
             yaoType = '少阳';
             yaoSymbol = '━━━';
-            isMoving = false;
+            isMoving = false; // 静爻
             binaryVal = 1;
-        } else {
+        } else if (headsCount === 1) {
+            yaoType = '少阴';
+            yaoSymbol = '━ ━';
+            isMoving = false; // 静爻
+            binaryVal = 0;
+        } else { // 0个正面
             yaoType = '老阴';
             yaoSymbol = '━ ━';
-            isMoving = true;
+            isMoving = true;  // 动爻
             binaryVal = 0;
         }
 
-        // Add this line to hexagram (from bottom up - 初爻 to 上爻)
-        const newLine = { type: yaoType, symbol: yaoSymbol, isMoving, headsCount, binaryVal };
+        // 🎯 添加这1个爻到卦象中
+        const newLine = { 
+            type: yaoType, 
+            symbol: yaoSymbol, 
+            isMoving, 
+            headsCount, 
+            binaryVal,
+            throwNumber: currentThrow 
+        };
 
-        // Use functional state update to ensure we have the latest lines
         setHexagramLines(prev => {
-            // Strict boundary check inside state update
-            if (prev.length >= 6) return prev;
-
-            const updatedLines = [...prev, newLine];
-
-            // If this is the 6th throw, calculate final hexagram
-            if (updatedLines.length === 6) {
-                setTimeout(() => {
-                    calculateFinalHexagram(updatedLines);
-                }, 100);
-            } else {
-                setCurrentThrow(prevCount => Math.min(prevCount + 1, 6));
+            // 严格边界检查
+            if (prev.length >= 6) {
+                return prev;
             }
 
+            const updatedLines = [...prev, newLine];
+            
+            // 🎯 检查是否完成6爻
+            if (updatedLines.length === 6) {
+                // 完成6爻，计算最终卦象
+                setTimeout(() => {
+                    calculateFinalHexagram(updatedLines);
+                }, 200);
+            } else {
+                // 准备下一次摇卦
+                setCurrentThrow(prev => prev + 1);
+                setIsProcessing(false);
+                setResults({}); // 🔧 关键：清空当前结果，准备下次摇卦
+            }
+            
             return updatedLines;
         });
     };
