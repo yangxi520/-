@@ -177,68 +177,7 @@ const playLandSound = (audioContext, delay = 0) => {
     }, delay);
 };
 
-// --- Component: Animated Coin ---
-function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
-    const [started, setStarted] = useState(false);
-    const [finalRotation, setFinalRotation] = useState(0);
-    const [hasReported, setHasReported] = useState(false);
-    const [yangMap, yinMap] = useTexture([coinYangTexture, coinYinTexture]);
 
-    useEffect(() => {
-        if (isThrown) {
-            setHasReported(false);
-            const timer = setTimeout(() => {
-                const isHeads = Math.random() > 0.5;
-                const baseRotation = isHeads ? 0 : Math.PI;
-                setFinalRotation(baseRotation + Math.PI * 16);
-                setStarted(true);
-            }, delay);
-            return () => clearTimeout(timer);
-        } else {
-            setStarted(false);
-            setHasReported(false);
-        }
-    }, [isThrown, delay]);
-
-    const { position, rotation } = useSpring({
-        position: started
-            ? [index * 3.5 - 3.5, 0.2, 0]
-            : [index * 3.5 - 3.5, 5, 0],
-        rotation: started
-            ? [finalRotation, Math.PI * 3 + (Math.random() * 0.5), (Math.random() - 0.5) * 0.5]
-            : [0, 0, 0],
-        config: { mass: 2, tension: 120, friction: 14 },
-        onRest: () => {
-            if (started && !hasReported) {
-                setHasReported(true);
-                playLandSound(audioContext, index * 50);
-
-                const normalizedRotation = finalRotation % (Math.PI * 2);
-                const isHeads = normalizedRotation < Math.PI / 2 || normalizedRotation > Math.PI * 1.5;
-                onResult(index, isHeads ? 'heads' : 'tails');
-            }
-        }
-    });
-
-    return (
-        <animated.group position={position} rotation={rotation}>
-            <mesh castShadow receiveShadow>
-                <cylinderGeometry args={[COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 32]} />
-                <meshStandardMaterial color="#d4af37" metalness={0.8} roughness={0.3} />
-            </mesh>
-
-            <mesh position={[0, COIN_THICKNESS / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
-                <meshStandardMaterial map={yinMap} transparent alphaTest={0.3} />
-            </mesh>
-
-            <mesh position={[0, -COIN_THICKNESS / 2 - 0.01, 0]} rotation={[Math.PI / 2, 0, 0]}>
-                <planeGeometry args={[COIN_RADIUS * 1.8, COIN_RADIUS * 1.8]} />
-                <meshStandardMaterial map={yangMap} transparent alphaTest={0.3} />
-            </mesh>
-        </animated.group>
-    );
-}
 
 // --- Main Component ---
 export default function MoneyDivination({ onBack }) {
