@@ -44,4 +44,13 @@ export default defineConfig({
       }
     })
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        entryFileNames: `assets/[name].${Date.now()}.js`,
+        chunkFileNames: `assets/[name].${Date.now()}.js`,
+        assetFileNames: `assets/[name].${Date.now()}.[ext]`
+      }
+    }
+  }
 })
