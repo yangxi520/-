@@ -9,13 +9,13 @@ import { RefreshCw, ArrowLeft } from 'lucide-react';
 import { getHexagram } from '../utils/hexagramLogic'; // Import First Principles Logic
 
 // --- Assets ---
-import coinYangTexture from '../assets/coin_yang_final.png';
-import coinYinTexture from '../assets/coin_yin_final.png';
+// Using AI-generated high-quality coin textures
+import coinYangTexture from '../assets/coin_yang_perfect.png';
+import coinYinTexture from '../assets/coin_yin_perfect.png';
 
 // --- Constants ---
-const COIN_RADIUS = 1.5;
-const COIN_THICKNESS = 0.15; // Slightly thinner for realism
-const HOLE_SIZE = 0.45; // Size of the square hole
+const COIN_RADIUS = 1.8; // Larger for better visibility
+const COIN_THICKNESS = 0.3; // Much thicker for realism
 
 // --- Component: Animated Coin ---
 function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
@@ -23,31 +23,6 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
     const [finalRotation, setFinalRotation] = useState(0);
     const [hasReported, setHasReported] = useState(false);
     const [yangMap, yinMap] = useTexture([coinYangTexture, coinYinTexture]);
-
-    // Create Coin Geometry with Hole
-    const coinGeometry = React.useMemo(() => {
-        const shape = new THREE.Shape();
-        shape.absarc(0, 0, COIN_RADIUS, 0, Math.PI * 2, false);
-
-        const hole = new THREE.Path();
-        const h = HOLE_SIZE;
-        hole.moveTo(-h, -h);
-        hole.lineTo(h, -h);
-        hole.lineTo(h, h);
-        hole.lineTo(-h, h);
-        hole.lineTo(-h, -h);
-        shape.holes.push(hole);
-
-        const extrudeSettings = {
-            depth: COIN_THICKNESS,
-            bevelEnabled: true,
-            bevelThickness: 0.05,
-            bevelSize: 0.05,
-            bevelSegments: 5
-        };
-
-        return new THREE.ExtrudeGeometry(shape, extrudeSettings);
-    }, []);
 
     useEffect(() => {
         if (isThrown) {
@@ -97,36 +72,40 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
 
     return (
         <animated.group position={position} rotation={rotation}>
-            {/* Coin Body (Gold Metal) */}
-            <mesh geometry={coinGeometry} castShadow receiveShadow>
-                <meshStandardMaterial color="#e6c200" metalness={1} roughness={0.3} />
-            </mesh>
-
-            {/* Top Face (Yin - Manchu) - Local Z+ (Extrude goes Z+) */}
-            {/* Position: thickness + bevel + tiny offset */}
-            <mesh position={[0, 0, COIN_THICKNESS + 0.051]} rotation={[0, 0, 0]}>
-                <planeGeometry args={[COIN_RADIUS * 2.05, COIN_RADIUS * 2.05]} />
+            {/* Coin Edge/Rim - Bronze cylinder */}
+            <mesh castShadow receiveShadow rotation={[Math.PI / 2, 0, 0]}>
+                <cylinderGeometry args={[COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 64]} />
                 <meshStandardMaterial
-                    map={yinMap}
-                    transparent
-                    alphaTest={0.1}
-                    roughness={0.8}
-                    polygonOffset
-                    polygonOffsetFactor={-1}
+                    color="#8B6914"
+                    metalness={0.7}
+                    roughness={0.5}
+                    envMapIntensity={0.5}
                 />
             </mesh>
 
-            {/* Bottom Face (Yang - Qianlong) - Local Z- (Back side) */}
-            {/* Position: -bevel - tiny offset */}
-            <mesh position={[0, 0, -0.051]} rotation={[0, Math.PI, 0]}>
-                <planeGeometry args={[COIN_RADIUS * 2.05, COIN_RADIUS * 2.05]} />
+            {/* Top Face (Yin - Manchu) - Textured circle */}
+            <mesh position={[0, 0, COIN_THICKNESS / 2 + 0.002]} castShadow>
+                <circleGeometry args={[COIN_RADIUS, 64]} />
+                <meshStandardMaterial
+                    map={yinMap}
+                    transparent={true}
+                    alphaTest={0.5}
+                    metalness={0.4}
+                    roughness={0.6}
+                    envMapIntensity={0.3}
+                />
+            </mesh>
+
+            {/* Bottom Face (Yang - Qianlong) - Textured circle */}
+            <mesh position={[0, 0, -COIN_THICKNESS / 2 - 0.002]} rotation={[0, Math.PI, 0]} castShadow>
+                <circleGeometry args={[COIN_RADIUS, 64]} />
                 <meshStandardMaterial
                     map={yangMap}
-                    transparent
-                    alphaTest={0.1}
-                    roughness={0.8}
-                    polygonOffset
-                    polygonOffsetFactor={-1}
+                    transparent={true}
+                    alphaTest={0.5}
+                    metalness={0.4}
+                    roughness={0.6}
+                    envMapIntensity={0.3}
                 />
             </mesh>
         </animated.group>
