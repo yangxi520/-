@@ -1,6 +1,8 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import React, { useState, useEffect, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { useSpring, animated, config } from '@react-spring/three';
+import { Canvas } from '@react-three/fiber';
+// eslint-disable-next-line no-unused-vars
+import { useSpring, animated } from '@react-spring/three';
 import { useTexture, Text, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { RefreshCw, ArrowLeft } from 'lucide-react';
@@ -64,12 +66,21 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
         }
     }, [isThrown, delay]);
 
+    const [randomRotations, setRandomRotations] = useState({ x: 0, y: 0 });
+
+    useEffect(() => {
+        setRandomRotations({
+            x: Math.PI * 3 + (Math.random() * 0.5),
+            y: (Math.random() - 0.5) * 0.5
+        });
+    }, []);
+
     const { position, rotation } = useSpring({
         position: started
             ? [index * 3.5 - 3.5, 0.2, 0]
             : [index * 3.5 - 3.5, 5, 0],
         rotation: started
-            ? [finalRotation, Math.PI * 3 + (Math.random() * 0.5), (Math.random() - 0.5) * 0.5]
+            ? [finalRotation, randomRotations.x, randomRotations.y]
             : [0, 0, 0],
         config: { mass: 2, tension: 120, friction: 14 },
         onRest: () => {
@@ -147,9 +158,26 @@ const playLandSound = (audioContext, delay = 0) => {
         gainNode.gain.linearRampToValueAtTime(0.4, audioContext.currentTime + 0.01);
         gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
 
-        oscillator.start(audioContext.currentTime);
         oscillator.stop(audioContext.currentTime + 0.3);
     }, delay);
+};
+
+const playThrowSound = (audioContext) => {
+    if (!audioContext) return;
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(100, audioContext.currentTime + 0.1);
+
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.1);
 };
 
 
@@ -169,12 +197,15 @@ export default function MoneyDivination({ onBack }) {
     // 🔒 使用 Ref 来解决闭包和竞态问题 (关键修复)
     const isProcessingRef = useRef(false);
     const audioContextRef = useRef(null);
+    const [audioContext, setAudioContext] = useState(null);
 
     // --- Effects ---
     useEffect(() => {
         console.log('MoneyDivination Component Mounted - Version: 2025-12-08 v3 (Final Visuals)');
         // 初始化音频上下文
-        audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        audioContextRef.current = ctx;
+        setAudioContext(ctx);
         return () => {
             if (audioContextRef.current) {
                 audioContextRef.current.close();
@@ -534,7 +565,7 @@ export default function MoneyDivination({ onBack }) {
                             isThrown={isThrown}
                             delay={i * 150}
                             onResult={handleCoinResult}
-                            audioContext={audioContextRef.current}
+                            audioContext={audioContext}
                         />
                     ))}
                 </React.Suspense>

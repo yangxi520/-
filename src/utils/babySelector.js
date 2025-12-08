@@ -3,7 +3,6 @@ import { astro } from 'iztro';
 // Helper to check if a star is in a list
 const hasStar = (stars, name) => stars.some(s => s.name === name);
 const hasBrightness = (stars, name, levels) => stars.some(s => s.name === name && levels.includes(s.brightness));
-const hasMutagen = (stars, name, type) => stars.some(s => s.name === name && s.mutagen === type);
 
 // Scoring Rules for each Type
 const SCORING_RULES = {
