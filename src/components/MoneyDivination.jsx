@@ -730,6 +730,10 @@ export default function MoneyDivination({ onBack }) {
                     修复显示问题 (强制刷新)
                 </button>
             </div>
+            {/* 版本号显示 */}
+            <div className="absolute bottom-2 right-2 text-white/20 text-xs pointer-events-none z-50">
+                v2025.12.08.4
+            </div>
         </div>
     );
 }
