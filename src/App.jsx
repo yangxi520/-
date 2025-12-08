@@ -187,7 +187,7 @@ export default function App() {
               </button>
               {/* Version Footer */}
               <div className="mt-8 text-center">
-                <p className="text-white/20 text-xs font-mono">v1.2.0 (3D Physics Enabled)</p>
+                <p className="text-white/20 text-xs font-mono">v2025.12.08.4 (Hexagram Fix)</p>
                 <button
                   onClick={() => {
                     if ('serviceWorker' in navigator) {
