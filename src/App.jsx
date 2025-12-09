@@ -1,11 +1,13 @@
 import React, { useState, Suspense, lazy } from 'react';
 import ProfessionalChart from "./components/ProfessionalChart";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import * as iztro from "iztro";
+import { archiveManager } from './utils/archiveManager';
 
-// Lazy load the heavy 3D component
+// Lazy load the heavy components
 const MoneyDivination = lazy(() => import("./components/MoneyDivination"));
+const ArchiveView = lazy(() => import("./components/ArchiveView"));
 
 const getTimeDescription = (time) => {
   const timeMap = {
@@ -27,7 +29,7 @@ const getTimeDescription = (time) => {
 };
 
 export default function App() {
-  const [view, setView] = useState('home'); // 'home', 'input', 'chart', 'money'
+  const [view, setView] = useState('home'); // 'home', 'input', 'chart', 'money', 'archive'
   const [calendarType, setCalendarType] = useState('solar');
   const [gender, setGender] = useState('male');
   const [name, setName] = useState('');
@@ -36,6 +38,11 @@ export default function App() {
   const [horoscope, setHoroscope] = useState(null);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
+
+  // Archive Save Modal State
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [saveNote, setSaveNote] = useState('');
+  const [saveGroup, setSaveGroup] = useState('friend');
 
   React.useEffect(() => {
     const handler = (e) => {
@@ -76,6 +83,49 @@ export default function App() {
     }
   };
 
+  // --- Archive Logic ---
+
+  const handleLoadRecord = (record) => {
+    if (record.type === 'ziwei') {
+      setName(record.name);
+      setGender(record.gender);
+      // Assuming stored date is solar for simplicity or we should store type
+      // If the record has type 'lunar', we should handle that.
+      // For now, let's assume we store the solar date string in saving logic
+      setBirthday(record.solarDate);
+      setBirthTime(record.timeHour);
+      setCalendarType('solar');
+
+      try {
+        const newHoroscope = iztro.astro.astrolabeBySolarDate(record.solarDate, record.timeHour, record.gender);
+        setHoroscope(newHoroscope);
+        setView('chart');
+      } catch (e) {
+        alert('读取档案失败，数据可能损坏');
+      }
+    }
+  };
+
+  const handleSaveToArchive = () => {
+    if (!horoscope) return;
+
+    const newRecord = {
+      name: name || '未命名',
+      gender, // 'male' | 'female'
+      type: 'ziwei',
+      solarDate: birthday, // Current input state
+      timeHour: birthTime,
+      group: saveGroup,
+      note: saveNote,
+      data: {}
+    };
+
+    archiveManager.addRecord(newRecord);
+    setIsSaveModalOpen(false);
+    setSaveNote(''); // Reset
+    alert('保存成功！');
+  };
+
   return (
     <div className="min-h-screen bg-[#050505] text-gray-100 font-sans selection:bg-cyan-500/30 overflow-hidden flex flex-col">
       {/* Background Effects */}
@@ -108,6 +158,16 @@ export default function App() {
             </h1>
           </div>
           <div className="flex items-center gap-3">
+            {/* Archive Entry (Desktop/Mobile Header) */}
+            {view === 'home' && (
+              <button
+                onClick={() => setView('archive')}
+                className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-white transition-colors"
+              >
+                📂 档案
+              </button>
+            )}
+
             <button
               onClick={handleInstallClick}
               className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-900/50 to-purple-900/50 border border-cyan-500/30 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)]"
@@ -186,19 +246,19 @@ export default function App() {
                 </div>
               </button>
               {/* Version Footer */}
-              <div className="mt-8 text-center">
-                <p className="text-white/20 text-xs font-mono">v2025.12.08.4 (Hexagram Fix)</p>
+              <div className="mt-8 text-center col-span-1 md:col-span-2">
+                <p className="text-white/20 text-xs font-mono">v2025.12.09.Archive</p>
                 <button
                   onClick={() => {
-                    if ('serviceWorker' in navigator) {
-                      navigator.serviceWorker.getRegistrations().then(function (registrations) {
-                        for (let registration of registrations) {
-                          registration.unregister();
-                        }
+                    if (window.confirm('确定要清除所有缓存并强制更新吗？')) {
+                      if ('serviceWorker' in navigator) {
+                        navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                          for (let registration of registrations) registration.unregister();
+                          window.location.reload();
+                        });
+                      } else {
                         window.location.reload();
-                      });
-                    } else {
-                      window.location.reload();
+                      }
                     }
                   }}
                   className="mt-2 text-cyan-500/50 text-[10px] hover:text-cyan-400 underline cursor-pointer"
@@ -281,12 +341,30 @@ export default function App() {
               <MoneyDivination onBack={() => setView('home')} />
             </Suspense>
           </ErrorBoundary>
+        ) : view === 'archive' ? (
+          // --- ARCHIVE VIEW ---
+          <Suspense fallback={<div className="text-white p-10 text-center">Loading Archive...</div>}>
+            <ArchiveView
+              onBack={() => setView('home')}
+              onLoadRecord={handleLoadRecord}
+            />
+          </Suspense>
         ) : (
           // --- CHART VIEW ---
           <div className="flex-1 relative overflow-hidden flex flex-col">
             {/* Chart Area */}
             <div className="flex-1 overflow-auto p-2 md:p-4 pb-24">
-              <div className="max-w-3xl mx-auto bg-slate-50/95 rounded-lg overflow-hidden shadow-2xl border border-cyan-500/30">
+              <div className="max-w-3xl mx-auto bg-slate-50/95 rounded-lg overflow-hidden shadow-2xl border border-cyan-500/30 relative">
+
+                {/* Save Button (Floating) */}
+                <button
+                  onClick={() => setIsSaveModalOpen(true)}
+                  className="absolute top-4 right-4 z-50 p-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-500 transition-all flex items-center gap-2 px-4"
+                >
+                  <Save className="w-4 h-4" />
+                  <span className="text-xs font-bold">保存档案</span>
+                </button>
+
                 <ProfessionalChart
                   horoscope={horoscope}
                   basicInfo={{
@@ -302,6 +380,54 @@ export default function App() {
           </div>
         )}
       </main>
+
+      {/* Save Modal */}
+      {isSaveModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-[#111] border border-white/10 rounded-xl p-6 w-full max-w-sm space-y-4">
+            <h3 className="text-xl font-bold text-white">保存到档案</h3>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">姓名</label>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className="w-full bg-black/50 border border-white/20 rounded p-2 text-white"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">分组</label>
+              <div className="flex gap-2 text-xs">
+                {['family', 'friend', 'customer', 'other'].map(g => (
+                  <button
+                    key={g}
+                    onClick={() => setSaveGroup(g)}
+                    className={`px-2 py-1 rounded border ${saveGroup === g ? 'bg-cyan-900 border-cyan-500 text-cyan-300' : 'border-white/10 text-gray-500'}`}
+                  >
+                    {g === 'family' ? '家人' : g === 'friend' ? '朋友' : g === 'customer' ? '客户' : '其他'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500">备注</label>
+              <textarea
+                value={saveNote}
+                onChange={e => setSaveNote(e.target.value)}
+                placeholder="例如：这是我的小号..."
+                className="w-full bg-black/50 border border-white/20 rounded p-2 text-white h-20 text-sm"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button onClick={() => setIsSaveModalOpen(false)} className="flex-1 py-2 rounded bg-white/5 hover:bg-white/10 text-gray-400 text-sm">取消</button>
+              <button onClick={handleSaveToArchive} className="flex-1 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-bold">确认保存</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* PWA Install Modal */}
       {showInstallModal && (
