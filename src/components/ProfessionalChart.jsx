@@ -11,7 +11,7 @@ import {
     generateBabyPrompt
 } from '../utils/aiPrompts';
 import { findBestConceptionDates } from '../utils/babySelector';
-import { Sparkles, HelpCircle, Coffee } from "lucide-react";
+import { Sparkles, HelpCircle, Coffee, Save } from "lucide-react";
 import wechatPayImg from '../assets/wechat_pay.jpg';
 import alipayImg from '../assets/alipay.jpg';
 
@@ -81,7 +81,7 @@ const TIME_RANGES = [
 // Helper: Get Year Stem (0-9 index)
 const getYearStemIndex = (year) => (year - 4) % 10;
 
-function ProfessionalChartInner({ horoscope, basicInfo }) {
+function ProfessionalChartInner({ horoscope, basicInfo, onSave }) {
     const palaces = useMemo(() => {
         if (!horoscope) return [];
         return horoscope.palaces;
@@ -814,20 +814,56 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                 </table>
             </div>
 
-            {/* AI Analysis Floating Button */}
-            <div className="absolute bottom-6 left-6 z-50">
-                <button
-                    onClick={() => setShowAiMenu(!showAiMenu)}
-                    className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold rounded-full shadow-[0_0_20px_rgba(168,85,247,0.5)] hover:scale-105 transition-transform animate-pulse"
-                >
-                    <Sparkles className="w-5 h-5" />
-                    AI 分析
-                </button>
+            {/* --- Unified Floating Action Buttons (Stack) --- */}
+            <div className="fixed bottom-6 right-4 z-50 flex flex-col gap-3 items-end pointer-events-none">
+                {/* Buttons wrapper - enable pointer events */}
+                <div className="pointer-events-auto flex flex-col gap-3 items-end">
+
+                    {/* 1. Save Button */}
+                    <button
+                        onClick={onSave}
+                        className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-500 hover:scale-110 transition-all duration-300"
+                        title="保存档案"
+                    >
+                        <Save className="w-5 h-5" />
+                        <span className="absolute right-14 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                            保存档案
+                        </span>
+                    </button>
+
+                    {/* 2. AI Analysis Button */}
+                    <button
+                        onClick={() => setShowAiMenu(!showAiMenu)}
+                        className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:scale-110 transition-all duration-300"
+                        title="AI 分析"
+                    >
+                        <Sparkles className="w-5 h-5" />
+                        <span className="absolute right-14 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                            AI 分析
+                        </span>
+                    </button>
+
+                    {/* 3. Coffee Button */}
+                    <button
+                        onClick={() => setShowDonationModal(true)}
+                        className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg hover:scale-110 transition-all duration-300"
+                        title="请喝咖啡"
+                    >
+                        <Coffee className="w-5 h-5" />
+                        <span className="absolute right-14 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                            请喝咖啡
+                        </span>
+                    </button>
+                </div>
             </div>
 
-            {/* AI Analysis Menu (Drawer) */}
+            {/* AI Analysis Menu (Drawer) - Repositioned relative to new button location? 
+                Actually, let's keep it fixed absolute relative to this container or viewport.
+                Since the stack is fixed bottom-right, the menu should probably open to the left or center.
+                Original was bottom-left. Let's make it fixed centered-bottom or fixed bottom-right (shifted left).
+            */}
             {showAiMenu && (
-                <div className="absolute bottom-20 left-6 z-50 w-64 bg-black/90 backdrop-blur-xl border border-purple-500/30 rounded-xl shadow-2xl p-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
+                <div className="fixed bottom-24 right-20 z-[60] w-64 bg-[#111]/95 backdrop-blur-xl border border-purple-500/30 rounded-xl shadow-2xl p-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
                     <div className="space-y-2">
                         {menuView === 'main' && (
                             <>
@@ -1036,18 +1072,6 @@ function ProfessionalChartInner({ horoscope, basicInfo }) {
                     </div>
                 </div>
             )}
-
-            {/* Floating Donation Button */}
-            <button
-                onClick={() => setShowDonationModal(true)}
-                className="fixed bottom-6 right-6 bg-gradient-to-r from-red-500 to-orange-500 text-white p-3 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all z-40 flex items-center gap-2 group"
-                title="打赏作者"
-            >
-                <Coffee className="w-5 h-5" />
-                <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 ease-in-out whitespace-nowrap text-sm font-bold">
-                    请喝咖啡
-                </span>
-            </button>
         </div>
     );
 }

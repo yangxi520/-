@@ -4,9 +4,13 @@ import { archiveManager } from '../utils/archiveManager';
 
 const GROUPS = [
     { id: 'all', label: '全部', icon: Archive },
-    { id: 'family', label: '家人', icon: Users },
-    { id: 'friend', label: '朋友', icon: User },
-    { id: 'customer', label: '客户', icon: Briefcase },
+    { id: 'self', label: '自己', icon: User },
+    { id: 'father', label: '父亲', icon: Users },
+    { id: 'mother', label: '母亲', icon: Users },
+    { id: 'son', label: '儿子', icon: Users },
+    { id: 'daughter', label: '女儿', icon: Users },
+    { id: 'girlfriend', label: '女友', icon: User },
+    { id: 'boyfriend', label: '男友', icon: User },
     { id: 'other', label: '其他', icon: Filter },
 ];
 

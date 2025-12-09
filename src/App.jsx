@@ -356,15 +356,6 @@ export default function App() {
             <div className="flex-1 overflow-auto p-2 md:p-4 pb-24">
               <div className="max-w-3xl mx-auto bg-slate-50/95 rounded-lg overflow-hidden shadow-2xl border border-cyan-500/30 relative">
 
-                {/* Save Button (Floating) */}
-                <button
-                  onClick={() => setIsSaveModalOpen(true)}
-                  className="absolute top-4 right-4 z-50 p-2 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-500 transition-all flex items-center gap-2 px-4"
-                >
-                  <Save className="w-4 h-4" />
-                  <span className="text-xs font-bold">保存档案</span>
-                </button>
-
                 <ProfessionalChart
                   horoscope={horoscope}
                   basicInfo={{
@@ -374,6 +365,7 @@ export default function App() {
                     birthTime: getTimeDescription(birthTime),
                     lunarDate: horoscope?.lunarDate
                   }}
+                  onSave={() => setIsSaveModalOpen(true)}
                 />
               </div>
             </div>
@@ -383,47 +375,72 @@ export default function App() {
 
       {/* Save Modal */}
       {isSaveModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-[#111] border border-white/10 rounded-xl p-6 w-full max-w-sm space-y-4">
-            <h3 className="text-xl font-bold text-white">保存到档案</h3>
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          {/* Backdrop with blur */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity"
+            onClick={() => setIsSaveModalOpen(false)}
+          ></div>
 
-            <div className="space-y-1">
-              <label className="text-xs text-gray-500">姓名</label>
+          <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-5 shadow-2xl animate-in fade-in zoom-in duration-200">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                <Save className="w-5 h-5 text-cyan-500" />
+                保存到档案
+              </h3>
+              <button onClick={() => setIsSaveModalOpen(false)} className="text-gray-500 hover:text-white transition-colors">✕</button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">姓名</label>
               <input
                 value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full bg-black/50 border border-white/20 rounded p-2 text-white"
+                className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-cyan-500/50 transition-all outline-none"
+                placeholder="请输入姓名"
               />
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs text-gray-500">分组</label>
-              <div className="flex gap-2 text-xs">
-                {['family', 'friend', 'customer', 'other'].map(g => (
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">分组</label>
+              <div className="flex flex-wrap gap-2">
+                {[
+                  { id: 'self', label: '自己' },
+                  { id: 'father', label: '父亲' },
+                  { id: 'mother', label: '母亲' },
+                  { id: 'son', label: '儿子' },
+                  { id: 'daughter', label: '女儿' },
+                  { id: 'girlfriend', label: '女友' },
+                  { id: 'boyfriend', label: '男友' },
+                  { id: 'other', label: '其他' }
+                ].map(g => (
                   <button
-                    key={g}
-                    onClick={() => setSaveGroup(g)}
-                    className={`px-2 py-1 rounded border ${saveGroup === g ? 'bg-cyan-900 border-cyan-500 text-cyan-300' : 'border-white/10 text-gray-500'}`}
+                    key={g.id}
+                    onClick={() => setSaveGroup(g.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${saveGroup === g.id
+                      ? 'bg-cyan-900/50 border-cyan-500 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
+                      : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:border-white/20'
+                      }`}
                   >
-                    {g === 'family' ? '家人' : g === 'friend' ? '朋友' : g === 'customer' ? '客户' : '其他'}
+                    {g.label}
                   </button>
                 ))}
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs text-gray-500">备注</label>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">备注</label>
               <textarea
                 value={saveNote}
                 onChange={e => setSaveNote(e.target.value)}
-                placeholder="例如：这是我的小号..."
-                className="w-full bg-black/50 border border-white/20 rounded p-2 text-white h-20 text-sm"
+                placeholder="备注信息..."
+                className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white h-24 text-sm resize-none focus:border-cyan-500/50 transition-all outline-none"
               />
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setIsSaveModalOpen(false)} className="flex-1 py-2 rounded bg-white/5 hover:bg-white/10 text-gray-400 text-sm">取消</button>
-              <button onClick={handleSaveToArchive} className="flex-1 py-2 rounded bg-cyan-600 hover:bg-cyan-500 text-white text-sm font-bold">确认保存</button>
+              <button onClick={() => setIsSaveModalOpen(false)} className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 text-sm font-bold transition-all">取消</button>
+              <button onClick={handleSaveToArchive} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-sm font-bold shadow-lg shadow-cyan-500/20 transition-all">确认保存</button>
             </div>
           </div>
         </div>
@@ -432,26 +449,24 @@ export default function App() {
       {/* PWA Install Modal */}
       {showInstallModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-[#111] border border-cyan-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl relative">
-            <button onClick={() => setShowInstallModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
-            <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-              <span className="text-2xl">📲</span> 安装 App
-            </h3>
-            <div className="space-y-4 text-sm text-gray-300">
-              <p>为了获得最佳体验（全屏、离线使用），请将本应用添加到主屏幕。</p>
-              <div className="bg-white/5 p-3 rounded border border-white/10">
-                <p className="font-bold text-cyan-400 mb-1">🍎 iOS (Safari):</p>
-                <p>点击底部中间的分享按钮 <span className="inline-block border border-gray-500 px-1 rounded">⎋</span>，然后选择 <span className="font-bold text-white">"添加到主屏幕"</span>。</p>
-              </div>
-              <div className="bg-white/5 p-3 rounded border border-white/10">
-                <p className="font-bold text-green-400 mb-1">🤖 Android (Chrome):</p>
-                <p>点击右上角菜单 <span className="font-bold text-white">⋮</span>，然后选择 <span className="font-bold text-white">"安装应用"</span> 或 <span className="font-bold text-white">"添加到主屏幕"</span>。</p>
-              </div>
+          <button onClick={() => setShowInstallModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
+          <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <span className="text-2xl">📲</span> 安装 App
+          </h3>
+          <div className="space-y-4 text-sm text-gray-300">
+            <p>为了获得最佳体验（全屏、离线使用），请将本应用添加到主屏幕。</p>
+            <div className="bg-white/5 p-3 rounded border border-white/10">
+              <p className="font-bold text-cyan-400 mb-1">🍎 iOS (Safari):</p>
+              <p>点击底部中间的分享按钮 <span className="inline-block border border-gray-500 px-1 rounded">⎋</span>，然后选择 <span className="font-bold text-white">"添加到主屏幕"</span>。</p>
             </div>
-            <button onClick={() => setShowInstallModal(false)} className="w-full mt-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded transition-colors">
-              知道了
-            </button>
+            <div className="bg-white/5 p-3 rounded border border-white/10">
+              <p className="font-bold text-green-400 mb-1">🤖 Android (Chrome):</p>
+              <p>点击右上角菜单 <span className="font-bold text-white">⋮</span>，然后选择 <span className="font-bold text-white">"安装应用"</span> 或 <span className="font-bold text-white">"添加到主屏幕"</span>。</p>
+            </div>
           </div>
+          <button onClick={() => setShowInstallModal(false)} className="w-full mt-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded transition-colors">
+            知道了
+          </button>
         </div>
       )}
     </div>
