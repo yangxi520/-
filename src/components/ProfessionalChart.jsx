@@ -281,6 +281,39 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
         const toughStars = palace.minorStars.filter(s => s.type === 'tough');
         const adjectiveStars = palace.adjectiveStars || [];
 
+        // --- Age Calculations ---
+        // 1. Xiao Xian (Small Limit) - from iztro
+        const xiaoXianAges = palace.ages || [];
+
+        // 2. Liu Nian (Flow Year)
+        // Formula: Ages where (Age - 1 + BirthBranchIndex) % 12 === PalaceBranchIndex
+        // We need Birth Branch Index.
+        // Try to get from horoscope.chineseDate.yearly[1] or calculate from solar year.
+        let birthBranchIndex = 0;
+        if (basicInfo.birthday) {
+            const birthYear = new Date(basicInfo.birthday).getFullYear();
+            // 1984=0(Rat), 1990=6(Horse). (Year-4)%12
+            birthBranchIndex = (birthYear - 4) % 12;
+        }
+        const palaceBranchIndex = BRANCH_ORDER.indexOf(palace.earthlyBranch);
+
+        // Generate Liu Nian ages (e.g., 1 to 100)
+        const liuNianAges = [];
+        // Age 1 corresponds to the birth branch.
+        // We want ages where the current branch (calculated as (birthBranchIndex + age - 1) % 12)
+        // matches the palaceBranchIndex.
+        // (birthBranchIndex + age - 1) % 12 === palaceBranchIndex
+        // age - 1 === (palaceBranchIndex - birthBranchIndex + 12) % 12
+        // age = (palaceBranchIndex - birthBranchIndex + 12) % 12 + 1
+        let baseAge = (palaceBranchIndex - birthBranchIndex + 12) % 12 + 1;
+        for (let a = baseAge; a <= 110; a += 12) {
+            liuNianAges.push(a);
+        }
+
+        // Display Logic: Limit to ~5 entries to prevent overflow
+        const displayLiuNian = liuNianAges.slice(0, 5); // e.g. 11, 23, 35, 47, 59
+        const displayXiaoXian = xiaoXianAges.slice(0, 5);
+
         return (
             <div
                 className={`w-full h-full relative p-0.5 md:p-1 flex flex-col justify-between transition-all duration-200 cursor-pointer overflow-hidden
@@ -290,16 +323,16 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                 onClick={() => setFocusedIndex(palaces.findIndex(p => p.earthlyBranch === branch))}
             >
                 {/* --- TOP AREA: Stars --- */}
-                <div className="flex flex-row gap-1 h-full">
+                <div className="flex flex-row gap-0.5 h-full relative">
 
-                    {/* Left Column: Major & Minor (Tough/Soft) */}
-                    <div className="flex flex-col items-start gap-0.5 min-w-[40%] md:min-w-[45%]">
+                    {/* Left Column: Major & Minor */}
+                    <div className="flex flex-col items-start gap-0.5 min-w-[42%] z-10">
 
                         {/* Major Stars (Red) */}
                         {palace.majorStars.map((star, idx) => {
                             const activeSiHua = getActiveSiHua(star.name);
                             return (
-                                <div key={`major-${idx}`} className="flex items-center gap-0.5 font-serif font-bold text-sm md:text-base text-red-600 leading-none">
+                                <div key={`major-${idx}`} className="flex items-center gap-0.5 font-serif font-bold text-sm md:text-base text-red-600 leading-none whitespace-nowrap">
                                     <span>{star.name}</span>
                                     <span className="text-[9px] font-normal text-gray-400 scale-75 origin-left hidden md:inline">{star.brightness}</span>
                                     {activeSiHua.map((badge, bIdx) => (
@@ -313,7 +346,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
                         {/* Soft Stars (Purple) */}
                         {softStars.map((star, idx) => (
-                            <div key={`soft-${idx}`} className="flex items-center gap-0.5 text-xs md:text-sm font-bold text-purple-600 leading-none">
+                            <div key={`soft-${idx}`} className="flex items-center gap-0.5 text-xs md:text-sm font-bold text-purple-600 leading-none whitespace-nowrap">
                                 <span>{star.name}</span>
                                 <span className="text-[8px] font-normal text-gray-400 scale-75 origin-left hidden md:inline">{star.brightness}</span>
                             </div>
@@ -321,15 +354,15 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
                         {/* Tough Stars (Black) */}
                         {toughStars.map((star, idx) => (
-                            <div key={`tough-${idx}`} className="flex items-center gap-0.5 text-xs md:text-sm font-bold text-gray-900 leading-none">
+                            <div key={`tough-${idx}`} className="flex items-center gap-0.5 text-xs md:text-sm font-bold text-gray-900 leading-none whitespace-nowrap">
                                 <span>{star.name}</span>
                                 <span className="text-[8px] font-normal text-gray-400 scale-75 origin-left hidden md:inline">{star.brightness}</span>
                             </div>
                         ))}
                     </div>
 
-                    {/* Right Area: Adjective Stars (Blue) - Flow Layout */}
-                    <div className="flex flex-wrap content-start items-start gap-x-1 gap-y-0.5 text-[10px] md:text-xs">
+                    {/* Right Area: Adjective Stars (Blue) */}
+                    <div className="flex flex-wrap content-start items-start gap-x-1 gap-y-0.5 text-[10px] md:text-xs pl-1">
                         {adjectiveStars.map((star, idx) => (
                             <span key={`adj-${idx}`} className="text-blue-500 font-medium leading-tight">
                                 {star.name}
@@ -338,56 +371,56 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                     </div>
                 </div>
 
-                {/* --- BOTTOM AREA: Meta Info --- */}
-                <div className="mt-auto flex flex-col w-full border-t border-gray-100/50 pt-0.5">
+                {/* --- BOTTOM AREA: Meta Info (Wen Mo Style) --- */}
+                <div className="mt-auto flex justify-between items-end w-full border-t border-gray-100/50 pt-1">
 
-                    {/* Row 1: Ages (Small Limit) - Right Aligned or scattered? Let's put top right actually? 
-                    Actually user said "bottom/perimeter". Let's put Ages along the top right of the bottom area or strictly bottom.
-                    Let's display the list of ages compactly. 
-                */}
-                    <div className="flex flex-wrap justify-end gap-1 text-[9px] text-gray-400 leading-none mb-0.5 px-0.5">
-                        {palace.ages && palace.ages.slice(0, 6).map((age, i) => <span key={i}>{age}</span>)}
-                        {palace.ages && palace.ages.length > 6 && <span>...</span>}
+                    {/* Left Bottom: Stacked Ages (Liu Nian / Xiao Xian) */}
+                    <div className="flex flex-col gap-0.5 text-[9px] leading-tight">
+                        {/* Row 1: Liu Nian */}
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-gray-400 scale-90 origin-left whitespace-nowrap">流年</span>
+                            <span className="text-black font-mono">{displayLiuNian.join(' ')}</span>
+                        </div>
+                        {/* Row 2: Xiao Xian */}
+                        <div className="flex items-baseline gap-1">
+                            <span className="text-gray-400 scale-90 origin-left whitespace-nowrap">小限</span>
+                            <span className="text-black font-mono">{displayXiaoXian.join(' ')}</span>
+                        </div>
                     </div>
 
-                    {/* Row 2: Gods & Life Stage & Palace Name */}
-                    <div className="flex justify-between items-end">
+                    {/* Right Bottom: Palace Info & Gods */}
+                    <div className="flex flex-col items-end text-right min-w-[35%]">
 
-                        {/* Left Bottom: 12 Gods & Life Stage (Black) */}
-                        <div className="flex flex-col items-start text-[9px] md:text-[10px] text-gray-800 leading-tight font-medium">
-                            <div className="flex gap-1">
-                                <span>{palace.boshi12}</span>
-                                <span>{palace.jiangqian12}</span>
-                                <span>{palace.suiqian12}</span>
-                            </div>
-                            <div className="font-bold mt-0.5">
-                                {palace.changsheng12}
-                            </div>
+                        {/* Gods Row (Compact) */}
+                        <div className="flex flex-wrap justify-end gap-1 text-[9px] text-gray-800 scale-90 origin-right mb-0.5">
+                            <span className="font-medium">{palace.boshi12}</span>
+                            <span className="font-medium">{palace.jiangqian12}</span>
+                            <span className="font-medium">{palace.suiqian12}</span>
                         </div>
 
-                        {/* Right Bottom: Palace Name, Stem/Branch, Decade */}
-                        <div className="text-right">
-                            {/* Da Xian Range */}
-                            <div className="text-blue-500 font-bold text-xs transform translate-y-0.5">
-                                {palace.decadal.range[0]}-{palace.decadal.range[1]}
+                        {/* Main Info Row */}
+                        <div className="flex items-end justify-end gap-1">
+                            {/* Life Stage */}
+                            <div className="text-[10px] text-gray-900 leading-none mb-0.5 font-bold">
+                                {palace.changsheng12}
                             </div>
 
                             {/* Palace Name */}
-                            <div className={`font-serif font-bold text-sm md:text-base ${isMing ? 'text-red-700' : isShen ? 'text-amber-700' : 'text-slate-700'}`}>
+                            <div className={`font-serif font-bold text-sm md:text-base leading-none ${isMing ? 'text-red-700' : isShen ? 'text-amber-700' : 'text-slate-700'}`}>
                                 {palace.name}
                             </div>
+                        </div>
 
-                            {/* Stem Branch */}
-                            <div className="text-stone-400 text-[10px] font-mono -mt-1">
-                                {palace.heavenlyStem}{palace.earthlyBranch}
-                            </div>
+                        {/* Stem/Branch & Decade */}
+                        <div className="flex items-center justify-end gap-1 text-[10px] text-stone-400 font-mono mt-0.5 leading-none">
+                            <span className="text-blue-500 font-bold">{palace.decadal.range[0]}-{palace.decadal.range[1]}</span>
+                            <span>{palace.heavenlyStem}{palace.earthlyBranch}</span>
                         </div>
                     </div>
                 </div>
             </div>
         );
     };
-
     // Calculate connection lines for San Fang Si Zheng
     const renderConnections = () => {
         if (focusedIndex === null) return null;
