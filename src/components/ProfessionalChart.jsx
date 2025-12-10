@@ -334,7 +334,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                             return (
                                 <div key={`major-${idx}`} className="flex items-center gap-0.5 font-serif font-bold text-sm md:text-base text-red-600 leading-none whitespace-nowrap">
                                     <span>{star.name}</span>
-                                    <span className="text-[9px] font-normal text-gray-400 scale-75 origin-left hidden md:inline">{star.brightness}</span>
+                                    <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
                                     {activeSiHua.map((badge, bIdx) => (
                                         <span key={bIdx} className={`text-[8px] px-0.5 rounded-sm text-white scale-90 origin-left shadow-sm ${badge.color}`}>
                                             {badge.type}
@@ -348,7 +348,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                         {softStars.map((star, idx) => (
                             <div key={`soft-${idx}`} className="flex items-center gap-0.5 text-xs md:text-sm font-bold text-purple-600 leading-none whitespace-nowrap">
                                 <span>{star.name}</span>
-                                <span className="text-[8px] font-normal text-gray-400 scale-75 origin-left hidden md:inline">{star.brightness}</span>
+                                <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
                             </div>
                         ))}
 
@@ -356,7 +356,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                         {toughStars.map((star, idx) => (
                             <div key={`tough-${idx}`} className="flex items-center gap-0.5 text-xs md:text-sm font-bold text-gray-900 leading-none whitespace-nowrap">
                                 <span>{star.name}</span>
-                                <span className="text-[8px] font-normal text-gray-400 scale-75 origin-left hidden md:inline">{star.brightness}</span>
+                                <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
                             </div>
                         ))}
                     </div>
