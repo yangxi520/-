@@ -276,66 +276,112 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
         const isMing = palace.name === '命宫';
         const isShen = palace.isBodyPalace;
 
+        // Filter Stars by Type for styling
+        const softStars = palace.minorStars.filter(s => s.type === 'soft');
+        const toughStars = palace.minorStars.filter(s => s.type === 'tough');
+        const adjectiveStars = palace.adjectiveStars || [];
+
         return (
             <div
-                className={`w-full h-full relative p-1 flex flex-col justify-between transition-all duration-200 cursor-pointer
-                    ${isFocused ? 'bg-amber-50 ring-2 ring-amber-400 z-10 shadow-lg' : 'bg-stone-50 hover:bg-stone-100'}
-                    ${isMing ? 'bg-red-50/30' : ''}
-                `}
+                className={`w-full h-full relative p-0.5 md:p-1 flex flex-col justify-between transition-all duration-200 cursor-pointer overflow-hidden
+                ${isFocused ? 'bg-amber-50 ring-2 ring-amber-400 z-10 shadow-lg' : 'bg-stone-50 hover:bg-stone-100'}
+                ${isMing ? 'bg-red-50/30' : ''}
+            `}
                 onClick={() => setFocusedIndex(palaces.findIndex(p => p.earthlyBranch === branch))}
             >
-                {/* Top Left: Major Stars */}
-                <div className="flex flex-col items-start gap-0.5">
-                    {palace.majorStars.map((star, idx) => {
-                        // Color logic for Major Stars
-                        const starColor = star.mutagen === '忌' ? 'text-red-600' :
-                            star.mutagen === '禄' ? 'text-green-600' :
-                                star.mutagen === '权' ? 'text-blue-600' :
-                                    star.mutagen === '科' ? 'text-amber-600' :
-                                        'text-slate-800'; // Default dark grey
+                {/* --- TOP AREA: Stars --- */}
+                <div className="flex flex-row gap-1 h-full">
 
-                        // Get all active Si Hua for this star (including original and layered)
-                        const activeSiHua = getActiveSiHua(star.name);
+                    {/* Left Column: Major & Minor (Tough/Soft) */}
+                    <div className="flex flex-col items-start gap-0.5 min-w-[40%] md:min-w-[45%]">
 
-                        return (
-                            <div key={idx} className={`flex items-center gap-0.5 font-serif font-bold text-sm ${starColor}`}>
+                        {/* Major Stars (Red) */}
+                        {palace.majorStars.map((star, idx) => {
+                            const activeSiHua = getActiveSiHua(star.name);
+                            return (
+                                <div key={`major-${idx}`} className="flex items-center gap-0.5 font-serif font-bold text-sm md:text-base text-red-600 leading-none">
+                                    <span>{star.name}</span>
+                                    <span className="text-[9px] font-normal text-gray-400 scale-75 origin-left hidden md:inline">{star.brightness}</span>
+                                    {activeSiHua.map((badge, bIdx) => (
+                                        <span key={bIdx} className={`text-[8px] px-0.5 rounded-sm text-white scale-90 origin-left shadow-sm ${badge.color}`}>
+                                            {badge.type}
+                                        </span>
+                                    ))}
+                                </div>
+                            );
+                        })}
+
+                        {/* Soft Stars (Purple) */}
+                        {softStars.map((star, idx) => (
+                            <div key={`soft-${idx}`} className="flex items-center gap-0.5 text-xs md:text-sm font-bold text-purple-600 leading-none">
                                 <span>{star.name}</span>
-                                <span className="text-[9px] font-normal text-gray-400 scale-75 origin-left">{star.brightness}</span>
-
-                                {/* Render Si Hua Badges */}
-                                {activeSiHua.map((badge, bIdx) => (
-                                    <span key={bIdx} className={`
-                                        text-[9px] px-0.5 rounded-sm text-white scale-90 origin-left shadow-sm
-                                        ${badge.color}
-                                    `}>
-                                        {badge.type}
-                                    </span>
-                                ))}
+                                <span className="text-[8px] font-normal text-gray-400 scale-75 origin-left hidden md:inline">{star.brightness}</span>
                             </div>
-                        );
-                    })}
-                </div>
+                        ))}
 
-                {/* Minor Stars (Simplified) */}
-                <div className="flex flex-wrap gap-1 text-[10px] text-gray-600 absolute top-1 right-1 w-1/2 justify-end pointer-events-none">
-                    {palace.minorStars.map((star, idx) => (
-                        <span key={idx} className="bg-white/80 px-0.5 rounded">{star.name}</span>
-                    ))}
-                </div>
-
-                {/* Bottom Info */}
-                <div className="mt-auto flex justify-between items-end w-full">
-                    {/* Da Xian Range */}
-                    <div className="text-blue-500 font-bold text-sm transform -translate-y-1">
-                        {palace.decadal.range[0]}-{palace.decadal.range[1]}
+                        {/* Tough Stars (Black) */}
+                        {toughStars.map((star, idx) => (
+                            <div key={`tough-${idx}`} className="flex items-center gap-0.5 text-xs md:text-sm font-bold text-gray-900 leading-none">
+                                <span>{star.name}</span>
+                                <span className="text-[8px] font-normal text-gray-400 scale-75 origin-left hidden md:inline">{star.brightness}</span>
+                            </div>
+                        ))}
                     </div>
 
-                    {/* Palace Name & Stem/Branch */}
-                    <div className="text-right">
-                        <div className={`font-serif font-bold text-sm ${isMing ? 'text-red-700' : isShen ? 'text-amber-700' : 'text-slate-700'}`}>
-                            {palace.name}
+                    {/* Right Area: Adjective Stars (Blue) - Flow Layout */}
+                    <div className="flex flex-wrap content-start items-start gap-x-1 gap-y-0.5 text-[10px] md:text-xs">
+                        {adjectiveStars.map((star, idx) => (
+                            <span key={`adj-${idx}`} className="text-blue-500 font-medium leading-tight">
+                                {star.name}
+                            </span>
+                        ))}
+                    </div>
+                </div>
+
+                {/* --- BOTTOM AREA: Meta Info --- */}
+                <div className="mt-auto flex flex-col w-full border-t border-gray-100/50 pt-0.5">
+
+                    {/* Row 1: Ages (Small Limit) - Right Aligned or scattered? Let's put top right actually? 
+                    Actually user said "bottom/perimeter". Let's put Ages along the top right of the bottom area or strictly bottom.
+                    Let's display the list of ages compactly. 
+                */}
+                    <div className="flex flex-wrap justify-end gap-1 text-[9px] text-gray-400 leading-none mb-0.5 px-0.5">
+                        {palace.ages && palace.ages.slice(0, 6).map((age, i) => <span key={i}>{age}</span>)}
+                        {palace.ages && palace.ages.length > 6 && <span>...</span>}
+                    </div>
+
+                    {/* Row 2: Gods & Life Stage & Palace Name */}
+                    <div className="flex justify-between items-end">
+
+                        {/* Left Bottom: 12 Gods & Life Stage (Black) */}
+                        <div className="flex flex-col items-start text-[9px] md:text-[10px] text-gray-800 leading-tight font-medium">
+                            <div className="flex gap-1">
+                                <span>{palace.boshi12}</span>
+                                <span>{palace.jiangqian12}</span>
+                                <span>{palace.suiqian12}</span>
+                            </div>
+                            <div className="font-bold mt-0.5">
+                                {palace.changsheng12}
+                            </div>
                         </div>
-                        <div className="text-stone-400 text-[10px] font-mono">{palace.heavenlyStem}{palace.earthlyBranch}</div>
+
+                        {/* Right Bottom: Palace Name, Stem/Branch, Decade */}
+                        <div className="text-right">
+                            {/* Da Xian Range */}
+                            <div className="text-blue-500 font-bold text-xs transform translate-y-0.5">
+                                {palace.decadal.range[0]}-{palace.decadal.range[1]}
+                            </div>
+
+                            {/* Palace Name */}
+                            <div className={`font-serif font-bold text-sm md:text-base ${isMing ? 'text-red-700' : isShen ? 'text-amber-700' : 'text-slate-700'}`}>
+                                {palace.name}
+                            </div>
+
+                            {/* Stem Branch */}
+                            <div className="text-stone-400 text-[10px] font-mono -mt-1">
+                                {palace.heavenlyStem}{palace.earthlyBranch}
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
