@@ -11,7 +11,7 @@ import {
     generateBabyPrompt
 } from '../utils/aiPrompts';
 import { findBestConceptionDates } from '../utils/babySelector';
-import { Sparkles, HelpCircle, Coffee, Save } from "lucide-react";
+import { Sparkles, HelpCircle, Coffee, Save, Archive } from "lucide-react";
 import wechatPayImg from '../assets/wechat_pay.jpg';
 import alipayImg from '../assets/alipay.jpg';
 
@@ -81,7 +81,7 @@ const TIME_RANGES = [
 // Helper: Get Year Stem (0-9 index)
 const getYearStemIndex = (year) => (year - 4) % 10;
 
-function ProfessionalChartInner({ horoscope, basicInfo, onSave }) {
+function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive }) {
     const palaces = useMemo(() => {
         if (!horoscope) return [];
         return horoscope.palaces;
@@ -819,7 +819,19 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave }) {
                 {/* Buttons wrapper - enable pointer events */}
                 <div className="pointer-events-auto flex flex-col gap-3 items-end">
 
-                    {/* 1. Save Button */}
+                    {/* 1. Archive List Button */}
+                    <button
+                        onClick={onOpenArchive}
+                        className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-cyan-600 text-white shadow-lg hover:bg-cyan-500 hover:scale-110 transition-all duration-300"
+                        title="查看档案"
+                    >
+                        <Archive className="w-5 h-5" />
+                        <span className="absolute right-14 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                            查看档案
+                        </span>
+                    </button>
+
+                    {/* 2. Save Button */}
                     <button
                         onClick={onSave}
                         className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-500 hover:scale-110 transition-all duration-300"

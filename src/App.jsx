@@ -170,7 +170,7 @@ export default function App() {
 
             <button
               onClick={handleInstallClick}
-              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-900/50 to-purple-900/50 border border-cyan-500/30 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-900/50 to-purple-900/50 border border-cyan-500/30 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)]"
             >
               📲 下载APP
             </button>
@@ -366,6 +366,7 @@ export default function App() {
                     lunarDate: horoscope?.lunarDate
                   }}
                   onSave={() => setIsSaveModalOpen(true)}
+                  onOpenArchive={() => setView('archive')}
                 />
               </div>
             </div>
