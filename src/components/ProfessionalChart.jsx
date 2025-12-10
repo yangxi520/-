@@ -413,9 +413,18 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
                             {/* Col 2: Palace Name & Decade (Target: Aligned) */}
                             <div className="flex flex-col items-end gap-0.5">
-                                {/* Palace Name */}
-                                <div className={`font-serif font-bold text-sm md:text-base leading-none ${isMing ? 'text-red-700' : isShen ? 'text-amber-700' : 'text-slate-700'}`}>
-                                    {palace.name}
+                                {/* Palace Name Row (with Body Palace Badge) */}
+                                <div className="flex items-center justify-end gap-1">
+                                    {/* Body Palace Badge */}
+                                    {isShen && (
+                                        <span className="text-[9px] border border-amber-600 text-amber-700 px-0.5 rounded-sm leading-none bg-amber-50">
+                                            身宫
+                                        </span>
+                                    )}
+                                    {/* Palace Name */}
+                                    <div className={`font-serif font-bold text-sm md:text-base leading-none ${isMing ? 'text-red-700' : isShen ? 'text-amber-700' : 'text-slate-700'}`}>
+                                        {palace.name}
+                                    </div>
                                 </div>
                                 {/* Decade Range - Aligned under Palace Name */}
                                 <div className="text-blue-500 font-bold text-[10px] leading-none">
