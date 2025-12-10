@@ -514,83 +514,112 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
         );
     };
 
-    // Generate Prompt for AI Analysis
-    const handleGeneratePrompt = (type) => {
-        let prompt = '';
-        const scumbagData = generateScumbagPrompt(horoscope);
-        const basicInfoData = `
-    ** --- 命主基本信息(用于推算大限流年)-- -**
-- ** 姓名 **：${basicInfo.name || '未填写'}
-- ** 性别 **：${basicInfo.gender === 'male' ? '男' : '女'}
-- ** 生辰 **：${basicInfo.birthday}
-- ** 出生时辰 **：${basicInfo.birthTime}
-`;
-
-        if (type === 'scumbag') {
-            const template = basicInfo.gender === 'female' ? FEMALE_PROMPT_TEMPLATE : AI_PROMPT_TEMPLATE;
-            prompt = `${template} \n${basicInfoData} \n${scumbagData} `;
-        } else if (type === 'marriage') {
-            prompt = `${MARRIAGE_PROMPT_TEMPLATE} \n${basicInfoData} \n${scumbagData} `;
-        } else if (type === 'wealth') {
-            prompt = `${WEALTH_PROMPT_TEMPLATE} \n${basicInfoData} \n${scumbagData} `;
-        } else if (['yearly', 'monthly', 'daily', 'hourly'].includes(type)) {
-
-            let currentSelection = { ...selection };
-            let currentStems = activeStems;
-
-            // Auto-fill for Daily/Hourly if missing
-            if ((type === 'daily' && !currentSelection.day) || (type === 'hourly' && !currentSelection.hour) || (type === 'monthly' && !currentSelection.month) || (type === 'yearly' && !currentSelection.year)) {
-                // Get current Lunar Date
-                const now = new Date();
-                const currentHoroscope = astro.bySolar(now.toISOString(), 0, 'male', true, 'zh-CN');
-
-                if (currentHoroscope && currentHoroscope.lunarDate) {
-                    // Update selection with current time
-                    if (!currentSelection.year) currentSelection.year = currentHoroscope.lunarDate.year;
-                    if (!currentSelection.month) currentSelection.month = currentHoroscope.lunarDate.month;
-                    if (!currentSelection.day) currentSelection.day = currentHoroscope.lunarDate.day;
-
-                    const hourIndex = Math.floor((now.getHours() + 1) / 2) % 12;
-                    if (currentSelection.hour === null) currentSelection.hour = hourIndex;
-
-                    // Update UI selection
-                    setSelection(currentSelection);
-
-                    // Recalculate stems for this new selection
-                    currentStems = calculateActiveStems(currentSelection, horoscope, basicInfo);
-
-                    // Also enable relevant layers
-                    setActiveLayers(prev => ({
-                        ...prev,
-                        yearly: true,
-                        monthly: ['monthly', 'daily', 'hourly'].includes(type) ? true : prev.monthly,
-                        daily: ['daily', 'hourly'].includes(type) ? true : prev.daily,
-                        hourly: type === 'hourly' ? true : prev.hourly
-                    }));
+    // Generic Copy Helper
+    const copyToClipboard = async (text) => {
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(text);
+                alert('已复制分析指令！\n请发送给AI进行分析。');
+            } else {
+                throw new Error('Clipboard API unavailable');
+            }
+        } catch (err) {
+            // Fallback for HTTP or Mobile restrictions
+            try {
+                const textArea = document.createElement("textarea");
+                textArea.value = text;
+                textArea.style.position = "fixed"; // Avoid scrolling to bottom
+                textArea.style.left = "-9999px";
+                textArea.style.top = "0";
+                document.body.appendChild(textArea);
+                textArea.focus();
+                textArea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textArea);
+                if (successful) {
+                    alert('已复制分析指令！\n请发送给AI进行分析。');
+                    return;
                 }
+            } catch (fallbackErr) {
+                console.error('Fallback copy failed:', fallbackErr);
             }
-
-            prompt = generateFortunePromptText(type, currentSelection, currentStems, basicInfo, horoscope, palaces, SI_HUA_MAP);
-
-            if (!prompt) {
-                alert(`请先选择${type === 'yearly' ? '流年' : type === 'monthly' ? '流月' : type === 'daily' ? '流日' : '流时'}！`);
-                return;
-            }
-        } else if (type.startsWith('baby_')) {
-            const babyType = type.replace('baby_', '');
-            setSelectedBabyType(babyType);
-            setShowPartnerModal(true);
-            setShowAiMenu(false); // Close menu
-            return; // Stop here, wait for modal
+            alert('自动复制失败，可能因浏览器安全限制(非HTTPS)。\n请尝试截图或手动输入。');
         }
+    };
 
-        navigator.clipboard.writeText(prompt).then(() => {
-            alert(`已复制分析指令！\n请发送给AI进行分析。`);
-            setShowAiMenu(false);
-        }).catch(err => {
-            console.error('Failed to copy:', err);
-            alert('复制失败，请手动复制。');
-        });
+    // Generate Prompt for AI Analysis
+    const handleGeneratePrompt = async (type) => {
+        try {
+            let prompt = '';
+            const scumbagData = generateScumbagPrompt(horoscope);
+            const basicInfoData = `\n**--- 命主基本信息 (用于推算大限流年) ---**\n- **姓名**：${basicInfo.name || '未填写'}\n- **性别**：${basicInfo.gender === 'male' ? '男' : '女'}\n- **生辰**：${basicInfo.birthday}\n- **出生时辰**：${basicInfo.birthTime}\n`;
+
+            if (type === 'scumbag') {
+                const template = basicInfo.gender === 'female' ? FEMALE_PROMPT_TEMPLATE : AI_PROMPT_TEMPLATE;
+                prompt = `${template}\n${basicInfoData}\n${scumbagData}`;
+            } else if (type === 'marriage') {
+                prompt = `${MARRIAGE_PROMPT_TEMPLATE}\n${basicInfoData}\n${scumbagData}`;
+            } else if (type === 'wealth') {
+                prompt = `${WEALTH_PROMPT_TEMPLATE}\n${basicInfoData}\n${scumbagData}`;
+            } else if (['yearly', 'monthly', 'daily', 'hourly'].includes(type)) {
+
+                let currentSelection = { ...selection };
+                let currentStems = activeStems;
+
+                // Auto-fill for Daily/Hourly if missing
+                if ((type === 'daily' && !currentSelection.day) || (type === 'hourly' && !currentSelection.hour) || (type === 'monthly' && !currentSelection.month) || (type === 'yearly' && !currentSelection.year)) {
+                    // Get current Lunar Date
+                    const now = new Date();
+                    const currentHoroscope = astro.bySolar(now.toISOString(), 0, 'male', true, 'zh-CN');
+
+                    if (currentHoroscope && currentHoroscope.lunarDate) {
+                        // Update selection with current time
+                        if (!currentSelection.year) currentSelection.year = currentHoroscope.lunarDate.year;
+                        if (!currentSelection.month) currentSelection.month = currentHoroscope.lunarDate.month;
+                        if (!currentSelection.day) currentSelection.day = currentHoroscope.lunarDate.day;
+
+                        const hourIndex = Math.floor((now.getHours() + 1) / 2) % 12;
+                        if (currentSelection.hour === null) currentSelection.hour = hourIndex;
+
+                        // Update UI selection
+                        setSelection(currentSelection);
+
+                        // Recalculate stems for this new selection
+                        currentStems = calculateActiveStems(currentSelection, horoscope, basicInfo);
+
+                        // Also enable relevant layers
+                        setActiveLayers(prev => ({
+                            ...prev,
+                            yearly: true,
+                            monthly: ['monthly', 'daily', 'hourly'].includes(type) ? true : prev.monthly,
+                            daily: ['daily', 'hourly'].includes(type) ? true : prev.daily,
+                            hourly: type === 'hourly' ? true : prev.hourly
+                        }));
+                    }
+                }
+
+                prompt = generateFortunePromptText(type, currentSelection, currentStems, basicInfo, horoscope, palaces, SI_HUA_MAP);
+
+                if (!prompt) {
+                    alert(`请先选择${type === 'yearly' ? '流年' : type === 'monthly' ? '流月' : type === 'daily' ? '流日' : '流时'}！`);
+                    return;
+                }
+            } else if (type.startsWith('baby_')) {
+                const babyType = type.replace('baby_', '');
+                setSelectedBabyType(babyType);
+                setShowPartnerModal(true);
+                setShowAiMenu(false); // Close menu
+                return; // Stop here, wait for modal
+            }
+
+            if (prompt) {
+                await copyToClipboard(prompt);
+                setShowAiMenu(false);
+            }
+        } catch (error) {
+            console.error("Generate prompt error:", error);
+            alert("生成话术失败，请检查数据完整性或刷新重试。");
+        }
     };
 
     const handleConfirmPartner = async () => {
