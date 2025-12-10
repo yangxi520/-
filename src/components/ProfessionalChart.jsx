@@ -11,7 +11,7 @@ import {
     generateBabyPrompt
 } from '../utils/aiPrompts';
 import { findBestConceptionDates } from '../utils/babySelector';
-import { Sparkles, HelpCircle, Coffee, Save, Archive } from "lucide-react";
+import { Sparkles, HelpCircle, Coffee, Save, Archive, Calendar } from "lucide-react";
 import wechatPayImg from '../assets/wechat_pay.jpg';
 import alipayImg from '../assets/alipay.jpg';
 
@@ -1121,12 +1121,26 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-gray-700">出生日期 (阳历)</label>
-                                <input
-                                    type="date"
-                                    value={partnerInfo.birthday}
-                                    onChange={(e) => setPartnerInfo({ ...partnerInfo, birthday: e.target.value })}
-                                    className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:border-purple-500"
-                                />
+                                {/* Date Picker with Enhanced UX for Android */}
+                                <div className="relative group">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Calendar className="h-5 w-5 text-indigo-500 group-hover:text-indigo-600 transition-colors" />
+                                    </div>
+                                    <input
+                                        type="date"
+                                        id="partner-birthday"
+                                        required
+                                        className="block w-full pl-10 pr-3 py-3 text-base border-2 border-dashed border-indigo-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-indigo-50/50 text-indigo-900 shadow-sm transition-all hover:bg-white hover:border-indigo-400 cursor-pointer appearance-none"
+                                        value={partnerInfo.birthday}
+                                        onChange={(e) => setPartnerInfo({ ...partnerInfo, birthday: e.target.value })}
+                                    />
+                                    {/* Visual Cue for interaction */}
+                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <span className="text-xs text-indigo-400 font-medium bg-white/80 px-1 rounded">
+                                            选取
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
 
                             <div className="space-y-1">
