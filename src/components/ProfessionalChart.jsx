@@ -391,30 +391,37 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                     {/* Right Bottom: Palace Info & Gods */}
                     <div className="flex flex-col items-end text-right min-w-[35%]">
 
-                        {/* Gods Row (Compact) */}
-                        <div className="flex flex-wrap justify-end gap-1 text-[9px] text-gray-800 scale-90 origin-right mb-0.5">
-                            <span className="font-medium">{palace.boshi12}</span>
-                            <span className="font-medium">{palace.jiangqian12}</span>
-                            <span className="font-medium">{palace.suiqian12}</span>
+                        {/* Gods Row (Compact, Top) */}
+                        <div className="flex flex-wrap justify-end gap-1 text-[9px] text-gray-800 scale-90 origin-right mb-0.5 opacity-80">
+                            <span>{palace.boshi12} • {palace.jiangqian12} • {palace.suiqian12}</span>
                         </div>
 
-                        {/* Main Info Row */}
-                        <div className="flex items-end justify-end gap-1">
-                            {/* Life Stage */}
-                            <div className="text-[10px] text-gray-900 leading-none mb-0.5 font-bold">
-                                {palace.changsheng12}
+                        {/* Main Info Block: Separated into Columns for strict alignment */}
+                        <div className="flex items-end justify-end gap-1.5">
+
+                            {/* Col 1: Life Stage & Stem/Branch */}
+                            <div className="flex flex-col items-end gap-0.5">
+                                {/* Life Stage */}
+                                <div className="text-[10px] text-gray-900 font-bold leading-none">
+                                    {palace.changsheng12}
+                                </div>
+                                {/* Stem/Branch */}
+                                <div className="text-[10px] text-stone-500 font-mono leading-none">
+                                    {palace.heavenlyStem}{palace.earthlyBranch}
+                                </div>
                             </div>
 
-                            {/* Palace Name */}
-                            <div className={`font-serif font-bold text-sm md:text-base leading-none ${isMing ? 'text-red-700' : isShen ? 'text-amber-700' : 'text-slate-700'}`}>
-                                {palace.name}
+                            {/* Col 2: Palace Name & Decade (Target: Aligned) */}
+                            <div className="flex flex-col items-end gap-0.5">
+                                {/* Palace Name */}
+                                <div className={`font-serif font-bold text-sm md:text-base leading-none ${isMing ? 'text-red-700' : isShen ? 'text-amber-700' : 'text-slate-700'}`}>
+                                    {palace.name}
+                                </div>
+                                {/* Decade Range - Aligned under Palace Name */}
+                                <div className="text-blue-500 font-bold text-[10px] leading-none">
+                                    {palace.decadal.range[0]}-{palace.decadal.range[1]}
+                                </div>
                             </div>
-                        </div>
-
-                        {/* Stem/Branch & Decade */}
-                        <div className="flex items-center justify-end gap-1 text-[10px] text-stone-400 font-mono mt-0.5 leading-none">
-                            <span className="text-blue-500 font-bold">{palace.decadal.range[0]}-{palace.decadal.range[1]}</span>
-                            <span>{palace.heavenlyStem}{palace.earthlyBranch}</span>
                         </div>
                     </div>
                 </div>
