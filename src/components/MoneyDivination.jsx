@@ -98,6 +98,7 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
                 <cylinderGeometry args={[COIN_RADIUS, COIN_RADIUS, COIN_THICKNESS, 64]} />
                 <meshStandardMaterial color="#B8860B" metalness={0.8} roughness={0.4} envMapIntensity={0.8} />
             </mesh>
+
             <mesh position={[0, 0, COIN_THICKNESS / 2 + 0.002]} castShadow>
                 <circleGeometry args={[COIN_RADIUS, 64]} />
                 <meshStandardMaterial map={yinMap} transparent={true} alphaTest={0.5} metalness={0.5} roughness={0.5} />
@@ -105,6 +106,16 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext }) {
             <mesh position={[0, 0, -COIN_THICKNESS / 2 - 0.002]} rotation={[0, Math.PI, 0]} castShadow>
                 <circleGeometry args={[COIN_RADIUS, 64]} />
                 <meshStandardMaterial map={yangMap} transparent={true} alphaTest={0.5} metalness={0.5} roughness={0.5} />
+            </mesh>
+
+            {/* Square hole overlays with background color - positioned AFTER textures to render on top */}
+            <mesh position={[0, 0, COIN_THICKNESS / 2 + 0.003]}>
+                <planeGeometry args={[COIN_RADIUS * 0.28, COIN_RADIUS * 0.28]} />
+                <meshBasicMaterial color="#e8dcc8" />
+            </mesh>
+            <mesh position={[0, 0, -COIN_THICKNESS / 2 - 0.003]} rotation={[0, Math.PI, 0]}>
+                <planeGeometry args={[COIN_RADIUS * 0.28, COIN_RADIUS * 0.28]} />
+                <meshBasicMaterial color="#e8dcc8" />
             </mesh>
         </animated.group>
     );
