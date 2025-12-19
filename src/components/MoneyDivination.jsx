@@ -184,6 +184,7 @@ export default function MoneyDivination({ onBack }) {
     const [targetResults, setTargetResults] = useState([true, true, true]); // Store fetched results [bool, bool, bool]
     const [isQuantum, setIsQuantum] = useState(false); // Track if current throw reused ANU data
     const isProcessingRef = useRef(false);
+    const isGeneratingRef = useRef(false); // Lock to prevent double generation
     const audioContextRef = useRef(null);
     const [audioContext, setAudioContext] = useState(null);
 
@@ -209,6 +210,7 @@ export default function MoneyDivination({ onBack }) {
         if (yaos.length >= 6 || finalHexagram || isProcessingRef.current) return;
 
         isProcessingRef.current = true;
+        isGeneratingRef.current = false; // Reset generation lock
         setIsProcessing(true);
 
         // 1. Play Sound immediately for feedback
@@ -258,12 +260,14 @@ export default function MoneyDivination({ onBack }) {
             const newResults = { ...prev, [index]: result };
             if (Object.keys(prev).length < 3 && Object.keys(newResults).length === 3) {
                 // All 3 coins landed
-                if (yaos.length < 6) {
+                if (yaos.length < 6 && !isGeneratingRef.current) {
                     // Logic to proceed
+                    isGeneratingRef.current = true; // Lock immediately
                     setTimeout(() => {
                         generateYao(newResults);
                         setIsProcessing(false); // Re-enable button
                         isProcessingRef.current = false;
+                        // isGeneratingRef.current stays true until next throw
                     }, 500);
                 }
             }
