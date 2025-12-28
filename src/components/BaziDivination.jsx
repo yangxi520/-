@@ -59,17 +59,38 @@ const SHISHEN_NAMES = {
 export default function BaziDivination({ onBack }) {
     const [step, setStep] = useState('input'); // 'input' | 'result'
     const [calendarType, setCalendarType] = useState('solar'); // 'solar' | 'lunar'
-    const [birthday, setBirthday] = useState('');
+    const [birthYear, setBirthYear] = useState(1990);
+    const [birthMonth, setBirthMonth] = useState(1);
+    const [birthDay, setBirthDay] = useState(1);
     const [birthHour, setBirthHour] = useState(6); // 默认午时
     const [gender, setGender] = useState('male');
     const [loading, setLoading] = useState(false);
 
+    // 生成年份选项 (1940-当前年)
+    const currentYear = new Date().getFullYear();
+    const years = Array.from({ length: currentYear - 1940 + 1 }, (_, i) => 1940 + i);
+
+    // 生成月份选项
+    const months = Array.from({ length: 12 }, (_, i) => i + 1);
+
+    // 根据年月计算当月天数
+    const getDaysInMonth = (year, month) => {
+        if (calendarType === 'lunar') {
+            // 农历固定30天选项
+            return 30;
+        }
+        return new Date(year, month, 0).getDate();
+    };
+    const days = Array.from({ length: getDaysInMonth(birthYear, birthMonth) }, (_, i) => i + 1);
+
     // 计算八字
     const baziResult = useMemo(() => {
-        if (step !== 'result' || !birthday) return null;
+        if (step !== 'result') return null;
 
         try {
-            const [year, month, day] = birthday.split('-').map(Number);
+            const year = birthYear;
+            const month = birthMonth;
+            const day = birthDay;
 
             // 根据时辰获取小时
             const hourMap = [23, 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21];
@@ -184,13 +205,9 @@ export default function BaziDivination({ onBack }) {
             console.error('计算八字失败:', error);
             return null;
         }
-    }, [step, birthday, birthHour, calendarType, gender]);
+    }, [step, birthYear, birthMonth, birthDay, birthHour, calendarType, gender]);
 
     const handleCalculate = () => {
-        if (!birthday) {
-            alert('请输入出生日期');
-            return;
-        }
         setLoading(true);
         setTimeout(() => {
             setStep('result');
@@ -290,8 +307,8 @@ export default function BaziDivination({ onBack }) {
                                 <button
                                     onClick={() => setCalendarType('solar')}
                                     className={`flex-1 py-2.5 text-sm font-bold rounded transition-all ${calendarType === 'solar'
-                                            ? 'bg-orange-900/50 text-orange-300 border border-orange-500/50'
-                                            : 'text-gray-500'
+                                        ? 'bg-orange-900/50 text-orange-300 border border-orange-500/50'
+                                        : 'text-gray-500'
                                         }`}
                                 >
                                     阳历
@@ -299,8 +316,8 @@ export default function BaziDivination({ onBack }) {
                                 <button
                                     onClick={() => setCalendarType('lunar')}
                                     className={`flex-1 py-2.5 text-sm font-bold rounded transition-all ${calendarType === 'lunar'
-                                            ? 'bg-red-900/50 text-red-300 border border-red-500/50'
-                                            : 'text-gray-500'
+                                        ? 'bg-red-900/50 text-red-300 border border-red-500/50'
+                                        : 'text-gray-500'
                                         }`}
                                 >
                                     农历
@@ -308,17 +325,43 @@ export default function BaziDivination({ onBack }) {
                             </div>
                         </div>
 
-                        {/* 出生日期 */}
+                        {/* 出生日期 - 年月日下拉框 */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-orange-500 uppercase tracking-widest">
                                 出生日期
                             </label>
-                            <input
-                                type="date"
-                                value={birthday}
-                                onChange={(e) => setBirthday(e.target.value)}
-                                className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white rounded-lg outline-none focus:border-orange-500/50 transition-all"
-                            />
+                            <div className="grid grid-cols-3 gap-2">
+                                {/* 年 */}
+                                <select
+                                    value={birthYear}
+                                    onChange={(e) => setBirthYear(Number(e.target.value))}
+                                    className="px-3 py-3 bg-black/50 border border-white/10 text-white rounded-lg outline-none focus:border-orange-500/50 transition-all appearance-none cursor-pointer text-center"
+                                >
+                                    {years.map(y => (
+                                        <option key={y} value={y}>{y}年</option>
+                                    ))}
+                                </select>
+                                {/* 月 */}
+                                <select
+                                    value={birthMonth}
+                                    onChange={(e) => setBirthMonth(Number(e.target.value))}
+                                    className="px-3 py-3 bg-black/50 border border-white/10 text-white rounded-lg outline-none focus:border-orange-500/50 transition-all appearance-none cursor-pointer text-center"
+                                >
+                                    {months.map(m => (
+                                        <option key={m} value={m}>{m}月</option>
+                                    ))}
+                                </select>
+                                {/* 日 */}
+                                <select
+                                    value={birthDay}
+                                    onChange={(e) => setBirthDay(Number(e.target.value))}
+                                    className="px-3 py-3 bg-black/50 border border-white/10 text-white rounded-lg outline-none focus:border-orange-500/50 transition-all appearance-none cursor-pointer text-center"
+                                >
+                                    {days.map(d => (
+                                        <option key={d} value={d}>{d}日</option>
+                                    ))}
+                                </select>
+                            </div>
                         </div>
 
                         {/* 出生时辰 */}
@@ -348,8 +391,8 @@ export default function BaziDivination({ onBack }) {
                                 <button
                                     onClick={() => setGender('male')}
                                     className={`py-3 border rounded-lg transition-all flex items-center justify-center gap-2 ${gender === 'male'
-                                            ? 'bg-blue-900/20 border-blue-500 text-blue-400'
-                                            : 'bg-black/50 border-white/10 text-gray-500'
+                                        ? 'bg-blue-900/20 border-blue-500 text-blue-400'
+                                        : 'bg-black/50 border-white/10 text-gray-500'
                                         }`}
                                 >
                                     <span>♂</span>
@@ -358,8 +401,8 @@ export default function BaziDivination({ onBack }) {
                                 <button
                                     onClick={() => setGender('female')}
                                     className={`py-3 border rounded-lg transition-all flex items-center justify-center gap-2 ${gender === 'female'
-                                            ? 'bg-pink-900/20 border-pink-500 text-pink-400'
-                                            : 'bg-black/50 border-white/10 text-gray-500'
+                                        ? 'bg-pink-900/20 border-pink-500 text-pink-400'
+                                        : 'bg-black/50 border-white/10 text-gray-500'
                                         }`}
                                 >
                                     <span>♀</span>
