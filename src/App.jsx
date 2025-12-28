@@ -10,6 +10,7 @@ const MoneyDivination = lazy(() => import("./components/MoneyDivination"));
 const ArchiveView = lazy(() => import("./components/ArchiveView"));
 const VideoLessons = lazy(() => import("./components/VideoLessons"));
 const EnglishLearning = lazy(() => import("./components/EnglishLearning"));
+const BaziDivination = lazy(() => import("./components/BaziDivination"));
 
 const getTimeDescription = (time) => {
   const timeMap = {
@@ -31,7 +32,7 @@ const getTimeDescription = (time) => {
 };
 
 export default function App() {
-  const [view, setView] = useState('home'); // 'home', 'input', 'chart', 'money', 'archive', 'videos'
+  const [view, setView] = useState('home'); // 'home', 'input', 'chart', 'money', 'archive', 'videos', 'bazi'
   const [calendarType, setCalendarType] = useState('solar');
   const [gender, setGender] = useState('male');
   const [name, setName] = useState('');
@@ -248,6 +249,30 @@ export default function App() {
                 </div>
               </button>
 
+              {/* Bazi Entry Card - NEW */}
+              <button
+                onClick={() => setView('bazi')}
+                className="group relative overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-900/40 to-red-900/40 p-8 text-left transition-all hover:scale-[1.02] hover:border-orange-500/60 hover:shadow-[0_0_30px_rgba(249,115,22,0.3)]"
+              >
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
+                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-orange-500/20 rounded-full blur-3xl group-hover:bg-orange-500/30 transition-all"></div>
+
+                <div className="relative z-10 flex flex-col h-full justify-between gap-4">
+                  <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center border border-orange-500/30 group-hover:scale-110 transition-transform">
+                    <span className="text-2xl">🔥</span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-orange-300 transition-colors">八字排盘</h3>
+                    <p className="text-gray-400 text-sm leading-relaxed">
+                      四柱八字，五行分析。通过生辰推演命格，洞察大运流年与人生轨迹。
+                    </p>
+                  </div>
+                  <div className="flex items-center text-orange-400 text-sm font-bold mt-2 group-hover:translate-x-2 transition-transform">
+                    立即排盘 <ArrowLeft className="w-4 h-4 ml-1 rotate-180" />
+                  </div>
+                </div>
+              </button>
+
               {/* English Learning Entry Card */}
               <button
                 onClick={() => setView('english')}
@@ -424,6 +449,18 @@ export default function App() {
             </div>
           }>
             <EnglishLearning onBack={() => setView('home')} />
+          </Suspense>
+        ) : view === 'bazi' ? (
+          // --- BAZI DIVINATION VIEW ---
+          <Suspense fallback={
+            <div className="flex-1 flex items-center justify-center text-white">
+              <div className="text-center">
+                <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <p>正在加载八字模块...</p>
+              </div>
+            </div>
+          }>
+            <BaziDivination onBack={() => setView('home')} />
           </Suspense>
         ) : (
           // --- CHART VIEW ---
