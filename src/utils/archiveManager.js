@@ -1,6 +1,14 @@
 import { v4 as uuidv4 } from 'uuid';
 
 const STORAGE_KEY = 'ziwei_archives_v1';
+const isValidRecord = (record) => (
+    record
+    && typeof record === 'object'
+    && !Array.isArray(record)
+    && typeof record.id === 'string'
+    && record.id.length > 0
+    && typeof record.name === 'string'
+);
 
 /**
  * @typedef {Object} ChartRecord
@@ -15,38 +23,51 @@ const STORAGE_KEY = 'ziwei_archives_v1';
  * @property {number} updatedAt
  */
 
-class ArchiveManager {
-    constructor() {
+export class ArchiveManager {
+    constructor(storage = globalThis.localStorage, eventTarget = globalThis.window) {
+        this.storage = storage;
+        this.eventTarget = eventTarget;
         this.records = this._loadFromStorage();
     }
 
     _loadFromStorage() {
         try {
-            const data = localStorage.getItem(STORAGE_KEY);
-            return data ? JSON.parse(data) : [];
+            const data = this.storage?.getItem(STORAGE_KEY);
+            if (!data) return [];
+            const parsed = JSON.parse(data);
+            return Array.isArray(parsed) ? parsed.filter(isValidRecord) : [];
         } catch (e) {
             console.error('Failed to load archives:', e);
             return [];
         }
     }
 
-    _saveToStorage() {
+    _commit(nextRecords) {
         try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(this.records));
-            // Dispatch event for reactive UI updates if needed across tabs/components
-            window.dispatchEvent(new Event('archive-updated'));
+            if (!this.storage?.setItem) throw new Error('Storage unavailable');
+            this.storage.setItem(STORAGE_KEY, JSON.stringify(nextRecords));
+            this.records = nextRecords;
         } catch (e) {
             console.error('Failed to save archives:', e);
-            alert('存储空间不足或保存失败！');
+            return false;
         }
+
+        try {
+            // Dispatch event for reactive UI updates if needed in this page.
+            this.eventTarget?.dispatchEvent?.(new Event('archive-updated'));
+        } catch (e) {
+            console.warn('Failed to dispatch archive update:', e);
+        }
+        return true;
     }
 
     /**
      * Get all records, optionally filtered
      */
     getRecords(filterFn = null) {
-        if (!filterFn) return [...this.records];
-        return this.records.filter(filterFn);
+        const records = Array.isArray(this.records) ? this.records : [];
+        if (!filterFn) return [...records];
+        return records.filter(filterFn);
     }
 
     /**
@@ -55,15 +76,14 @@ class ArchiveManager {
      */
     addRecord(recordInput) {
         const newRecord = {
-            id: uuidv4(),
             ...recordInput,
+            id: uuidv4(),
             createdAt: Date.now(),
             updatedAt: Date.now()
         };
         // Add to beginning of list
-        this.records.unshift(newRecord);
-        this._saveToStorage();
-        return newRecord;
+        const nextRecords = [newRecord, ...this.getRecords()];
+        return this._commit(nextRecords) ? newRecord : null;
     }
 
     /**
@@ -73,21 +93,24 @@ class ArchiveManager {
         const index = this.records.findIndex(r => r.id === id);
         if (index === -1) return null;
 
-        this.records[index] = {
+        const currentRecord = this.records[index];
+        const nextRecords = [...this.records];
+        nextRecords[index] = {
             ...this.records[index],
             ...updates,
+            id: currentRecord.id,
+            createdAt: currentRecord.createdAt,
             updatedAt: Date.now()
         };
-        this._saveToStorage();
-        return this.records[index];
+        return this._commit(nextRecords) ? nextRecords[index] : null;
     }
 
     /**
      * Delete a record
      */
     deleteRecord(id) {
-        this.records = this.records.filter(r => r.id !== id);
-        this._saveToStorage();
+        const nextRecords = this.getRecords().filter(r => r.id !== id);
+        return this._commit(nextRecords);
     }
 
     /**
@@ -118,20 +141,38 @@ class ArchiveManager {
             if (!Array.isArray(imported)) throw new Error('Invalid format');
 
             if (merge) {
-                // Merge logic: standard is replace if ID exists, add if new
-                const currentMap = new Map(this.records.map(r => [r.id, r]));
+                // 安全合并：同 ID 始终保留本机版本，只添加备份中的新记录。
+                const currentMap = new Map(this.getRecords().map(r => [r.id, r]));
                 imported.forEach(rec => {
-                    if (rec.id && rec.name) { // Basic validation
+                    if (
+                        rec
+                        && typeof rec === 'object'
+                        && !Array.isArray(rec)
+                        && typeof rec.id === 'string'
+                        && typeof rec.name === 'string'
+                        && rec.id
+                        && rec.name
+                        && !currentMap.has(rec.id)
+                    ) {
                         currentMap.set(rec.id, rec);
                     }
                 });
-                this.records = Array.from(currentMap.values())
+                const nextRecords = Array.from(currentMap.values())
                     .sort((a, b) => b.updatedAt - a.updatedAt);
+                if (!this._commit(nextRecords)) throw new Error('Storage unavailable');
             } else {
-                this.records = imported;
+                const validRecords = imported.filter((rec) => (
+                    rec
+                    && typeof rec === 'object'
+                    && !Array.isArray(rec)
+                    && typeof rec.id === 'string'
+                    && typeof rec.name === 'string'
+                    && rec.id
+                    && rec.name
+                ));
+                if (!this._commit(validRecords)) throw new Error('Storage unavailable');
             }
 
-            this._saveToStorage();
             return { success: true, count: this.records.length };
         } catch (e) {
             console.error('Import failed:', e);

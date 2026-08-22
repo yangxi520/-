@@ -1,7 +1,7 @@
 import React, { useState, Suspense, lazy } from 'react';
 import ProfessionalChart from "./components/ProfessionalChart";
 import ErrorBoundary from "./components/ErrorBoundary";
-import { ArrowLeft, Save } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Save } from "lucide-react";
 import * as iztro from "iztro";
 import { archiveManager } from './utils/archiveManager';
 import { buildHomeFortune, HOME_FORTUNE_PERIODS } from './utils/homeFortune';
@@ -51,6 +51,9 @@ export default function App() {
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [saveNote, setSaveNote] = useState('');
   const [saveGroup, setSaveGroup] = useState('self');
+  const [archiveNotice, setArchiveNotice] = useState(null);
+  const saveDialogRef = React.useRef(null);
+  const saveOpenerRef = React.useRef(null);
 
   React.useEffect(() => {
     const handler = (e) => {
@@ -90,6 +93,47 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleEscape);
   }, [showInstallModal, isSaveModalOpen]);
 
+  React.useEffect(() => {
+    if (!archiveNotice || archiveNotice.type === 'error') return undefined;
+    const timer = window.setTimeout(() => setArchiveNotice(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [archiveNotice]);
+
+  React.useEffect(() => {
+    if (!isSaveModalOpen || !saveDialogRef.current) return undefined;
+
+    const dialog = saveDialogRef.current;
+    const opener = saveOpenerRef.current;
+    const focusableSelector = 'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
+    const getFocusableItems = () => Array.from(dialog.querySelectorAll(focusableSelector));
+    const focusFrame = window.requestAnimationFrame(() => {
+      (dialog.querySelector('#archive-name') || getFocusableItems()[0])?.focus();
+    });
+
+    const trapFocus = (event) => {
+      if (event.key !== 'Tab') return;
+      const items = getFocusableItems();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    dialog.addEventListener('keydown', trapFocus);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      dialog.removeEventListener('keydown', trapFocus);
+      opener?.focus?.();
+    };
+  }, [isSaveModalOpen]);
+
   const handleInstallClick = async () => {
     if (deferredPrompt) {
       try {
@@ -128,13 +172,25 @@ export default function App() {
 
   // --- Archive Logic ---
 
+  const openSaveArchive = () => {
+    saveOpenerRef.current = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    setSaveGroup('self');
+    setSaveNote('');
+    setIsSaveModalOpen(true);
+  };
+
   const handleLoadRecord = (record) => {
     if (record.type === 'ziwei') {
       // Records created before calendarType/birthDate existed were always
       // reloaded as solar dates. Keep that fallback while preserving the
       // original calendar for all newly saved records.
       const recordCalendarType = record.calendarType === 'lunar' ? 'lunar' : 'solar';
-      const recordBirthDate = record.birthDate || record.solarDate;
+      const recordBirthDate = record.birthDate
+        || record.solarDate
+        || record.data?.birthDate
+        || record.data?.solarDate;
       const recordBirthTime = Number(record.timeHour) || 0;
       const recordGender = record.gender === 'female' ? 'female' : 'male';
 
@@ -172,17 +228,21 @@ export default function App() {
       birthDate: birthday,
       // Keep the legacy field so existing archive-list displays and exports
       // remain compatible. Loading now uses birthDate + calendarType first.
-      solarDate: birthday,
+      solarDate: horoscope?.solarDate || (calendarType === 'solar' ? birthday : ''),
       timeHour: birthTime,
       group: saveGroup,
       note: saveNote,
       data: {}
     };
 
-    archiveManager.addRecord(newRecord);
+    const savedRecord = archiveManager.addRecord(newRecord);
+    if (!savedRecord) {
+      setArchiveNotice({ type: 'error', message: '保存失败，请检查浏览器存储空间后重试' });
+      return;
+    }
     setIsSaveModalOpen(false);
     setSaveNote(''); // Reset
-    alert('保存成功！');
+    setArchiveNotice({ type: 'success', message: `已保存「${savedRecord.name}」的紫微命盘` });
   };
 
   const ziweiRecords = React.useMemo(
@@ -217,7 +277,7 @@ export default function App() {
 
   const homeFortune = homeFortuneState.data;
 
-  const usesOwnHeader = ['money', 'bazi', 'videos', 'english'].includes(view);
+  const usesOwnHeader = ['money', 'bazi', 'archive', 'videos', 'english'].includes(view);
 
   return (
     <div className="app-shell">
@@ -487,7 +547,7 @@ export default function App() {
             </nav>
 
             <footer className="home-footer">
-              <p>v2026.08.23.Bazi-Navigator</p>
+              <p>v2026.08.23.Archive-UI</p>
               <button
                 type="button"
                 onClick={async () => {
@@ -712,7 +772,7 @@ export default function App() {
                     birthTime: getTimeDescription(birthTime),
                     lunarDate: horoscope?.lunarDate
                   }}
-                  onSave={() => setIsSaveModalOpen(true)}
+                  onSave={openSaveArchive}
                   onOpenArchive={() => setView('archive')}
                 />
               </div>
@@ -726,78 +786,91 @@ export default function App() {
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 safe-modal-padding">
           {/* Backdrop with blur */}
           <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity"
+            className="absolute inset-0 bg-black/75 backdrop-blur-md transition-opacity"
             onClick={() => setIsSaveModalOpen(false)}
           ></div>
 
           <section
+            ref={saveDialogRef}
             role="dialog"
             aria-modal="true"
             aria-labelledby="save-dialog-title"
-            className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto space-y-5 shadow-2xl animate-in fade-in zoom-in duration-200"
+            aria-describedby="save-dialog-description"
+            className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-[28px] border border-[#cbbfac] bg-[#f3ecdf] text-[#302a25] shadow-2xl animate-in fade-in zoom-in duration-200"
           >
-            <div className="flex justify-between items-center">
-              <h3 id="save-dialog-title" className="text-xl font-bold text-white flex items-center gap-2">
-                <Save className="w-5 h-5 text-emerald-400" aria-hidden="true" />
-                保存到档案
-              </h3>
-              <button type="button" aria-label="关闭保存档案弹窗" onClick={() => setIsSaveModalOpen(false)} className="min-w-11 min-h-11 text-gray-500 hover:text-white transition-colors">✕</button>
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="archive-name" className="text-xs font-bold text-gray-500 uppercase tracking-widest">姓名</label>
-              <input
-                id="archive-name"
-                value={name}
-                onChange={e => setName(e.target.value)}
-                className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-cyan-500/50 transition-all outline-none"
-                placeholder="请输入姓名"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">分组</label>
-              <div className="flex flex-wrap gap-2">
-                {[
-                  { id: 'self', label: '自己' },
-                  { id: 'father', label: '父亲' },
-                  { id: 'mother', label: '母亲' },
-                  { id: 'son', label: '儿子' },
-                  { id: 'daughter', label: '女儿' },
-                  { id: 'girlfriend', label: '女友' },
-                  { id: 'boyfriend', label: '男友' },
-                  { id: 'other', label: '其他' }
-                ].map(g => (
-                  <button
-                    type="button"
-                    key={g.id}
-                    onClick={() => setSaveGroup(g.id)}
-                    aria-pressed={saveGroup === g.id}
-                    className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${saveGroup === g.id
-                      ? 'bg-cyan-900/50 border-cyan-500 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
-                      : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:border-white/20'
-                      }`}
-                  >
-                    {g.label}
-                  </button>
-                ))}
+            <div className="flex items-start justify-between gap-4 border-b border-[#c8bba7] bg-[#e7ddcc]/80 p-5">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-lg border border-[#a33b30]/40 bg-[#a33b30]/[0.06] text-[#96372e]" aria-hidden="true">
+                  <Save className="size-5" />
+                </span>
+                <div>
+                  <p className="text-[10px] font-bold tracking-[0.2em] text-[#81776b]">命盘归档</p>
+                  <h3 id="save-dialog-title" className="mt-0.5 font-serif text-xl font-bold tracking-[0.08em] text-[#28231f]">保存到档案</h3>
+                </div>
               </div>
+              <button type="button" aria-label="关闭保存档案弹窗" onClick={() => setIsSaveModalOpen(false)} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full text-xl text-[#756d63] hover:bg-[#d8cdbb] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2d6b62]">✕</button>
             </div>
 
-            <div className="space-y-2">
-              <label htmlFor="archive-note" className="text-xs font-bold text-gray-500 uppercase tracking-widest">备注</label>
-              <textarea
-                id="archive-note"
-                value={saveNote}
-                onChange={e => setSaveNote(e.target.value)}
-                placeholder="备注信息..."
-                className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white h-24 text-sm resize-none focus:border-cyan-500/50 transition-all outline-none"
-              />
-            </div>
+            <div className="space-y-5 p-5">
+              <p id="save-dialog-description" className="rounded-xl border border-[#cbbfac]/80 bg-[#fffaf0]/65 px-3 py-2 text-[11px] leading-5 text-[#6f665d]">
+                出生资料和备注只保存在当前设备。建议定期前往档案页备份，清除浏览器数据可能导致档案丢失。
+              </p>
 
-            <div className="flex gap-3 pt-2">
-              <button type="button" onClick={() => setIsSaveModalOpen(false)} className="flex-1 min-h-11 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 text-sm font-bold transition-all">取消</button>
-              <button type="button" onClick={handleSaveToArchive} className="flex-1 min-h-11 py-3 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-bold shadow-lg shadow-emerald-950/30 transition-all">确认保存</button>
+              <div className="space-y-2">
+                <label htmlFor="archive-name" className="text-xs font-bold tracking-[0.12em] text-[#6f665d]">命主称呼</label>
+                <input
+                  id="archive-name"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="min-h-12 w-full rounded-xl border border-[#b9ad98] bg-[#fffaf0] px-4 text-[#302a25] outline-none transition focus:border-[#2d6b62] focus-visible:ring-2 focus-visible:ring-[#2d6b62]/30"
+                  placeholder="例如：杨先生"
+                />
+              </div>
+
+              <fieldset className="space-y-2">
+                <legend className="text-xs font-bold tracking-[0.12em] text-[#6f665d]">归档分组</legend>
+                <div className="grid grid-cols-4 gap-2">
+                  {[
+                    { id: 'self', label: '自己' },
+                    { id: 'father', label: '父亲' },
+                    { id: 'mother', label: '母亲' },
+                    { id: 'son', label: '儿子' },
+                    { id: 'daughter', label: '女儿' },
+                    { id: 'girlfriend', label: '女友' },
+                    { id: 'boyfriend', label: '男友' },
+                    { id: 'other', label: '其他' }
+                  ].map(g => (
+                    <button
+                      type="button"
+                      key={g.id}
+                      onClick={() => setSaveGroup(g.id)}
+                      aria-pressed={saveGroup === g.id}
+                      className={`min-h-11 rounded-xl border px-2 text-xs font-bold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2d6b62] ${saveGroup === g.id
+                        ? 'border-[#2d6b62] bg-[#2d6b62] text-white shadow-sm'
+                        : 'border-[#cbbfac] bg-[#fffaf0]/70 text-[#6f665d] hover:border-[#9e8f7a]'
+                        }`}
+                    >
+                      {g.label}{saveGroup === g.id ? ' ✓' : ''}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+
+              <div className="space-y-2">
+                <label htmlFor="archive-note" className="text-xs font-bold tracking-[0.12em] text-[#6f665d]">备注</label>
+                <textarea
+                  id="archive-note"
+                  value={saveNote}
+                  onChange={e => setSaveNote(e.target.value)}
+                  placeholder="记录咨询主题、关键事件或后续提醒……"
+                  className="h-24 w-full resize-none rounded-xl border border-[#b9ad98] bg-[#fffaf0] p-3 text-sm text-[#302a25] outline-none transition focus:border-[#2d6b62] focus-visible:ring-2 focus-visible:ring-[#2d6b62]/30"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 pt-1">
+                <button type="button" onClick={() => setIsSaveModalOpen(false)} className="min-h-12 rounded-xl border border-[#b9ad98] bg-[#fffaf0]/60 px-4 text-sm font-bold text-[#6f665d] hover:bg-[#e9dfcd] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2d6b62]">取消</button>
+                <button type="button" onClick={handleSaveToArchive} className="min-h-12 rounded-xl bg-[#a33b30] px-4 text-sm font-bold text-white shadow-lg shadow-[#7f2c24]/20 hover:bg-[#8f3028] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d18275]">确认保存</button>
+              </div>
             </div>
           </section>
         </div>
@@ -850,6 +923,25 @@ export default function App() {
               我知道了
             </button>
           </section>
+        </div>
+      )}
+
+      {archiveNotice && (
+        <div className="fixed inset-x-3 z-[240] flex justify-center print:hidden" style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }} role={archiveNotice.type === 'error' ? 'alert' : 'status'} aria-live="polite">
+          <div className={`flex min-h-12 max-w-xl items-center gap-2 rounded-2xl border pl-4 pr-1 py-1 text-sm font-bold text-white shadow-2xl backdrop-blur ${archiveNotice.type === 'error' ? 'border-[#d1847b]/60 bg-[#6f2520]/95' : 'border-[#78a69f]/50 bg-[#163d38]/95'}`}>
+            {archiveNotice.type === 'error'
+              ? <AlertCircle className="size-5 text-[#f0b5ae]" aria-hidden="true" />
+              : <CheckCircle2 className="size-5 text-[#8ec8bd]" aria-hidden="true" />}
+            <span className="flex-1 py-2">{archiveNotice.message}</span>
+            <button
+              type="button"
+              onClick={() => setArchiveNotice(null)}
+              aria-label="关闭档案提示"
+              className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-xl text-lg text-white/80 hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80"
+            >
+              ✕
+            </button>
+          </div>
         </div>
       )}
     </div>
