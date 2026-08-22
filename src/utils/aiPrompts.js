@@ -1,3 +1,8 @@
+import {
+  FORTUNE_HOUR_OPTIONS,
+  FORTUNE_LAYER_LABELS,
+  formatFortuneTime,
+} from './fortuneContext.js';
 
 
 export const AI_PROMPT_TEMPLATE = `**--- 🚨 深度鉴渣报告：多派紫微 x 进化心理学 🚨 ---**
@@ -205,19 +210,29 @@ export const generateScumbagPrompt = (horoscope) => {
   }
 };
 
-export const generateFortunePromptText = (layerKey, selection, activeStems, basicInfo, horoscope, palaces, SI_HUA_MAP) => {
-  const stem = activeStems[layerKey];
+export const generateFortunePromptText = (layerKey, selection, activeStems, basicInfo, horoscope, palaces, SI_HUA_MAP, fortuneContext = null) => {
+  const targetScope = fortuneContext?.fortune?.[layerKey];
+  const stem = targetScope?.heavenlyStem || activeStems[layerKey];
   if (!stem) return null;
 
-  const map = SI_HUA_MAP[stem];
-  const layerName = layerKey === 'yearly' ? '流年' :
-    layerKey === 'monthly' ? '流月' :
-      layerKey === 'daily' ? '流日' : '流时';
+  const fallbackMap = SI_HUA_MAP[stem];
+  const mutagens = targetScope?.mutagen?.length >= 4
+    ? targetScope.mutagen
+    : fallbackMap
+      ? [fallbackMap.lu, fallbackMap.quan, fallbackMap.ke, fallbackMap.ji]
+      : [];
+  if (mutagens.length < 4) return null;
 
-  const timeInfo = layerKey === 'yearly' ? `${selection.year}年` :
-    layerKey === 'monthly' ? `${selection.year}年${selection.month}月` :
-      layerKey === 'daily' ? `${selection.year}年${selection.month}月${selection.day}日` :
-        `${selection.year}年${selection.month}月${selection.day}日 ${selection.hour !== null ? selection.hour * 2 : ''}-${selection.hour !== null ? selection.hour * 2 + 2 : ''}时`;
+  const [lu, quan, ke, ji] = mutagens;
+  const layerName = FORTUNE_LAYER_LABELS[layerKey] || '运势';
+
+  const selectedHour = FORTUNE_HOUR_OPTIONS.find((item) => item.index === selection.hour);
+  const timeInfo = fortuneContext
+    ? formatFortuneTime(layerKey, fortuneContext)
+    : layerKey === 'yearly' ? `${selection.year}年` :
+      layerKey === 'monthly' ? `${selection.year}年${selection.month}月` :
+        layerKey === 'daily' ? `${selection.year}年${selection.month}月${selection.day}日` :
+          `${selection.year}年${selection.month}月${selection.day}日 ${selectedHour?.name || ''} ${selectedHour?.range || ''}`;
 
   let prompt = `你是一位精通紫微斗数的命理大师。请根据以下命盘数据和${layerName}四化，为命主进行${layerName}运势分析。\n\n`;
 
@@ -228,17 +243,59 @@ export const generateFortunePromptText = (layerKey, selection, activeStems, basi
 
   prompt += `【${layerName}信息】\n`;
   prompt += `时间：${timeInfo}\n`;
-  prompt += `天干：${stem}\n`;
+  prompt += `干支：${stem}${targetScope?.earthlyBranch || ''}\n`;
   prompt += `四化：\n`;
-  prompt += `  - 禄：${map.lu}\n`;
-  prompt += `  - 权：${map.quan}\n`;
-  prompt += `  - 科：${map.ke}\n`;
-  prompt += `  - 忌：${map.ji}\n\n`;
+  prompt += `  - 禄：${lu}\n`;
+  prompt += `  - 权：${quan}\n`;
+  prompt += `  - 科：${ke}\n`;
+  prompt += `  - 忌：${ji}\n\n`;
+
+  if (fortuneContext) {
+    const { fortune, scopeKeys, solarDate, lunarDate, dayBoundaryNote } = fortuneContext;
+    prompt += `【自动定位的真实运限】\n`;
+    prompt += `阳历：${solarDate}\n`;
+    prompt += `农历：${lunarDate}\n`;
+    if (dayBoundaryNote) prompt += `换日规则：${dayBoundaryNote}\n`;
+    prompt += `虚岁：${fortune.age?.nominalAge ?? '未知'}岁\n\n`;
+
+    scopeKeys.forEach((scopeKey) => {
+      const scope = fortune[scopeKey];
+      if (!scope) return;
+
+      const scopeName = FORTUNE_LAYER_LABELS[scopeKey] || scope.name;
+      const natalPalace = palaces[scope.index];
+      const scopeMutagens = scope.mutagen || [];
+      const decadalRange = scopeKey === 'decadal' && natalPalace?.decadal?.range
+        ? `，年龄范围 ${natalPalace.decadal.range[0]}-${natalPalace.decadal.range[1]}岁`
+        : '';
+
+      prompt += `【${scopeName}盘】\n`;
+      prompt += `干支：${scope.heavenlyStem}${scope.earthlyBranch}${decadalRange}\n`;
+      prompt += `命宫落点：本命${natalPalace?.name || '未知宫'}（${natalPalace?.heavenlyStem || ''}${natalPalace?.earthlyBranch || ''}）\n`;
+      if (scopeMutagens.length >= 4) {
+        prompt += `四化：禄-${scopeMutagens[0]}、权-${scopeMutagens[1]}、科-${scopeMutagens[2]}、忌-${scopeMutagens[3]}\n`;
+      }
+
+      const palaceOverlay = (scope.palaceNames || []).map((name, index) => {
+        const natal = palaces[index];
+        return `${name}→${natal?.name || '未知宫'}(${natal?.earthlyBranch || '-'})`;
+      }).join('；');
+      if (palaceOverlay) prompt += `十二宫叠盘：${palaceOverlay}\n`;
+
+      const movingStars = (scope.stars || []).flatMap((stars, index) => {
+        if (!stars?.length) return [];
+        const natal = palaces[index];
+        return [`${natal?.earthlyBranch || index}宫：${stars.map((star) => star.name).join('、')}`];
+      });
+      if (movingStars.length) prompt += `流耀落宫：${movingStars.join('；')}\n`;
+      prompt += `\n`;
+    });
+  }
 
   prompt += `【命盘十二宫位分布】\n`;
   palaces.forEach(p => {
-    const major = p.majorStars.map(s => `${s.name}(${s.brightness})`).join('、');
-    const minor = p.minorStars.map(s => s.name).join('、');
+    const major = (p.majorStars || []).map(s => `${s.name}(${s.brightness || '平'})`).join('、') || '无';
+    const minor = (p.minorStars || []).map(s => s.name).join('、') || '无';
     prompt += `- ${p.name} (${p.heavenlyStem}${p.earthlyBranch})：${major} | ${minor}\n`;
   });
 
@@ -318,4 +375,3 @@ export const generateBabyPrompt = (type, basicInfo, horoscope, partnerHoroscope,
     .replace('{{BEST_DATES_LIST}}', bestDatesList)
     .replace('{{PARENTS_DATA}}', parentsData);
 };
-

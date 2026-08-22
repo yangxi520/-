@@ -11,6 +11,13 @@ import {
     generateBabyPrompt
 } from '../utils/aiPrompts';
 import { findBestConceptionDates } from '../utils/babySelector';
+import {
+    buildCurrentFortuneContext,
+    FORTUNE_HOUR_OPTIONS,
+    FORTUNE_LAYER_LABELS,
+    getLunarMonthDays,
+    getLunarMonthOptions,
+} from '../utils/fortuneContext';
 import { Sparkles, HelpCircle, Coffee, Save, Archive, Calendar } from "lucide-react";
 import wechatPayImg from '../assets/wechat_pay.jpg';
 import alipayImg from '../assets/alipay.jpg';
@@ -91,10 +98,16 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     const [selection, setSelection] = React.useState({
         daxianIndex: null, // Palace index
         year: null,        // Full Year (e.g., 2025)
+        lunarYear: null,   // Numeric lunar year for daily/hourly calculations
         month: null,       // Month Index (1-12)
         day: null,         // Day Index (1-30)
-        hour: null         // Hour Index (0-11)
+        hour: null,        // Hour Index (0-12, including late Zi hour)
+        isLeapMonth: false,
+        targetSolarDate: null,
     });
+
+    // iztro-computed current luck cycles used by the “current” shortcut buttons.
+    const [currentFortuneContext, setCurrentFortuneContext] = React.useState(null);
 
     // State for focused palace (for San Fang Si Zheng lines)
     // This can be independent of timeline selection, or synced.
@@ -114,6 +127,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     // State for AI Menu
     const [showAiMenu, setShowAiMenu] = React.useState(false);
     const [menuView, setMenuView] = React.useState('main'); // 'main', 'fortune', 'baby'
+    const [promptPreview, setPromptPreview] = React.useState(null);
     // Lunar Tip State
     const [showLunarTip, setShowLunarTip] = React.useState(false);
 
@@ -167,32 +181,22 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
         if (sel.year && sel.month && sel.day) {
             try {
                 const tempHoroscope = astro.byLunar(
-                    `${sel.year}-${sel.month}-${sel.day}`,
-                    0,
+                    `${sel.lunarYear || sel.year}-${sel.month}-${sel.day}`,
+                    sel.hour ?? 0,
                     info.gender === 'male' ? '男' : '女',
-                    false,
+                    Boolean(sel.isLeapMonth),
                     true
                 );
 
                 if (tempHoroscope && tempHoroscope.chineseDate) {
-                    let dayStemIndex = null;
-                    if (typeof tempHoroscope.chineseDate === 'string') {
-                        const parts = tempHoroscope.chineseDate.trim().split(/\s+/);
-                        if (parts.length >= 3) {
-                            const dayStemChar = parts[2][0];
-                            stems.daily = dayStemChar;
-                            dayStemIndex = HEAVENLY_STEMS.indexOf(dayStemChar);
-                        }
-                    } else if (tempHoroscope.chineseDate.daily) {
-                        const dayStemChar = tempHoroscope.chineseDate.daily[0];
-                        stems.daily = dayStemChar;
-                        dayStemIndex = HEAVENLY_STEMS.indexOf(dayStemChar);
-                    }
+                    const rawChineseDate = tempHoroscope.rawDates?.chineseDate;
+                    const parts = typeof tempHoroscope.chineseDate === 'string'
+                        ? tempHoroscope.chineseDate.trim().split(/\s+/)
+                        : [];
 
-                    if (dayStemIndex !== -1 && dayStemIndex !== null && sel.hour !== null) {
-                        const startStem = (dayStemIndex % 5) * 2;
-                        const hourStemIndex = (startStem + sel.hour) % 10;
-                        stems.hourly = HEAVENLY_STEMS[hourStemIndex];
+                    stems.daily = rawChineseDate?.daily?.[0] || parts[2]?.[0];
+                    if (sel.hour !== null) {
+                        stems.hourly = rawChineseDate?.hourly?.[0] || parts[3]?.[0];
                     }
                 }
             } catch (e) {
@@ -204,8 +208,9 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
     // Memoize active stems for UI rendering
     const activeStems = useMemo(() => {
+        if (currentFortuneContext) return currentFortuneContext.activeStems;
         return calculateActiveStems(selection, horoscope, basicInfo);
-    }, [horoscope, selection, basicInfo]);
+    }, [horoscope, selection, basicInfo, currentFortuneContext]);
 
     // Helper to get Si Hua for a star from active stems
     const getActiveSiHua = (starName) => {
@@ -239,22 +244,36 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     };
 
     const handleSelection = (type, value) => {
+        setCurrentFortuneContext(null);
+        const layerBySelection = {
+            daxian: 'decadal',
+            year: 'yearly',
+            month: 'monthly',
+            day: 'daily',
+            hour: 'hourly',
+        };
+        setActiveLayers(prev => ({ ...prev, [layerBySelection[type]]: true }));
         setSelection(prev => {
             const next = { ...prev };
             if (type === 'daxian') {
                 next.daxianIndex = value;
                 // Reset children
-                next.year = null; next.month = null; next.day = null; next.hour = null;
+                next.year = null; next.lunarYear = null; next.month = null; next.day = null; next.hour = null;
+                next.isLeapMonth = false; next.targetSolarDate = null;
                 // Auto-select first year of Da Xian? Or wait for user?
                 // Let's wait.
                 // Also set focusedIndex to highlight the palace
                 setFocusedIndex(value);
             } else if (type === 'year') {
                 next.year = value;
+                next.lunarYear = value;
                 next.month = null; next.day = null; next.hour = null;
+                next.isLeapMonth = false; next.targetSolarDate = null;
             } else if (type === 'month') {
-                next.month = value;
+                next.month = typeof value === 'object' ? value.month : value;
                 next.day = null; next.hour = null;
+                next.isLeapMonth = typeof value === 'object' ? Boolean(value.isLeap) : false;
+                next.targetSolarDate = null;
             } else if (type === 'day') {
                 next.day = value;
                 next.hour = null;
@@ -523,7 +542,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             } else {
                 throw new Error('Clipboard API unavailable');
             }
-        } catch (err) {
+        } catch {
             // Fallback for HTTP or Mobile restrictions
             try {
                 const textArea = document.createElement("textarea");
@@ -562,48 +581,46 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             } else if (type === 'wealth') {
                 prompt = `${WEALTH_PROMPT_TEMPLATE}\n${basicInfoData}\n${scumbagData}`;
             } else if (['yearly', 'monthly', 'daily', 'hourly'].includes(type)) {
+                const fortuneContext = buildCurrentFortuneContext({
+                    horoscope,
+                    basicInfo,
+                    type,
+                    now: new Date(),
+                });
+                const targetOrder = ['yearly', 'monthly', 'daily', 'hourly'];
+                const targetIndex = targetOrder.indexOf(type);
 
-                let currentSelection = { ...selection };
-                let currentStems = activeStems;
+                setSelection(fortuneContext.selection);
+                setCurrentFortuneContext(fortuneContext);
+                setFocusedIndex(fortuneContext.fortune[type]?.index ?? fortuneContext.fortune.decadal.index);
+                setActiveLayers({
+                    origin: true,
+                    decadal: true,
+                    yearly: true,
+                    monthly: targetIndex >= 1,
+                    daily: targetIndex >= 2,
+                    hourly: targetIndex >= 3,
+                });
 
-                // Auto-fill for Daily/Hourly if missing
-                if ((type === 'daily' && !currentSelection.day) || (type === 'hourly' && !currentSelection.hour) || (type === 'monthly' && !currentSelection.month) || (type === 'yearly' && !currentSelection.year)) {
-                    // Get current Lunar Date
-                    const now = new Date();
-                    const currentHoroscope = astro.bySolar(now.toISOString(), 0, 'male', true, 'zh-CN');
+                prompt = generateFortunePromptText(
+                    type,
+                    fortuneContext.selection,
+                    fortuneContext.activeStems,
+                    basicInfo,
+                    horoscope,
+                    palaces,
+                    SI_HUA_MAP,
+                    fortuneContext,
+                );
 
-                    if (currentHoroscope && currentHoroscope.lunarDate) {
-                        // Update selection with current time
-                        if (!currentSelection.year) currentSelection.year = currentHoroscope.lunarDate.year;
-                        if (!currentSelection.month) currentSelection.month = currentHoroscope.lunarDate.month;
-                        if (!currentSelection.day) currentSelection.day = currentHoroscope.lunarDate.day;
+                if (!prompt) throw new Error(`无法生成${FORTUNE_LAYER_LABELS[type] || '运势'}话术`);
 
-                        const hourIndex = Math.floor((now.getHours() + 1) / 2) % 12;
-                        if (currentSelection.hour === null) currentSelection.hour = hourIndex;
-
-                        // Update UI selection
-                        setSelection(currentSelection);
-
-                        // Recalculate stems for this new selection
-                        currentStems = calculateActiveStems(currentSelection, horoscope, basicInfo);
-
-                        // Also enable relevant layers
-                        setActiveLayers(prev => ({
-                            ...prev,
-                            yearly: true,
-                            monthly: ['monthly', 'daily', 'hourly'].includes(type) ? true : prev.monthly,
-                            daily: ['daily', 'hourly'].includes(type) ? true : prev.daily,
-                            hourly: type === 'hourly' ? true : prev.hourly
-                        }));
-                    }
-                }
-
-                prompt = generateFortunePromptText(type, currentSelection, currentStems, basicInfo, horoscope, palaces, SI_HUA_MAP);
-
-                if (!prompt) {
-                    alert(`请先选择${type === 'yearly' ? '流年' : type === 'monthly' ? '流月' : type === 'daily' ? '流日' : '流时'}！`);
-                    return;
-                }
+                setPromptPreview({
+                    title: `${FORTUNE_LAYER_LABELS[type]}运势话术`,
+                    text: prompt,
+                });
+                setShowAiMenu(false);
+                return;
             } else if (type.startsWith('baby_')) {
                 const babyType = type.replace('baby_', '');
                 setSelectedBabyType(babyType);
@@ -704,7 +721,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
                             <div className="flex justify-between">
                                 <span className="text-slate-500">四柱：</span>
-                                <span className="font-bold text-olive-600">{horoscope.chineseDate?.year} {horoscope.chineseDate?.month} {horoscope.chineseDate?.day} {horoscope.chineseDate?.time}</span>
+                                <span className="font-bold text-olive-600">{horoscope.chineseDate || '-'}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500">阳历：</span>
@@ -713,7 +730,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
                             <div className="flex justify-between">
                                 <span className="text-slate-500">农历：</span>
-                                <span>{horoscope.lunarDate?.year}年{horoscope.lunarDate?.month}{horoscope.lunarDate?.day}</span>
+                                <span>{horoscope.lunarDate || '-'}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500">时辰：</span>
@@ -876,13 +893,13 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                 </td>
                                 <td className="p-1">
                                     <div className="grid grid-cols-6 gap-1">
-                                        {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                                        {getLunarMonthOptions(selection.lunarYear || selection.year).map(monthOption => (
                                             <button
-                                                key={month}
-                                                className={`px - 2 py - 1 rounded whitespace - nowrap text - center ${selection.month === month ? 'bg-yellow-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
-                                                onClick={() => handleSelection('month', month)}
+                                                key={`${monthOption.month}-${monthOption.isLeap ? 'leap' : 'regular'}`}
+                                                className={`px-2 py-1 rounded whitespace-nowrap text-center ${selection.month === monthOption.month && selection.isLeapMonth === monthOption.isLeap ? 'bg-yellow-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
+                                                onClick={() => handleSelection('month', monthOption)}
                                             >
-                                                {month}月
+                                                {monthOption.label}
                                             </button>
                                         ))}
                                     </div>
@@ -897,12 +914,15 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                 <td className="p-1">
                                     <div className="grid grid-cols-7 gap-1">
                                         {(() => {
-                                            // Dynamic days based on year and month
-                                            const daysInMonth = new Date(selection.year, selection.month, 0).getDate();
+                                            const daysInMonth = getLunarMonthDays(
+                                                selection.lunarYear || selection.year,
+                                                selection.month,
+                                                selection.isLeapMonth,
+                                            );
                                             return Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
                                                 <button
                                                     key={day}
-                                                    className={`px - 1 py - 1 rounded whitespace - nowrap text - center text - [10px] ${selection.day === day ? 'bg-purple-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
+                                                    className={`px-1 py-1 rounded whitespace-nowrap text-center text-[10px] ${selection.day === day ? 'bg-purple-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
                                                     onClick={() => handleSelection('day', day)}
                                                 >
                                                     {day}
@@ -920,14 +940,14 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                 <td className="bg-gray-100 font-bold p-1 border-r">流时</td>
                                 <td className="p-1">
                                     <div className="flex gap-1 overflow-x-auto">
-                                        {EARTHLY_BRANCHES.map((branch, idx) => (
+                                        {FORTUNE_HOUR_OPTIONS.map((hourOption) => (
                                             <button
-                                                key={branch}
-                                                className={`px - 2 py - 1 rounded whitespace - nowrap flex flex - col items - center ${selection.hour === idx ? 'bg-cyan-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
-                                                onClick={() => handleSelection('hour', idx)}
+                                                key={hourOption.index}
+                                                className={`px-2 py-1 rounded whitespace-nowrap flex flex-col items-center ${selection.hour === hourOption.index ? 'bg-cyan-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
+                                                onClick={() => handleSelection('hour', hourOption.index)}
                                             >
-                                                <span>{branch}时</span>
-                                                <span className="text-[9px] opacity-80">{TIME_RANGES[idx]}</span>
+                                                <span>{hourOption.name}</span>
+                                                <span className="text-[9px] opacity-80">{hourOption.range}</span>
                                             </button>
                                         ))}
                                     </div>
@@ -1063,6 +1083,49 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                 </button>
                             </>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* Generated fortune prompt preview */}
+            {promptPreview && (
+                <div className="fixed inset-0 z-[90] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 md:p-6">
+                    <div className="w-full max-w-3xl max-h-[88vh] bg-stone-50 text-slate-900 rounded-2xl shadow-2xl border border-purple-300 flex flex-col overflow-hidden">
+                        <div className="px-4 py-3 md:px-6 md:py-4 bg-gradient-to-r from-purple-700 to-cyan-700 text-white flex items-center justify-between gap-3">
+                            <div>
+                                <h3 className="font-bold text-lg">{promptPreview.title}</h3>
+                                <p className="text-xs text-white/80">已自动带入当前大限与对应运限盘</p>
+                            </div>
+                            <button
+                                onClick={() => setPromptPreview(null)}
+                                className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-xl leading-none"
+                                aria-label="关闭话术预览"
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        <textarea
+                            readOnly
+                            value={promptPreview.text}
+                            className="flex-1 min-h-[52vh] p-4 md:p-6 bg-stone-50 text-slate-800 text-sm leading-relaxed font-mono resize-none outline-none"
+                            aria-label="运势分析话术"
+                        />
+
+                        <div className="p-3 md:p-4 border-t border-stone-200 bg-white flex gap-3 justify-end">
+                            <button
+                                onClick={() => setPromptPreview(null)}
+                                className="px-4 py-2 rounded-lg border border-stone-300 text-stone-600 hover:bg-stone-100"
+                            >
+                                关闭
+                            </button>
+                            <button
+                                onClick={() => copyToClipboard(promptPreview.text)}
+                                className="px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold shadow hover:opacity-90"
+                            >
+                                复制完整话术
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
