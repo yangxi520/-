@@ -13,6 +13,148 @@ const VideoLessons = lazy(() => import("./components/VideoLessons"));
 const EnglishLearning = lazy(() => import("./components/EnglishLearning"));
 const BaziDivination = lazy(() => import("./components/BaziDivination"));
 
+const FORTUNE_KEYWORDS_BY_PALACE = Object.freeze({
+  '命宫': ['定心', '取舍', '自省'],
+  '兄弟': ['协作', '边界', '互助'],
+  '夫妻': ['沟通', '倾听', '坦诚'],
+  '子女': ['创造', '陪伴', '耐心'],
+  '财帛': ['盘点', '节制', '价值'],
+  '疾厄': ['休息', '节律', '照顾'],
+  '迁移': ['准备', '应变', '探索'],
+  '仆役': ['协同', '边界', '信任'],
+  '官禄': ['专注', '交付', '担当'],
+  '田宅': ['安顿', '整理', '长期'],
+  '福德': ['静心', '恢复', '觉察'],
+  '父母': ['确认', '尊重', '留痕'],
+});
+
+const FORTUNE_DIMENSION_META = Object.freeze([
+  Object.freeze({ key: 'career', label: '事业', seal: '业', fallback: '排清轻重缓急，先完成最能推动局面的一项。' }),
+  Object.freeze({ key: 'finance', label: '财务', seal: '财', fallback: '重要收支先核对信息，避免因一时情绪作决定。' }),
+  Object.freeze({ key: 'relationships', label: '关系', seal: '缘', fallback: '重要表达先讲事实，再说感受与真实需要。' }),
+  Object.freeze({ key: 'wellbeing', label: '身心', seal: '身', fallback: '给精力留出余量，照顾作息、饮食与恢复。' }),
+]);
+
+const PALACE_DIMENSION = Object.freeze({
+  '官禄': 'career',
+  '迁移': 'career',
+  '财帛': 'finance',
+  '田宅': 'finance',
+  '兄弟': 'relationships',
+  '夫妻': 'relationships',
+  '子女': 'relationships',
+  '仆役': 'relationships',
+  '父母': 'relationships',
+  '命宫': 'wellbeing',
+  '疾厄': 'wellbeing',
+  '福德': 'wellbeing',
+});
+
+const cleanText = (value) => (typeof value === 'string' ? value.trim() : '');
+
+const isHomeFortuneRecordReady = (record) => {
+  if (!record || record.type !== 'ziwei') return false;
+  if (!['male', 'female'].includes(record.gender)) return false;
+
+  const timeHour = Number(record.timeHour);
+  if (record.timeHour == null || record.timeHour === '' || !Number.isInteger(timeHour) || timeHour < 0 || timeHour > 12) {
+    return false;
+  }
+
+  const birthDate = cleanText(
+    record.birthDate
+      || record.solarDate
+      || record.data?.birthDate
+      || record.data?.solarDate,
+  );
+  if (!birthDate) return false;
+
+  return ['solar', 'lunar'].includes(record.calendarType)
+    || (!record.calendarType && Boolean(record.solarDate || record.data?.solarDate));
+};
+
+const getFortuneKeywords = (fortune) => {
+  const provided = Array.isArray(fortune?.keywords)
+    ? fortune.keywords.map(cleanText).filter(Boolean)
+    : [];
+  const defaults = FORTUNE_KEYWORDS_BY_PALACE[fortune?.palaceName] || ['观察', '整理', '稳步'];
+  return [...new Set([...provided, ...defaults])].slice(0, 3);
+};
+
+const getDimensionText = (fortune, key, fallback, isFocus) => {
+  const contractDimension = Array.isArray(fortune?.lifeDimensions)
+    ? fortune.lifeDimensions.find((item) => item?.key === key)
+    : null;
+  const source = contractDimension?.prompt
+    ?? contractDimension?.summary
+    ?? fortune?.dimensions?.[key]
+    ?? fortune?.dimensionSummaries?.[key];
+  if (typeof source === 'string' && source.trim()) return source.trim();
+  if (source && typeof source === 'object') {
+    const objectText = cleanText(source.summary) || cleanText(source.text) || cleanText(source.guidance);
+    if (objectText) return objectText;
+  }
+  return isFocus && cleanText(fortune?.action) ? fortune.action.trim() : fallback;
+};
+
+const getFortuneDimensions = (fortune) => {
+  const focusKey = PALACE_DIMENSION[fortune?.palaceName] || '';
+  return FORTUNE_DIMENSION_META.map((item) => {
+    const contractDimension = Array.isArray(fortune?.lifeDimensions)
+      ? fortune.lifeDimensions.find((dimension) => dimension?.key === item.key)
+      : null;
+    const isFocus = contractDimension
+      ? Boolean(contractDimension.isFocus)
+      : focusKey === item.key;
+    return {
+      ...item,
+      label: cleanText(contractDimension?.label) || item.label,
+      isFocus,
+      text: getDimensionText(fortune, item.key, item.fallback, isFocus),
+    };
+  });
+};
+
+const getCustomEvidence = (fortune) => {
+  if (!Array.isArray(fortune?.evidence)) return [];
+  return fortune.evidence.map((item, index) => {
+    if (typeof item === 'string') return { label: `补充依据 ${index + 1}`, value: item.trim() };
+    if (!item || typeof item !== 'object') return null;
+    return {
+      label: cleanText(item.label) || cleanText(item.title) || `补充依据 ${index + 1}`,
+      value: cleanText(item.value) || cleanText(item.text) || cleanText(item.description),
+      source: cleanText(item.source),
+    };
+  }).filter((item) => item?.value);
+};
+
+const copyPlainText = async (text) => {
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(text);
+      return;
+    } catch {
+      // Some browsers expose Clipboard API but reject it outside a secure
+      // context. Continue with the compatibility fallback below.
+    }
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.opacity = '0';
+  document.body.appendChild(textarea);
+  textarea.select();
+  let copied = false;
+  try {
+    copied = document.execCommand('copy');
+  } finally {
+    textarea.remove();
+  }
+  if (!copied) throw new Error('copy unavailable');
+};
+
 const getTimeDescription = (time) => {
   const timeMap = {
     0: "早子时 (00:00-01:00)",
@@ -46,6 +188,8 @@ export default function App() {
   const [homeProfileId, setHomeProfileId] = useState(null);
   const [homePeriod, setHomePeriod] = useState('daily');
   const [homeNow, setHomeNow] = useState(() => new Date());
+  const [homeShareNotice, setHomeShareNotice] = useState(null);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   // Archive Save Modal State
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -54,6 +198,8 @@ export default function App() {
   const [archiveNotice, setArchiveNotice] = useState(null);
   const saveDialogRef = React.useRef(null);
   const saveOpenerRef = React.useRef(null);
+  const moreDialogRef = React.useRef(null);
+  const moreOpenerRef = React.useRef(null);
 
   React.useEffect(() => {
     const handler = (e) => {
@@ -87,11 +233,18 @@ export default function App() {
       if (event.key !== 'Escape') return;
       if (showInstallModal) setShowInstallModal(false);
       if (isSaveModalOpen) setIsSaveModalOpen(false);
+      if (isMoreOpen) setIsMoreOpen(false);
     };
 
     window.addEventListener('keydown', handleEscape);
     return () => window.removeEventListener('keydown', handleEscape);
-  }, [showInstallModal, isSaveModalOpen]);
+  }, [showInstallModal, isSaveModalOpen, isMoreOpen]);
+
+  React.useEffect(() => {
+    if (!homeShareNotice) return undefined;
+    const timer = window.setTimeout(() => setHomeShareNotice(null), 4200);
+    return () => window.clearTimeout(timer);
+  }, [homeShareNotice]);
 
   React.useEffect(() => {
     if (!archiveNotice || archiveNotice.type === 'error') return undefined;
@@ -133,6 +286,41 @@ export default function App() {
       opener?.focus?.();
     };
   }, [isSaveModalOpen]);
+
+  React.useEffect(() => {
+    if (!isMoreOpen || !moreDialogRef.current) return undefined;
+    const dialog = moreDialogRef.current;
+    const opener = moreOpenerRef.current;
+    const focusableSelector = 'button:not([disabled]), [href], [tabindex]:not([tabindex="-1"])';
+    const getFocusableItems = () => Array.from(dialog.querySelectorAll(focusableSelector));
+    const focusFrame = window.requestAnimationFrame(() => {
+      getFocusableItems()[0]?.focus();
+    });
+
+    const trapFocus = (event) => {
+      if (event.key !== 'Tab') return;
+      const items = getFocusableItems();
+      if (!items.length) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    dialog.addEventListener('keydown', trapFocus);
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      dialog.removeEventListener('keydown', trapFocus);
+      opener?.focus?.();
+    };
+  }, [isMoreOpen]);
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -250,16 +438,28 @@ export default function App() {
     [archiveRecords],
   );
 
+  const homeReadyRecords = React.useMemo(
+    () => ziweiRecords.filter(isHomeFortuneRecordReady),
+    [ziweiRecords],
+  );
+
   const homeProfile = React.useMemo(() => {
-    const selected = ziweiRecords.find((record) => record.id === homeProfileId);
+    const selected = homeReadyRecords.find((record) => record.id === homeProfileId);
     return selected
-      || ziweiRecords.find((record) => record.group === 'self')
-      || ziweiRecords[0]
+      || homeReadyRecords.find((record) => record.group === 'self')
+      || homeReadyRecords[0]
       || null;
-  }, [homeProfileId, ziweiRecords]);
+  }, [homeProfileId, homeReadyRecords]);
 
   const homeFortuneState = React.useMemo(() => {
-    if (!homeProfile) return { data: null, error: null };
+    if (!homeProfile) {
+      return {
+        data: null,
+        error: ziweiRecords.length > 0
+          ? '现有紫微档案缺少历法、性别或时辰，请前往档案页检查。'
+          : null,
+      };
+    }
 
     try {
       return {
@@ -273,14 +473,116 @@ export default function App() {
         error: error instanceof Error ? error.message : '当前档案无法生成运势简报',
       };
     }
-  }, [homeNow, homePeriod, homeProfile]);
+  }, [homeNow, homePeriod, homeProfile, ziweiRecords.length]);
 
   const homeFortune = homeFortuneState.data;
 
+  const homeKeywords = React.useMemo(
+    () => getFortuneKeywords(homeFortune),
+    [homeFortune],
+  );
+
+  const homeDimensions = React.useMemo(
+    () => getFortuneDimensions(homeFortune),
+    [homeFortune],
+  );
+
+  const homeEvidence = React.useMemo(() => {
+    if (!homeFortune) return [];
+    const contractEvidence = getCustomEvidence(homeFortune);
+    if (contractEvidence.length) return contractEvidence;
+
+    const evidence = [];
+    if (homeFortune.palaceName) {
+      evidence.push({
+        label: '运限落宫',
+        value: `${homeFortune.palaceName}${homeFortune.palaceBranch ? ` · ${homeFortune.palaceBranch}` : ''}`,
+      });
+    }
+    if (homeFortune.decadalPalaceName) {
+      evidence.push({
+        label: '大限背景',
+        value: `${homeFortune.decadalPalaceName}${homeFortune.nominalAge ? ` · 虚岁${homeFortune.nominalAge}` : ''}`,
+      });
+    }
+    if (Array.isArray(homeFortune.mutagens) && homeFortune.mutagens.length) {
+      evidence.push({
+        label: '当前四化',
+        value: homeFortune.mutagens.map((item) => `${item.label}${item.star}`).join(' · '),
+      });
+    }
+    if (Array.isArray(homeFortune.movingStars) && homeFortune.movingStars.length) {
+      evidence.push({ label: '当前流耀', value: homeFortune.movingStars.join(' · ') });
+    }
+    return evidence;
+  }, [homeFortune]);
+
+  const handleShareFortune = async () => {
+    if (!homeFortune) return;
+
+    const fallbackText = [
+      `古书派 · ${homeFortune.periodLabel}`,
+      `${homeFortune.dateLabel} · ${homeFortune.stemBranch}`,
+      `关键词：${homeKeywords.join(' · ')}`,
+      `宜：${homeFortune.action}`,
+      `慎：${homeFortune.caution}`,
+      '仅供传统文化研究与自我观察。',
+    ].join('\n');
+    const shareText = cleanText(homeFortune.privacySafeShareText) || fallbackText;
+    const cleanUrl = new URL(window.location.href);
+    cleanUrl.search = '';
+    cleanUrl.hash = '';
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `古书派 · ${homeFortune.periodLabel}`,
+          text: shareText,
+          url: cleanUrl.toString(),
+        });
+        setHomeShareNotice({ type: 'success', message: '已完成分享，内容不含姓名与出生资料' });
+        return;
+      } catch (error) {
+        if (error?.name === 'AbortError') return;
+      }
+    }
+
+    try {
+      await copyPlainText(`${shareText}\n${cleanUrl}`);
+      setHomeShareNotice({ type: 'success', message: '已复制隐私版摘要，不含姓名与出生资料' });
+    } catch {
+      setHomeShareNotice({ type: 'error', message: '暂时无法分享，请稍后再试' });
+    }
+  };
+
+  const handleForceUpdate = async () => {
+    if (!window.confirm('确定要清除所有缓存并强制更新吗？')) return;
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.unregister()));
+      }
+      if ('caches' in window) {
+        const cacheNames = await window.caches.keys();
+        await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)));
+      }
+    } finally {
+      const refreshUrl = new URL(window.location.href);
+      refreshUrl.searchParams.set('refresh', Date.now().toString());
+      window.location.replace(refreshUrl.toString());
+    }
+  };
+
+  const navigateFromMobile = (nextView) => {
+    setIsMoreOpen(false);
+    setView(nextView);
+  };
+
+  const showsMobileNav = ['home', 'input', 'archive'].includes(view);
   const usesOwnHeader = ['money', 'bazi', 'archive', 'videos', 'english'].includes(view);
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${showsMobileNav ? 'app-shell--mobile-nav' : ''}`}>
       <div className="app-ambient" aria-hidden="true"></div>
 
       {/* Header */}
@@ -338,36 +640,33 @@ export default function App() {
         {view === 'home' ? (
           // --- HOME PORTAL VIEW ---
           <div className="home-page animate-in fade-in duration-500">
-            <div className="home-overview">
-              <section className="home-hero" aria-labelledby="home-title">
-                <p className="section-kicker">古法为体 · 数理为用</p>
-                <h2 id="home-title" className="home-title">
-                  以星曜为镜，<em>观人生脉络</em>
-                </h2>
-                <p className="home-subtitle">
-                  从一张命盘开始，查看本命格局、大限与流年。传统术数，用更清晰的方式呈现。
-                </p>
-                <div className="home-assurances" aria-label="产品特点">
-                  <span className="assurance-chip">专业命盘</span>
-                  <span className="assurance-chip">运限推演</span>
-                  <span className="assurance-chip">AI 辅助解读</span>
-                </div>
-              </section>
-
-              <section className={`fortune-brief ${homeFortune ? '' : 'fortune-brief--empty'}`} aria-labelledby="fortune-brief-title">
+            <div className={`home-overview ${homeFortune ? 'home-overview--personalized' : 'home-overview--empty'}`}>
+              <section className={`fortune-brief ${homeFortune ? 'fortune-brief--personalized' : 'fortune-brief--empty'}`} aria-labelledby="fortune-brief-title">
                 <header className="fortune-brief-header">
                   <div>
                     <p className="fortune-brief-eyebrow">私人运势简报</p>
                     <h3 id="fortune-brief-title">{homeFortune ? `${homeFortune.profileName}的${homeFortune.periodLabel}` : '每天打开，就有当下重点'}</h3>
                   </div>
-                  <span className="fortune-brief-seal" aria-hidden="true">今</span>
+                  <div className="fortune-header-actions">
+                    {homeFortune && (
+                      <button
+                        type="button"
+                        className="fortune-share-button"
+                        onClick={handleShareFortune}
+                        aria-describedby="fortune-share-privacy"
+                      >
+                        <span aria-hidden="true">↗</span> 分享
+                      </button>
+                    )}
+                    <span className="fortune-brief-seal" aria-hidden="true">今</span>
+                  </div>
                 </header>
 
                 {homeFortune ? (
                   <>
-                    {ziweiRecords.length > 1 && (
+                    {homeReadyRecords.length > 1 && (
                       <div className="fortune-profiles" aria-label="切换命盘档案">
-                        {ziweiRecords.slice(0, 5).map((record) => (
+                        {homeReadyRecords.slice(0, 5).map((record) => (
                           <button
                             key={record.id}
                             type="button"
@@ -399,40 +698,63 @@ export default function App() {
                       <strong>{homeFortune.stemBranch}</strong>
                     </div>
 
+                    <div className="fortune-keywords" aria-label="运势关键词">
+                      {homeKeywords.map((keyword, index) => (
+                        <span key={keyword}><b>{index + 1}</b>{keyword}</span>
+                      ))}
+                    </div>
+
                     <p className="fortune-summary">{homeFortune.summary}</p>
 
-                    <dl className="fortune-facts">
-                      <div>
-                        <dt>运限命宫</dt>
-                        <dd>{homeFortune.palaceName}{homeFortune.palaceBranch ? ` · ${homeFortune.palaceBranch}` : ''}</dd>
-                      </div>
-                      <div>
-                        <dt>当前大限</dt>
-                        <dd>{homeFortune.decadalPalaceName || '—'}{homeFortune.nominalAge ? ` · 虚岁${homeFortune.nominalAge}` : ''}</dd>
-                      </div>
-                    </dl>
+                    <div className="fortune-dimensions" aria-label="事业、财务、关系与身心提示">
+                      {homeDimensions.map((dimension) => (
+                        <article
+                          key={dimension.key}
+                          className={`fortune-dimension ${dimension.isFocus ? 'fortune-dimension--focus' : ''}`}
+                        >
+                          <span className="fortune-dimension-seal" aria-hidden="true">{dimension.seal}</span>
+                          <div>
+                            <h4>{dimension.label}{dimension.isFocus && <small>当下重点</small>}</h4>
+                            <p>{dimension.text}</p>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
 
                     <div className="fortune-guidance" aria-label="当下参考">
                       <p><span>宜</span>{homeFortune.action}</p>
                       <p><span>慎</span>{homeFortune.caution}</p>
                     </div>
 
-                    <div className="fortune-mutagens" aria-label="当前四化">
-                      {homeFortune.mutagens.map((item) => (
-                        <span key={item.label} data-kind={item.label}>
-                          <b>{item.label}</b>{item.star}
-                        </span>
-                      ))}
-                    </div>
-
-                    {homeFortune.movingStars.length > 0 && (
-                      <p className="fortune-moving-stars">流耀：{homeFortune.movingStars.join(' · ')}</p>
+                    {homeEvidence.length > 0 && (
+                      <details className="fortune-evidence">
+                        <summary>
+                          <span>为什么这样判断</span>
+                          <span className="fortune-evidence-toggle" aria-hidden="true">⌄</span>
+                        </summary>
+                        <div className="fortune-evidence-body">
+                          <dl>
+                            {homeEvidence.map((item, index) => (
+                              <div key={`${item.label}-${index}`}>
+                                <dt>{item.label}</dt>
+                                <dd>{item.value}</dd>
+                              </div>
+                            ))}
+                          </dl>
+                          {homeFortune.dayBoundaryNote && <p className="fortune-boundary-note">{homeFortune.dayBoundaryNote}</p>}
+                        </div>
+                      </details>
                     )}
-                    {homeFortune.dayBoundaryNote && <p className="fortune-boundary-note">{homeFortune.dayBoundaryNote}</p>}
 
                     <button type="button" className="fortune-open-chart" onClick={() => handleLoadRecord(homeProfile)}>
                       查看完整命盘与专业依据 <span aria-hidden="true">→</span>
                     </button>
+                    {homeShareNotice && (
+                      <p className={`fortune-share-notice fortune-share-notice--${homeShareNotice.type}`} role={homeShareNotice.type === 'error' ? 'alert' : 'status'}>
+                        {homeShareNotice.message}
+                      </p>
+                    )}
+                    <p id="fortune-share-privacy" className="fortune-share-privacy">分享默认隐藏姓名、生辰、档案备注等私人资料。</p>
                     <p className="fortune-disclaimer">按当前设备时间自动排盘，仅供传统文化研究；具体判断需结合本命与三方四正。</p>
                   </>
                 ) : (
@@ -444,6 +766,23 @@ export default function App() {
                     <span>出生资料只保存在当前设备</span>
                   </div>
                 )}
+              </section>
+
+              <section className={`home-hero ${homeFortune ? 'home-hero--personalized' : ''}`} aria-labelledby="home-title">
+                <p className="section-kicker">{homeFortune ? '每日一看 · 把握当下' : '古法为体 · 数理为用'}</p>
+                <h2 id="home-title" className="home-title">
+                  {homeFortune ? <>从当下入手，<em>再观人生全局</em></> : <>以星曜为镜，<em>观人生脉络</em></>}
+                </h2>
+                <p className="home-subtitle">
+                  {homeFortune
+                    ? '先用三十秒看懂今天的重点，需要时再展开命盘依据。少一点术语堆叠，多一点可以落实的提示。'
+                    : '从一张命盘开始，查看本命格局、大限与流年。传统术数，用更清晰的方式呈现。'}
+                </p>
+                <div className="home-assurances" aria-label="产品特点">
+                  <span className="assurance-chip">{homeFortune ? '三十秒简报' : '专业命盘'}</span>
+                  <span className="assurance-chip">{homeFortune ? '四维提示' : '运限推演'}</span>
+                  <span className="assurance-chip">{homeFortune ? '依据可展开' : '命理话术'}</span>
+                </div>
               </section>
             </div>
 
@@ -458,7 +797,7 @@ export default function App() {
                   <p className="card-overline">主入口 · 紫微斗数</p>
                   <h3 className="primary-card-title">紫微斗数专业排盘</h3>
                   <p className="primary-card-description">
-                    输入出生年月日与时辰，生成十二宫命盘；继续查看大限、流年、流月、流日与 AI 解读。
+                    输入出生年月日与时辰，生成十二宫命盘；继续查看大限、流年、流月、流日与分析话术。
                   </p>
                   <ul className="primary-card-features" aria-hidden="true">
                     <li>本命十二宫</li>
@@ -514,12 +853,7 @@ export default function App() {
               </button>
             </section>
 
-            <div className="section-heading">
-              <h3>我的内容</h3>
-              <p>档案与学习功能</p>
-            </div>
-
-            <nav className="quiet-links" aria-label="档案与学习">
+            <nav className="quiet-links quiet-links--archive" aria-label="命盘档案">
               <button type="button" onClick={() => setView('archive')} className="quiet-link">
                 <span className="quiet-link-icon" aria-hidden="true">册</span>
                 <span className="quiet-link-copy">
@@ -528,46 +862,13 @@ export default function App() {
                 </span>
                 <span className="quiet-link-arrow" aria-hidden="true">›</span>
               </button>
-              <button type="button" onClick={() => setView('videos')} className="quiet-link">
-                <span className="quiet-link-icon" aria-hidden="true">学</span>
-                <span className="quiet-link-copy">
-                  <span className="quiet-link-title">紫微课程</span>
-                  <span className="quiet-link-caption">从基础概念到实盘解析</span>
-                </span>
-                <span className="quiet-link-arrow" aria-hidden="true">›</span>
-              </button>
-              <button type="button" onClick={() => setView('english')} className="quiet-link">
-                <span className="quiet-link-icon" aria-hidden="true">EN</span>
-                <span className="quiet-link-copy">
-                  <span className="quiet-link-title">英语学习</span>
-                  <span className="quiet-link-caption">发音评估与智能对话</span>
-                </span>
-                <span className="quiet-link-arrow" aria-hidden="true">›</span>
-              </button>
             </nav>
 
             <footer className="home-footer">
-              <p>v2026.08.23.Archive-UI</p>
+              <p>v2026.08.23.Today-UI</p>
               <button
                 type="button"
-                onClick={async () => {
-                  if (window.confirm('确定要清除所有缓存并强制更新吗？')) {
-                    try {
-                      if ('serviceWorker' in navigator) {
-                        const registrations = await navigator.serviceWorker.getRegistrations();
-                        await Promise.all(registrations.map((registration) => registration.unregister()));
-                      }
-                      if ('caches' in window) {
-                        const cacheNames = await window.caches.keys();
-                        await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)));
-                      }
-                    } finally {
-                      const refreshUrl = new URL(window.location.href);
-                      refreshUrl.searchParams.set('refresh', Date.now().toString());
-                      window.location.replace(refreshUrl.toString());
-                    }
-                  }
-                }}
+                onClick={handleForceUpdate}
                 className="force-update-button"
               >
                 页面显示异常？清除缓存并更新
@@ -781,6 +1082,113 @@ export default function App() {
         )}
       </main>
 
+      {showsMobileNav && <nav className="mobile-bottom-nav print:hidden" aria-label="手机主导航">
+        <button
+          type="button"
+          className={view === 'home' ? 'mobile-nav-item mobile-nav-item--active' : 'mobile-nav-item'}
+          aria-current={view === 'home' ? 'page' : undefined}
+          onClick={() => navigateFromMobile('home')}
+        >
+          <span className="mobile-nav-glyph" aria-hidden="true">日</span>
+          <span>今日</span>
+        </button>
+        <button
+          type="button"
+          className={['input', 'chart'].includes(view) ? 'mobile-nav-item mobile-nav-item--active' : 'mobile-nav-item'}
+          aria-current={['input', 'chart'].includes(view) ? 'page' : undefined}
+          onClick={() => navigateFromMobile('input')}
+        >
+          <span className="mobile-nav-glyph" aria-hidden="true">紫</span>
+          <span>紫微</span>
+        </button>
+        <button
+          type="button"
+          className={view === 'bazi' ? 'mobile-nav-item mobile-nav-item--active' : 'mobile-nav-item'}
+          aria-current={view === 'bazi' ? 'page' : undefined}
+          onClick={() => navigateFromMobile('bazi')}
+        >
+          <span className="mobile-nav-glyph" aria-hidden="true">八</span>
+          <span>八字</span>
+        </button>
+        <button
+          type="button"
+          className={view === 'archive' ? 'mobile-nav-item mobile-nav-item--active' : 'mobile-nav-item'}
+          aria-current={view === 'archive' ? 'page' : undefined}
+          onClick={() => navigateFromMobile('archive')}
+        >
+          <span className="mobile-nav-glyph" aria-hidden="true">册</span>
+          <span>档案</span>
+        </button>
+        <button
+          ref={moreOpenerRef}
+          type="button"
+          className={isMoreOpen || ['money', 'videos', 'english'].includes(view) ? 'mobile-nav-item mobile-nav-item--active' : 'mobile-nav-item'}
+          aria-haspopup="dialog"
+          aria-expanded={isMoreOpen}
+          onClick={() => setIsMoreOpen((isOpen) => !isOpen)}
+        >
+          <span className="mobile-nav-glyph" aria-hidden="true">···</span>
+          <span>更多</span>
+        </button>
+      </nav>}
+
+      {showsMobileNav && isMoreOpen && (
+        <div
+          className="mobile-more-overlay print:hidden"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setIsMoreOpen(false);
+          }}
+        >
+          <section
+            ref={moreDialogRef}
+            className="mobile-more-sheet"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-more-title"
+          >
+            <header className="mobile-more-header">
+              <div>
+                <p>古书派工具箱</p>
+                <h2 id="mobile-more-title">更多功能</h2>
+              </div>
+              <button type="button" onClick={() => setIsMoreOpen(false)} aria-label="关闭更多功能">✕</button>
+            </header>
+
+            <div className="mobile-more-grid">
+              <button type="button" className="mobile-more-card" onClick={() => navigateFromMobile('money')}>
+                <span className="mobile-more-seal" aria-hidden="true">卦</span>
+                <span><b>金钱卦</b><small>一事一问，即时起卦</small></span>
+                <i aria-hidden="true">›</i>
+              </button>
+              <button
+                type="button"
+                className="mobile-more-card"
+                onClick={() => {
+                  setIsMoreOpen(false);
+                  handleInstallClick();
+                }}
+              >
+                <span className="mobile-more-seal mobile-more-seal--jade" aria-hidden="true">＋</span>
+                <span><b>添加到主屏幕</b><small>像 App 一样快速打开</small></span>
+                <i aria-hidden="true">›</i>
+              </button>
+              <div className="mobile-more-card mobile-more-card--disabled" aria-label="紫微课程正在筹备中">
+                <span className="mobile-more-seal" aria-hidden="true">学</span>
+                <span><b>紫微课程 <em>筹备中</em></b><small>完成内容校对后开放</small></span>
+              </div>
+              <button type="button" className="mobile-more-card" onClick={handleForceUpdate}>
+                <span className="mobile-more-seal mobile-more-seal--jade" aria-hidden="true">新</span>
+                <span><b>检查页面更新</b><small>显示异常时清除旧缓存</small></span>
+                <i aria-hidden="true">›</i>
+              </button>
+            </div>
+
+            <p className="mobile-more-privacy">命盘档案保存在当前设备；分享运势时默认隐藏姓名、生辰与档案备注。</p>
+            <p className="mobile-more-version">v2026.08.23.Today-UI</p>
+          </section>
+        </div>
+      )}
+
       {/* Save Modal */}
       {isSaveModalOpen && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 safe-modal-padding">
@@ -927,7 +1335,7 @@ export default function App() {
       )}
 
       {archiveNotice && (
-        <div className="fixed inset-x-3 z-[240] flex justify-center print:hidden" style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }} role={archiveNotice.type === 'error' ? 'alert' : 'status'} aria-live="polite">
+        <div className="archive-notice fixed inset-x-3 z-[240] flex justify-center print:hidden" style={{ bottom: 'max(1rem, env(safe-area-inset-bottom))' }} role={archiveNotice.type === 'error' ? 'alert' : 'status'} aria-live="polite">
           <div className={`flex min-h-12 max-w-xl items-center gap-2 rounded-2xl border pl-4 pr-1 py-1 text-sm font-bold text-white shadow-2xl backdrop-blur ${archiveNotice.type === 'error' ? 'border-[#d1847b]/60 bg-[#6f2520]/95' : 'border-[#78a69f]/50 bg-[#163d38]/95'}`}>
             {archiveNotice.type === 'error'
               ? <AlertCircle className="size-5 text-[#f0b5ae]" aria-hidden="true" />

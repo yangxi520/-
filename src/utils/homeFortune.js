@@ -15,6 +15,50 @@ export const HOME_FORTUNE_PERIODS = Object.freeze([
 const PERIOD_META = new Map(HOME_FORTUNE_PERIODS.map((item) => [item.key, item]));
 const MUTAGEN_LABELS = ['禄', '权', '科', '忌'];
 
+const PALACE_KEYWORDS = {
+  命宫: ['自我整理', '节奏优先', '审慎选择'],
+  兄弟: ['协作', '边界', '坦诚沟通'],
+  夫妻: ['关系经营', '倾听', '共同决定'],
+  子女: ['创造', '表达', '耐心培育'],
+  财帛: ['资源盘点', '量力而行', '长期价值'],
+  疾厄: ['身心节奏', '温和照顾', '适度休息'],
+  迁移: ['环境适应', '提前准备', '保留弹性'],
+  仆役: ['团队协作', '明确分工', '守住边界'],
+  官禄: ['聚焦工作', '责任排序', '稳步推进'],
+  田宅: ['安定基础', '整理空间', '家庭沟通'],
+  福德: ['内在整理', '恢复精力', '活在当下'],
+  父母: ['核对信息', '尊重沟通', '留存资料'],
+};
+
+const DEFAULT_KEYWORDS = ['观察变化', '整理重点', '稳步行动'];
+
+const DIMENSION_DEFINITIONS = Object.freeze([
+  Object.freeze({
+    key: 'career',
+    label: '事业',
+    focusPalaces: Object.freeze(['官禄', '迁移', '仆役', '兄弟']),
+    prompt: '先明确一项可验证的重点任务，重要协作把分工与期限说清楚。',
+  }),
+  Object.freeze({
+    key: 'finance',
+    label: '财务',
+    focusPalaces: Object.freeze(['财帛', '田宅']),
+    prompt: '先核对可用资源与必要支出，重大安排以预算和完整信息为准。',
+  }),
+  Object.freeze({
+    key: 'relationships',
+    label: '关系',
+    focusPalaces: Object.freeze(['夫妻', '兄弟', '仆役', '父母', '子女']),
+    prompt: '用具体事实表达需要，也给对方完整回应的空间，避免仓促推测动机。',
+  }),
+  Object.freeze({
+    key: 'wellbeing',
+    label: '身心',
+    focusPalaces: Object.freeze(['命宫', '疾厄', '福德']),
+    prompt: '保留休息、饮食和活动的基本节奏；持续不适时请咨询专业人士。',
+  }),
+]);
+
 const PALACE_GUIDANCE = {
   命宫: {
     summary: '把注意力放回自身状态、节奏与当前最重要的选择。',
@@ -142,13 +186,21 @@ const validateRecord = (record) => {
     throw new Error('档案性别无效：只支持 male 或 female');
   }
 
-  const rawTimeHour = record.timeHour ?? 0;
+  if (record.timeHour == null || record.timeHour === '') {
+    throw new Error('档案缺少出生时辰');
+  }
+  const rawTimeHour = record.timeHour;
   const timeHour = Number(rawTimeHour);
   if (!Number.isInteger(timeHour) || timeHour < 0 || timeHour > 12) {
     throw new Error('档案出生时辰无效：timeHour 必须为 0 至 12 的整数');
   }
 
-  const parsedDate = parseBirthDate(record.birthDate || record.solarDate);
+  const parsedDate = parseBirthDate(
+    record.birthDate
+      || record.solarDate
+      || record.data?.birthDate
+      || record.data?.solarDate,
+  );
   if (calendarType === 'solar') assertSolarDate(parsedDate);
 
   return {
@@ -223,6 +275,74 @@ const getPalaceAt = (horoscope, index, scopeLabel) => {
   return horoscope.palaces[index];
 };
 
+const getStemBranch = (scope) => (
+  `${scope?.heavenlyStem || '干'}${scope?.earthlyBranch || '支'}`
+);
+
+const buildLifeDimensions = (palaceName) => DIMENSION_DEFINITIONS.map((dimension) => ({
+  key: dimension.key,
+  label: dimension.label,
+  isFocus: dimension.focusPalaces.includes(palaceName),
+  prompt: dimension.prompt,
+}));
+
+const buildEvidence = ({
+  period,
+  periodLabel,
+  targetScope,
+  targetPalace,
+  decadalScope,
+  decadalPalace,
+  mutagens,
+  movingStars,
+}) => [
+  {
+    id: 'decadal-palace',
+    kind: 'palace',
+    layer: 'decadal',
+    label: '当前大限落宫',
+    value: `${decadalPalace.name || '未知宫位'}（${getStemBranch(decadalScope)}）`,
+    source: 'fortune.decadal',
+  },
+  {
+    id: `${period}-palace`,
+    kind: 'palace',
+    layer: period,
+    label: `${periodLabel}落宫`,
+    value: `${targetPalace.name || '未知宫位'}（${getStemBranch(targetScope)}）`,
+    source: `fortune.${period}`,
+  },
+  {
+    id: `${period}-mutagens`,
+    kind: 'mutagen',
+    layer: period,
+    label: `${periodLabel}四化`,
+    value: mutagens.map(({ label, star }) => `${label}→${star}`).join(' · '),
+    source: `fortune.${period}.mutagen`,
+  },
+  {
+    id: `${period}-moving-stars`,
+    kind: 'moving-stars',
+    layer: period,
+    label: `${periodLabel}流耀`,
+    value: movingStars.length ? movingStars.join('、') : '当前落宫未单独标注流耀',
+    source: `fortune.${period}.stars[${targetScope.index}]`,
+  },
+];
+
+const buildPrivacySafeShareText = ({
+  periodMeta,
+  keywords,
+  summary,
+  action,
+}) => [
+  `${periodMeta.icon} ${periodMeta.label}`,
+  `关键词：${keywords.join(' · ')}`,
+  `主调：${summary}`,
+  `行动提示：${action}`,
+  '仅供传统文化参考，不替代医疗、法律或财务专业意见。',
+].join('\n');
+
 export const buildHomeFortune = (record, period, now = new Date()) => {
   const periodMeta = PERIOD_META.get(period);
   if (!periodMeta) {
@@ -261,6 +381,28 @@ export const buildHomeFortune = (record, period, now = new Date()) => {
       .filter((name) => typeof name === 'string' && name.trim()),
   )];
   const nominalAge = Number(context.fortune?.age?.nominalAge);
+  const mutagens = MUTAGEN_LABELS.map((label, index) => ({
+    label,
+    star: targetScope.mutagen?.[index] || '未标注',
+  }));
+  const keywords = [...(PALACE_KEYWORDS[targetPalace.name] || DEFAULT_KEYWORDS)];
+  const lifeDimensions = buildLifeDimensions(targetPalace.name);
+  const evidence = buildEvidence({
+    period,
+    periodLabel: periodMeta.label,
+    targetScope,
+    targetPalace,
+    decadalScope,
+    decadalPalace,
+    mutagens,
+    movingStars,
+  });
+  const privacySafeShareText = buildPrivacySafeShareText({
+    periodMeta,
+    keywords,
+    summary: guidance.summary,
+    action: guidance.action,
+  });
 
   return {
     period,
@@ -270,16 +412,17 @@ export const buildHomeFortune = (record, period, now = new Date()) => {
       ? record.name.trim()
       : '未命名档案',
     dateLabel: formatFortuneTime(period, context),
-    stemBranch: `${targetScope.heavenlyStem || '干'}${targetScope.earthlyBranch || '支'}`,
+    stemBranch: getStemBranch(targetScope),
     palaceName: targetPalace.name || '未知宫位',
     palaceBranch: targetPalace.earthlyBranch || '未知地支',
     decadalPalaceName: decadalPalace.name || '未知宫位',
     nominalAge: Number.isFinite(nominalAge) ? nominalAge : '未知',
-    mutagens: MUTAGEN_LABELS.map((label, index) => ({
-      label,
-      star: targetScope.mutagen?.[index] || '未标注',
-    })),
+    mutagens,
     movingStars,
+    keywords,
+    lifeDimensions,
+    evidence,
+    privacySafeShareText,
     summary: guidance.summary,
     action: guidance.action,
     caution: guidance.caution,
