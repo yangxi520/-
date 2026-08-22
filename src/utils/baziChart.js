@@ -189,7 +189,7 @@ const getDayMasterDiShi = (dayGan, zhi) => {
   return LunarUtil.CHANG_SHENG[index] ?? '';
 };
 
-const buildLiuNian = (liuNian, currentBaziYear, dayGan) => {
+const buildLiuNian = (liuNian, currentBaziYear, dayGan, sourceDaYunIndex) => {
   const ganZhi = liuNian.getGanZhi();
   const gan = ganZhi.slice(0, 1);
   const zhi = ganZhi.slice(1, 2);
@@ -198,6 +198,7 @@ const buildLiuNian = (liuNian, currentBaziYear, dayGan) => {
     name: '流年',
     type: 'liuNian',
     index: liuNian.getIndex(),
+    sourceDaYunIndex,
     year: liuNian.getYear(),
     age: liuNian.getAge(),
     ganZhi,
@@ -266,7 +267,7 @@ const buildDaYun = (daYun, now, yunStartSolar, currentBaziYear, dayGan) => {
     xunKong: daYun.getXunKong(),
     // 大运以实际交运时刻为边界，而不是每年元旦粗略切换。
     isCurrent: nowTimestamp >= exactStartTimestamp && nowTimestamp < exactEndTimestamp,
-    liuNian: daYun.getLiuNian().map((item) => buildLiuNian(item, currentBaziYear, dayGan)),
+    liuNian: daYun.getLiuNian().map((item) => buildLiuNian(item, currentBaziYear, dayGan, daYun.getIndex())),
   };
 };
 

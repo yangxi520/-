@@ -487,7 +487,7 @@ export default function App() {
             </nav>
 
             <footer className="home-footer">
-              <p>v2026.08.23.Bazi-Compare</p>
+              <p>v2026.08.23.Bazi-Navigator</p>
               <button
                 type="button"
                 onClick={async () => {

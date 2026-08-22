@@ -247,6 +247,7 @@ test('大运与流年提供专业对照表字段', () => {
     {
       name: liuNian.name,
       type: liuNian.type,
+      sourceDaYunIndex: liuNian.sourceDaYunIndex,
       ganZhi: liuNian.ganZhi,
       gan: liuNian.gan,
       zhi: liuNian.zhi,
@@ -261,6 +262,7 @@ test('大运与流年提供专业对照表字段', () => {
     {
       name: '流年',
       type: 'liuNian',
+      sourceDaYunIndex: dayun.index,
       ganZhi: '丙午',
       gan: '丙',
       zhi: '午',
@@ -277,4 +279,38 @@ test('大运与流年提供专业对照表字段', () => {
     { gan: '丁', shiShen: '伤官', wuxing: '火' },
     { gan: '己', shiShen: '正财', wuxing: '土' },
   ]);
+});
+
+test('大运在精确交运秒切换且任一时刻最多只有一步当前大运', () => {
+  const input = {
+    calendarType: 'solar',
+    year: 1970,
+    month: 7,
+    day: 23,
+    hourIndex: 4,
+    gender: 'male',
+  };
+  const baseline = buildBaziChart(input, new Date(2026, 7, 22, 12));
+  const firstDaYun = baseline.yun.dayun[0];
+  const parseLocal = (ymdHms) => {
+    const [datePart, timePart] = ymdHms.split(' ');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute, second] = timePart.split(':').map(Number);
+    return new Date(year, month - 1, day, hour, minute, second);
+  };
+  const exactStart = parseLocal(firstDaYun.exactStartSolar);
+  const exactEnd = parseLocal(firstDaYun.exactEndSolar);
+  const cases = [
+    { now: new Date(exactStart.getTime() - 1000), currentIndex: null },
+    { now: exactStart, currentIndex: firstDaYun.index },
+    { now: new Date(exactEnd.getTime() - 1000), currentIndex: firstDaYun.index },
+    { now: exactEnd, currentIndex: firstDaYun.index + 1 },
+  ];
+
+  cases.forEach(({ now, currentIndex }) => {
+    const chart = buildBaziChart(input, now);
+    const current = chart.yun.dayun.filter(({ isCurrent }) => isCurrent);
+    assert.ok(current.length <= 1);
+    assert.equal(current[0]?.index ?? null, currentIndex);
+  });
 });
