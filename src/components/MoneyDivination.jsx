@@ -88,7 +88,6 @@ function AnimatedCoin({ index, isThrown, onResult, delay = 0, audioContext, targ
             if (started && !hasReported) {
                 setHasReported(true);
                 playLandSound(audioContext, index * 60);
-                const normalizedRotation = finalRotation % (Math.PI * 2);
                 // We trust the targetIsHeads, but for physics verification:
                 // Heads (Yang) is 0 rad (texture up), Tails (Yin) is PI rad (texture down) when initialized?
                 // Actually my logic: baseRotation = isHeads ? 0 : Math.PI;
@@ -226,7 +225,7 @@ export default function MoneyDivination({ onBack }) {
             // Let's just assume for UX "Quantum Mode Active" if enabled.
             setTargetResults(results);
             setIsQuantum(true);
-        } catch (e) {
+        } catch {
             // Fallback handled in util, but here strictly for safety
             setTargetResults([Math.random() > 0.5, Math.random() > 0.5, Math.random() > 0.5]);
             setIsQuantum(false);
@@ -322,7 +321,7 @@ export default function MoneyDivination({ onBack }) {
     };
 
     return (
-        <div className="relative w-full h-screen overflow-hidden text-[#2b2b2b]"
+        <div className="relative w-full h-[100dvh] min-h-[100dvh] overflow-hidden text-[#2b2b2b]"
             style={{
                 backgroundImage: `url(${bgImage})`,
                 backgroundSize: 'cover',
@@ -335,11 +334,13 @@ export default function MoneyDivination({ onBack }) {
             {/* --- HEADER --- */}
             {/* Mobile: Top Left, smaller, horizontal-ish or stacked? Vertical implies tradition. */}
             {/* Desktop: Left, big, vertical */}
-            <div className={`absolute z-50 flex gap-4 md:gap-5 
-                           ${isMobile ? 'top-4 left-4 scale-75 origin-top-left flex-row' : 'top-12 left-12 flex-col'}`}>
+            <div
+                className={`absolute z-50 flex gap-3 md:gap-5 ${isMobile ? 'left-4 right-16 flex-row items-center' : 'top-12 left-12 flex-col'}`}
+                style={isMobile ? { top: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
+            >
 
                 {/* Seal */}
-                <div className={`size-9 border-2 border-[#a83232] text-[#a83232] flex items-center justify-center font-bold rounded-sm ${isMobile ? 'text-sm' : 'text-lg'}`}>
+                <div className={`size-10 shrink-0 border-2 border-[#a83232] text-[#a83232] flex items-center justify-center font-bold rounded-sm shadow-sm ${isMobile ? 'text-sm' : 'text-lg'}`}>
                     吉
                 </div>
 
@@ -348,14 +349,14 @@ export default function MoneyDivination({ onBack }) {
 
                     {/* Main Title */}
                     <div className="text-[#1a1a1a] font-black opacity-90 font-['STKaiti'] tracking-widest"
-                        style={{ fontSize: isMobile ? '24px' : '42px' }}>
+                        style={{ fontSize: isMobile ? '26px' : '42px' }}>
                         金钱卦
                     </div>
 
                     {/* Subtitle */}
                     <div className="text-[#666] tracking-[4px] border-[#999] opacity-80"
                         style={{
-                            fontSize: isMobile ? '12px' : '16px',
+                            fontSize: isMobile ? '11px' : '16px',
                             borderRight: isMobile ? 'none' : '1px solid #999',
                             borderLeft: isMobile ? '1px solid #999' : 'none', // Flip border for horizontal
                             paddingRight: isMobile ? '0' : '15px',
@@ -367,49 +368,83 @@ export default function MoneyDivination({ onBack }) {
             </div>
 
             {/* Quantum Badge */}
-            <div className="absolute top-4 right-4 z-40 flex flex-col items-end opacity-60">
+            <div
+                className={`absolute z-40 flex flex-col opacity-70 ${isMobile ? 'left-4 items-start' : 'top-20 right-12 items-end'}`}
+                style={isMobile ? { top: 'calc(env(safe-area-inset-top) + 4.25rem)' } : undefined}
+            >
                 <div className="text-[10px] text-[#2b2b2b] bg-white/40 px-2 py-1 rounded-full backdrop-blur-sm border border-gray-400/30">
-                    量子真随机: {isQuantum ? 'ON' : 'Ready'}
+                    量子真随机 · {isQuantum ? '已启用' : '就绪'}
                 </div>
             </div>
 
             {/* --- BACK BUTTON --- */}
             <button
+                type="button"
                 onClick={onBack}
-                className="absolute top-6 right-6 z-[100] size-8 rounded-full border border-gray-400 flex items-center justify-center text-gray-600 transition-colors hover:border-black hover:text-black"
+                className={`absolute z-[100] size-11 rounded-full border border-[#8b4513]/30 bg-[#f8f0e4]/70 backdrop-blur-sm flex items-center justify-center text-[#5d4037] shadow-sm transition-colors hover:border-[#5d4037] hover:bg-[#f8f0e4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a83232] ${isMobile ? 'right-4' : 'top-6 right-12'}`}
+                style={isMobile ? { top: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
+                aria-label="返回首页"
             >
-                <ArrowLeft size={16} />
+                <ArrowLeft size={19} aria-hidden="true" />
             </button>
 
             {/* --- MAIN CONTENT AREA (Yao List & Result) --- */}
             {/* Mobile: Top Right (for Yao list), avoid center overlap */}
             {/* Desktop: Right Center */}
-            <div className={`absolute z-50 flex flex-col items-center
+            <div
+                className={`absolute z-50 flex flex-col items-center
                 ${isMobile
-                    ? 'top-16 right-4 w-48' // Mobile: Compact, top-right
+                    ? 'left-4 right-4 w-auto max-w-sm mx-auto rounded-3xl border border-[#8b4513]/15 bg-[#f8f0e4]/70 p-3 shadow-lg shadow-[#5d4037]/10 backdrop-blur-sm'
                     : 'top-1/2 right-[8%] -translate-y-1/2 w-[300px] min-h-[400px]' // Desktop: Standard
-                }`}>
+                }`}
+                style={isMobile ? { top: 'calc(env(safe-area-inset-top) + 7rem)' } : undefined}
+            >
 
                 {/* Visual Status (Only if no result yet) */}
                 {!finalHexagram && (
-                    <div className="mb-4 text-sm text-[#8b4513] tracking-widest border-b border-[#8b4513]/30 pb-1">
-                        演算第 {currentThrow} 爻
+                    <div className={`w-full ${isMobile ? 'mb-3' : 'mb-4'}`} role="status" aria-live="polite">
+                        <div className="flex items-center justify-between text-xs font-bold tracking-widest text-[#8b4513]">
+                            <span>六爻起卦</span>
+                            <span>第 {currentThrow} / 6 爻</span>
+                        </div>
+                        <div className="mt-2 grid grid-cols-6 gap-1" aria-hidden="true">
+                            {Array.from({ length: 6 }, (_, index) => (
+                                <span
+                                    key={index}
+                                    className={`h-1.5 rounded-full transition-colors ${index < yaos.length
+                                        ? 'bg-[#a83232]'
+                                        : index === yaos.length
+                                            ? 'bg-[#a83232]/35'
+                                            : 'bg-[#8b4513]/10'
+                                        }`}
+                                />
+                            ))}
+                        </div>
+                        <p className="mt-2 text-xs leading-5 text-[#66534b]">
+                            {isProcessing
+                                ? '铜钱正在落定，请稍候…'
+                                : yaos.length > 0
+                                    ? '继续点击下方印章，完成下一爻'
+                                    : '静心默念所问之事，然后点击下方印章'}
+                        </p>
                     </div>
                 )}
 
                 {/* --- Yao List --- */}
                 {/* Mobile: scale down slightly to fit */}
-                <div className={`flex flex-col-reverse justify-center w-full transition-all duration-500
-                                ${isMobile ? 'gap-2' : 'gap-[18px] flex-1'}`}>
+                <div
+                    className={`flex flex-col-reverse justify-center w-full transition-all duration-500 ${isMobile ? 'gap-1.5' : 'gap-[18px] flex-1'}`}
+                    aria-label={yaos.length > 0 ? `已生成 ${yaos.length} 爻` : '尚未生成卦爻'}
+                >
                     {/* Ghost Placeholders */}
                     {yaos.length === 0 && Array(6).fill(0).map((_, i) => (
-                        <div key={i} className={`w-full ${isMobile ? 'h-3' : 'h-px my-3'}`}></div>
+                        <div key={i} className={`w-full ${isMobile ? 'h-2 border-b border-[#8b4513]/10' : 'h-px my-3'}`} aria-hidden="true" />
                     ))}
 
                     {yaos.map((yao, index) => (
-                        <div key={index} className="flex items-center gap-3 w-full">
+                        <div key={index} className={`flex items-center gap-3 w-full ${isMobile ? 'min-h-6' : ''}`}>
                             {/* Ink Stroke */}
-                            <div className="flex-1 flex items-center justify-end">
+                            <div className="flex-1 flex items-center justify-end" aria-hidden="true">
                                 <InkStroke type={yao.binaryVal === 1 ? 'yang' : 'yin'} width="100%" />
                             </div>
 
@@ -427,45 +462,22 @@ export default function MoneyDivination({ onBack }) {
                 </div>
             </div>
 
-            {/* --- FINAL RESULT OVERLAY (Mobile & Desktop) --- */}
-            {finalHexagram && (
-                <div className={`absolute z-50 flex flex-col items-center justify-center text-center animate-[fadeIn_1s_ease]
-                    ${isMobile
-                        ? 'bottom-0 left-0 right-0 p-6 pb-20 bg-gradient-to-t from-[#f5ecdfe0] to-transparent' // Mobile: Bottom sheet style with fade
-                        : 'top-1/2 right-[8%] -translate-y-1/2 w-[300px] translate-y-[200px]' // Desktop: Keep inside right panel area (offset down)
-                    }
-                    ${!isMobile && 'pointer-events-none'} 
-                    /* Hack: on Desktop, this div is logically separate if we want to position it relative to the list, 
-                       but simpler to just put it at bottom of the list container? 
-                       Actually, let's keep it separate for Mobile optimization. 
-                    */
-                `}>
-                    {/* On Desktop, this might conflict with the list if we're not careful. 
-                        Let's render it INSIDE the previous container for Desktop, but OUTSIDE for Mobile?
-                        react-three-fiber makes conditional rendering tricky? No, standard React.
-                        
-                        REFACTORING:
-                        Let's move this Result Block *back* into the main container for Desktop, 
-                        but keep it here for Mobile?
-                        
-                        Actually, let's stick to the previous Desktop layout (Top-Right List + Bottom Result)
-                        and Mobile Layout (Top-Right List + Bottom Screen Result).
-                     */}
-                </div>
-            )}
-
-            {/* --- RE-IMPLEMENTING RESULT LOGIC FOR POSITIONING --- */}
-            {/* Desktop Result: Rendered inside the Right Panel container above (conditional).
-                Mobile Result: Rendered at bottom of screen. */}
-
             {finalHexagram && isMobile && (
-                <div className="absolute bottom-0 left-0 w-full p-6 pb-12 z-[60] flex flex-col items-center bg-white/60 backdrop-blur-sm rounded-t-2xl shadow-lg border-t border-[#8b4513]/20 animate-[fadeIn_0.5s_ease-out]">
+                <div
+                    className="absolute bottom-0 left-0 w-full max-h-[58dvh] overflow-y-auto p-5 z-[60] flex flex-col items-center bg-[#f8f0e4]/90 backdrop-blur-md rounded-t-[28px] shadow-2xl border-t border-[#8b4513]/20 animate-[fadeIn_0.5s_ease-out]"
+                    style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+                    role="status"
+                    aria-live="polite"
+                    aria-label={`卦象结果：${finalHexagram.name}`}
+                >
                     <div className="w-10 h-1 bg-[#8b4513]/30 rounded-full mb-4"></div>
-                    <div className="text-4xl font-normal mb-2 text-[#1a1a1a] font-['STKaiti']">{finalHexagram.name}</div>
-                    <div className="text-sm text-[#444] leading-relaxed text-justify mb-6 px-4">{finalHexagram.desc}</div>
+                    <div className="text-[11px] tracking-[0.35em] text-[#8b4513]/70 mb-2">卦象结果</div>
+                    <h2 className="text-4xl font-normal mb-3 text-[#1a1a1a] font-['STKaiti'] tracking-widest">{finalHexagram.name}</h2>
+                    <div className="text-sm text-[#444] leading-7 text-left mb-5 px-1">{finalHexagram.desc}</div>
                     <button
+                        type="button"
                         onClick={resetDivination}
-                        className="px-8 py-2 bg-transparent border border-[#5d4037] text-[#5d4037] text-sm cursor-pointer transition-colors hover:bg-[#5d4037] hover:text-white"
+                        className="min-h-11 px-8 rounded-xl bg-transparent border border-[#5d4037] text-[#5d4037] text-sm font-bold tracking-widest cursor-pointer transition-colors hover:bg-[#5d4037] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a83232]"
                     >
                         再卜一卦
                     </button>
@@ -476,13 +488,14 @@ export default function MoneyDivination({ onBack }) {
                 Wait, I removed it from there. Let's put it back for desktop only. */}
 
             {finalHexagram && !isMobile && (
-                <div className="absolute top-[65%] right-[8%] w-[300px] flex flex-col items-center text-center z-50 animate-[fadeIn_1s_ease]">
+                <div className="absolute top-[65%] right-[8%] w-[300px] flex flex-col items-center text-center z-50 animate-[fadeIn_1s_ease]" role="status" aria-live="polite">
                     <div className="w-10 h-0.5 bg-[#333] mb-5"></div>
                     <div className="text-5xl font-normal mb-4 text-[#1a1a1a] font-['STKaiti'] drop-shadow-sm">{finalHexagram.name}</div>
                     <div className="text-[15px] text-[#444] leading-relaxed text-justify font-serif">{finalHexagram.desc}</div>
                     <button
+                        type="button"
                         onClick={resetDivination}
-                        className="mt-8 px-8 py-2 border border-[#5d4037] text-[#5d4037] hover:bg-[#5d4037] hover:text-white transition-all tracking-widest text-sm"
+                        className="mt-8 min-h-11 px-8 rounded-xl border border-[#5d4037] text-[#5d4037] hover:bg-[#5d4037] hover:text-white transition-all tracking-widest text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a83232]"
                     >
                         再卜一卦
                     </button>
@@ -493,49 +506,56 @@ export default function MoneyDivination({ onBack }) {
             {/* --- SHAKE BUTTON --- */}
             {!finalHexagram && yaos.length < 6 && (
                 <button
+                    type="button"
                     onClick={handleThrow}
                     disabled={isProcessing || (isThrown && Object.keys(coinResults).length < 3)}
-                    className={`fixed left-1/2 -translate-x-1/2 size-[90px] rounded-xl bg-[#b71c1c] text-white/90 shadow-lg shadow-red-900/40 flex items-center justify-center transition-all z-[999]
+                    aria-label={isProcessing ? '正在投掷铜钱' : `投掷第 ${currentThrow} 爻`}
+                    aria-busy={isProcessing}
+                    className={`fixed left-1/2 -translate-x-1/2 rounded-xl bg-[#a82828] text-white/95 shadow-lg shadow-red-900/40 flex items-center justify-center transition-all z-[999] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#a83232]/30
                                 ${isProcessing ? 'grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'}
-                                ${isMobile ? 'bottom-16 scale-90' : 'bottom-10'}
+                                ${isMobile ? 'size-[88px]' : 'bottom-10 size-[90px]'}
                     `}
+                    style={isMobile ? { bottom: 'calc(env(safe-area-inset-bottom) + 1rem)' } : undefined}
                 >
-                    <div className="border-[2px] border-white/30 w-[85%] h-[85%] flex items-center justify-center rounded-lg">
-                        {isProcessing ? '...' : <span className="text-2xl" style={{ writingMode: 'vertical-rl', textOrientation: 'upright' }}>启动</span>}
+                    <div className="border-[2px] border-white/35 w-[85%] h-[85%] flex flex-col items-center justify-center rounded-lg" aria-hidden="true">
+                        <span className="text-xl font-bold tracking-[0.18em]">{isProcessing ? '落定' : '起卦'}</span>
+                        <span className="mt-1 text-[10px] text-white/70">{isProcessing ? '请稍候' : `第${currentThrow}爻`}</span>
                     </div>
                 </button>
             )}
 
             {/* --- 3D SCENE --- */}
-            <Canvas
-                shadows
-                // Mobile: Move camera further back (z: 16 instead of 12) to fit everything
-                // Or Field of View (fov) adjustment.
-                camera={{ position: [0, 8, isMobile ? 18 : 12], fov: 45 }}
-                gl={{ alpha: true, antialias: true }}
-                onCreated={({ gl }) => {
-                    gl.toneMapping = THREE.ACESFilmicToneMapping;
-                    gl.outputColorSpace = THREE.SRGBColorSpace;
-                }}
-            >
-                <ambientLight intensity={1.5} color="#fffcf5" />
-                <directionalLight position={[5, 10, 5]} intensity={2.0} color="#fff8e1" castShadow shadow-mapSize={[1024, 1024]} />
-                <spotLight position={[0, 10, 0]} angle={0.5} penumbra={1} intensity={1} color="#ffd700" castShadow />
+            {(isProcessing || isThrown) && !finalHexagram && (
+                <Canvas
+                    shadows
+                    // Mobile: Move camera further back (z: 16 instead of 12) to fit everything
+                    // Or Field of View (fov) adjustment.
+                    camera={{ position: [0, 8, isMobile ? 18 : 12], fov: 45 }}
+                    gl={{ alpha: true, antialias: true }}
+                    onCreated={({ gl }) => {
+                        gl.toneMapping = THREE.ACESFilmicToneMapping;
+                        gl.outputColorSpace = THREE.SRGBColorSpace;
+                    }}
+                >
+                    <ambientLight intensity={1.5} color="#fffcf5" />
+                    <directionalLight position={[5, 10, 5]} intensity={2.0} color="#fff8e1" castShadow shadow-mapSize={[1024, 1024]} />
+                    <spotLight position={[0, 10, 0]} angle={0.5} penumbra={1} intensity={1} color="#ffd700" castShadow />
 
-                <React.Suspense fallback={null}>
-                    {[0, 1, 2].map(i => (
-                        <AnimatedCoin
-                            key={i}
-                            index={i} // Logic handles position X spread
-                            isThrown={isThrown}
-                            targetIsHeads={targetResults[i]}
-                            delay={i * 150}
-                            onResult={handleCoinResult}
-                            audioContext={audioContext}
-                        />
-                    ))}
-                </React.Suspense>
-            </Canvas>
+                    <React.Suspense fallback={null}>
+                        {[0, 1, 2].map(i => (
+                            <AnimatedCoin
+                                key={i}
+                                index={i} // Logic handles position X spread
+                                isThrown={isThrown}
+                                targetIsHeads={targetResults[i]}
+                                delay={i * 150}
+                                onResult={handleCoinResult}
+                                audioContext={audioContext}
+                            />
+                        ))}
+                    </React.Suspense>
+                </Canvas>
+            )}
 
             <style>{`
                 @keyframes strokeDraw {
@@ -547,7 +567,7 @@ export default function MoneyDivination({ onBack }) {
                     to { opacity: 1; transform: translateY(0); }
                 }
             `}</style>
-            <div className="absolute bottom-2 right-2 text-gray-500/30 text-[10px] pointer-events-none z-50">
+            <div className="absolute bottom-2 right-2 hidden sm:block text-gray-500/30 text-[10px] pointer-events-none z-50">
                 Song Dynasty Remastered vMobile
             </div>
         </div>

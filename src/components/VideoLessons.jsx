@@ -1,11 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Play, X, ChevronRight, Clock, BookOpen } from 'lucide-react';
-import { videos, categories, getVideosByCategory } from '../utils/videoData';
+import { categories, getVideosByCategory } from '../utils/videoData';
 
 export default function VideoLessons({ onBack }) {
     const [activeCategory, setActiveCategory] = useState('beginner');
     const [selectedVideo, setSelectedVideo] = useState(null);
-    const [isPlaying, setIsPlaying] = useState(false);
     const videoRef = useRef(null);
 
     const filteredVideos = getVideosByCategory(activeCategory);
@@ -13,7 +12,6 @@ export default function VideoLessons({ onBack }) {
     // Handle video play/pause
     const handleVideoClick = (video) => {
         setSelectedVideo(video);
-        setIsPlaying(true);
     };
 
     // Close video player
@@ -22,7 +20,6 @@ export default function VideoLessons({ onBack }) {
             videoRef.current.pause();
         }
         setSelectedVideo(null);
-        setIsPlaying(false);
     };
 
     // Handle escape key to close player
@@ -39,7 +36,10 @@ export default function VideoLessons({ onBack }) {
     return (
         <div className="flex-1 flex flex-col bg-gradient-to-br from-[#0a0505] via-[#0d0808] to-[#050505] min-h-screen">
             {/* Header */}
-            <div className="sticky top-0 z-40 bg-black/80 backdrop-blur-xl border-b border-red-900/20">
+            <div
+                className="sticky top-0 z-40 bg-black/80 backdrop-blur-xl border-b border-red-900/20"
+                style={{ paddingTop: 'env(safe-area-inset-top)' }}
+            >
                 <div className="max-w-4xl mx-auto px-4 py-4">
                     <div className="flex items-center gap-4">
                         <button
@@ -59,7 +59,10 @@ export default function VideoLessons({ onBack }) {
             </div>
 
             {/* Category Tabs */}
-            <div className="sticky top-[73px] z-30 bg-black/60 backdrop-blur-md border-b border-white/5">
+            <div
+                className="sticky z-30 bg-black/60 backdrop-blur-md border-b border-white/5"
+                style={{ top: 'calc(73px + env(safe-area-inset-top))' }}
+            >
                 <div className="max-w-4xl mx-auto px-4 py-3">
                     <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
                         {categories.map((cat) => (
@@ -183,7 +186,6 @@ export default function VideoLessons({ onBack }) {
                             controls
                             autoPlay
                             className="w-full h-full rounded-lg shadow-2xl"
-                            onEnded={() => setIsPlaying(false)}
                         >
                             您的浏览器不支持视频播放
                         </video>

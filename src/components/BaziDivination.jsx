@@ -143,7 +143,7 @@ export default function BaziDivination({ onBack }) {
             let yun;
             try {
                 yun = eightChar.getYun(gender === 'male' ? 1 : 0);
-            } catch (e) {
+            } catch {
                 yun = null;
             }
 
@@ -168,7 +168,7 @@ export default function BaziDivination({ onBack }) {
                         }
                     }
                 }
-            } catch (e) {
+            } catch {
                 // Ignore errors
             }
 
@@ -223,9 +223,16 @@ export default function BaziDivination({ onBack }) {
         return (
             <div className="flex items-center gap-2">
                 <span className={`w-6 text-center font-bold ${colors.text}`}>{label}</span>
-                <div className="flex-1 h-4 bg-white/5 rounded-full overflow-hidden">
+                <div
+                    className="flex-1 h-2.5 bg-white/5 rounded-full overflow-hidden"
+                    role="progressbar"
+                    aria-label={`${label}元素数量`}
+                    aria-valuemin={0}
+                    aria-valuemax={maxCount}
+                    aria-valuenow={count}
+                >
                     <div
-                        className={`h-full ${colors.bg} transition-all duration-500`}
+                        className={`h-full ${colors.bg} border ${colors.border} rounded-full transition-all duration-500`}
                         style={{ width: `${percentage}%` }}
                     />
                 </div>
@@ -242,71 +249,96 @@ export default function BaziDivination({ onBack }) {
         const zhiColors = WUXING_COLORS[zhiWuxing];
 
         return (
-            <div className="flex-1 text-center">
-                <div className="text-xs text-gray-500 mb-2">{pillar.name}</div>
+            <div
+                className="min-w-0 text-center"
+                aria-label={`${pillar.name}：${pillar.gan}${pillar.zhi}，${pillar.shiShen || ''}，纳音${pillar.naYin}`}
+            >
+                <div className="text-xs text-stone-400 mb-2">{pillar.name}</div>
 
                 {/* 十神 */}
-                <div className="text-xs text-purple-400 mb-1 h-4">
+                <div className="text-[11px] sm:text-xs text-amber-300/80 mb-1 h-4 truncate">
                     {pillar.shiShen || ''}
                 </div>
 
                 {/* 天干 */}
-                <div className={`text-3xl font-bold py-3 rounded-t-xl border-t border-x ${ganColors.bg} ${ganColors.text} ${ganColors.border}`}>
+                <div className={`text-2xl sm:text-3xl font-bold py-3 rounded-t-xl border-t border-x ${ganColors.bg} ${ganColors.text} ${ganColors.border}`}>
                     {pillar.gan}
                 </div>
 
                 {/* 地支 */}
-                <div className={`text-3xl font-bold py-3 rounded-b-xl border-b border-x ${zhiColors.bg} ${zhiColors.text} ${zhiColors.border}`}>
+                <div className={`text-2xl sm:text-3xl font-bold py-3 rounded-b-xl border-b border-x ${zhiColors.bg} ${zhiColors.text} ${zhiColors.border}`}>
                     {pillar.zhi}
                 </div>
 
                 {/* 纳音 */}
-                <div className="text-xs text-gray-500 mt-2 truncate">{pillar.naYin}</div>
+                <div className="text-[10px] sm:text-xs text-stone-500 mt-2 truncate">{pillar.naYin}</div>
             </div>
         );
     };
 
     return (
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="relative flex-1 flex flex-col overflow-hidden bg-[#090806] text-stone-100">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden" aria-hidden="true">
+                <div className="absolute -top-32 -right-24 h-72 w-72 rounded-full bg-red-950/20 blur-3xl" />
+                <div className="absolute -bottom-32 -left-24 h-72 w-72 rounded-full bg-amber-900/10 blur-3xl" />
+            </div>
             {/* Header */}
-            <div className="flex items-center gap-3 p-4 border-b border-white/10 bg-black/50 backdrop-blur-md">
+            <header
+                className="relative z-10 shrink-0 flex items-center gap-3 px-4 pb-3 border-b border-amber-100/10 bg-stone-950/80 backdrop-blur-xl"
+                style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}
+            >
                 <button
+                    type="button"
                     onClick={step === 'result' ? () => setStep('input') : onBack}
-                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                    className="min-w-11 min-h-11 inline-flex items-center justify-center hover:bg-white/10 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                    aria-label={step === 'result' ? '返回八字输入' : '返回首页'}
                 >
-                    <ArrowLeft className="w-5 h-5 text-orange-400" />
+                    <ArrowLeft className="w-5 h-5 text-amber-300" aria-hidden="true" />
                 </button>
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
-                        <span className="text-lg">🔥</span>
+                    <div className="w-9 h-9 rounded-md border border-red-400/60 bg-red-950/60 text-red-200 flex items-center justify-center shadow-inner shadow-red-950">
+                        <span className="text-base font-serif" aria-hidden="true">命</span>
                     </div>
-                    <h1 className="text-lg font-bold text-white">八字排盘</h1>
+                    <div>
+                        <h1 className="text-lg font-bold tracking-[0.16em] text-stone-100">八字排盘</h1>
+                        <p className="text-[10px] tracking-[0.2em] text-stone-500">四柱命理 · 本地排盘</p>
+                    </div>
                 </div>
-            </div>
+            </header>
 
             {/* Content */}
-            <div className="flex-1 overflow-auto p-4">
+            <main
+                className="relative z-10 flex-1 overflow-auto px-4 pt-5"
+                style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}
+            >
                 {step === 'input' ? (
                     // --- INPUT FORM ---
-                    <div className="max-w-md mx-auto space-y-6 animate-in fade-in duration-300">
-                        <div className="text-center space-y-2 mb-8">
-                            <h2 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-red-400">
-                                探索您的命格
+                    <div className="max-w-md mx-auto space-y-5 animate-in fade-in duration-300">
+                        <div className="text-center space-y-2 py-2">
+                            <div className="inline-flex items-center gap-2 text-[11px] tracking-[0.28em] text-amber-300/70">
+                                <span className="h-px w-8 bg-amber-300/30" />生辰入盘<span className="h-px w-8 bg-amber-300/30" />
+                            </div>
+                            <h2 className="text-2xl font-bold tracking-[0.12em] text-stone-100">
+                                探索四柱命格
                             </h2>
-                            <p className="text-gray-400 text-sm">
-                                输入出生信息，洞察四柱八字奥秘
+                            <p className="text-stone-400 text-sm leading-6">
+                                依次选择历法、生辰与性别，生成您的八字排盘
                             </p>
                         </div>
+
+                        <section className="space-y-5 rounded-[28px] border border-amber-100/10 bg-stone-950/70 p-4 sm:p-6 shadow-2xl shadow-black/30" aria-label="八字出生信息">
 
                         {/* 日历类型 */}
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-orange-500 uppercase tracking-widest flex items-center gap-1">
                                 <Calendar className="w-3 h-3" /> 日期类型
                             </label>
-                            <div className="flex bg-black/50 p-1 rounded-lg border border-white/10">
+                            <div className="flex bg-black/50 p-1 rounded-xl border border-white/10">
                                 <button
+                                    type="button"
                                     onClick={() => setCalendarType('solar')}
-                                    className={`flex-1 py-2.5 text-sm font-bold rounded transition-all ${calendarType === 'solar'
+                                    aria-pressed={calendarType === 'solar'}
+                                    className={`flex-1 min-h-11 px-3 text-sm font-bold rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${calendarType === 'solar'
                                         ? 'bg-orange-900/50 text-orange-300 border border-orange-500/50'
                                         : 'text-gray-500'
                                         }`}
@@ -314,8 +346,10 @@ export default function BaziDivination({ onBack }) {
                                     阳历
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={() => setCalendarType('lunar')}
-                                    className={`flex-1 py-2.5 text-sm font-bold rounded transition-all ${calendarType === 'lunar'
+                                    aria-pressed={calendarType === 'lunar'}
+                                    className={`flex-1 min-h-11 px-3 text-sm font-bold rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${calendarType === 'lunar'
                                         ? 'bg-red-900/50 text-red-300 border border-red-500/50'
                                         : 'text-gray-500'
                                         }`}
@@ -333,9 +367,10 @@ export default function BaziDivination({ onBack }) {
                             <div className="grid grid-cols-3 gap-2">
                                 {/* 年 */}
                                 <select
+                                    aria-label="出生年份"
                                     value={birthYear}
                                     onChange={(e) => setBirthYear(Number(e.target.value))}
-                                    className="px-3 py-3 bg-black/50 border border-white/10 text-white rounded-lg outline-none focus:border-orange-500/50 transition-all appearance-none cursor-pointer text-center"
+                                    className="min-h-11 px-2 bg-black/50 border border-white/10 text-white rounded-xl outline-none focus:border-orange-500/50 transition-all appearance-none cursor-pointer text-center"
                                 >
                                     {years.map(y => (
                                         <option key={y} value={y}>{y}年</option>
@@ -343,9 +378,10 @@ export default function BaziDivination({ onBack }) {
                                 </select>
                                 {/* 月 */}
                                 <select
+                                    aria-label="出生月份"
                                     value={birthMonth}
                                     onChange={(e) => setBirthMonth(Number(e.target.value))}
-                                    className="px-3 py-3 bg-black/50 border border-white/10 text-white rounded-lg outline-none focus:border-orange-500/50 transition-all appearance-none cursor-pointer text-center"
+                                    className="min-h-11 px-2 bg-black/50 border border-white/10 text-white rounded-xl outline-none focus:border-orange-500/50 transition-all appearance-none cursor-pointer text-center"
                                 >
                                     {months.map(m => (
                                         <option key={m} value={m}>{m}月</option>
@@ -353,9 +389,10 @@ export default function BaziDivination({ onBack }) {
                                 </select>
                                 {/* 日 */}
                                 <select
+                                    aria-label="出生日期"
                                     value={birthDay}
                                     onChange={(e) => setBirthDay(Number(e.target.value))}
-                                    className="px-3 py-3 bg-black/50 border border-white/10 text-white rounded-lg outline-none focus:border-orange-500/50 transition-all appearance-none cursor-pointer text-center"
+                                    className="min-h-11 px-2 bg-black/50 border border-white/10 text-white rounded-xl outline-none focus:border-orange-500/50 transition-all appearance-none cursor-pointer text-center"
                                 >
                                     {days.map(d => (
                                         <option key={d} value={d}>{d}日</option>
@@ -370,9 +407,10 @@ export default function BaziDivination({ onBack }) {
                                 <Clock className="w-3 h-3" /> 出生时辰
                             </label>
                             <select
+                                aria-label="出生时辰"
                                 value={birthHour}
                                 onChange={(e) => setBirthHour(Number(e.target.value))}
-                                className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white rounded-lg outline-none focus:border-orange-500/50 transition-all appearance-none cursor-pointer"
+                                className="w-full min-h-11 px-4 bg-black/50 border border-white/10 text-white rounded-xl outline-none focus:border-orange-500/50 transition-all appearance-none cursor-pointer"
                             >
                                 {SHICHEN_MAP.map((sc, i) => (
                                     <option key={i} value={i}>
@@ -389,8 +427,10 @@ export default function BaziDivination({ onBack }) {
                             </label>
                             <div className="grid grid-cols-2 gap-4">
                                 <button
+                                    type="button"
                                     onClick={() => setGender('male')}
-                                    className={`py-3 border rounded-lg transition-all flex items-center justify-center gap-2 ${gender === 'male'
+                                    aria-pressed={gender === 'male'}
+                                    className={`min-h-11 px-3 border rounded-xl transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${gender === 'male'
                                         ? 'bg-blue-900/20 border-blue-500 text-blue-400'
                                         : 'bg-black/50 border-white/10 text-gray-500'
                                         }`}
@@ -399,8 +439,10 @@ export default function BaziDivination({ onBack }) {
                                     <span className="font-bold">男</span>
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={() => setGender('female')}
-                                    className={`py-3 border rounded-lg transition-all flex items-center justify-center gap-2 ${gender === 'female'
+                                    aria-pressed={gender === 'female'}
+                                    className={`min-h-11 px-3 border rounded-xl transition-all flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 ${gender === 'female'
                                         ? 'bg-pink-900/20 border-pink-500 text-pink-400'
                                         : 'bg-black/50 border-white/10 text-gray-500'
                                         }`}
@@ -413,30 +455,36 @@ export default function BaziDivination({ onBack }) {
 
                         {/* 计算按钮 */}
                         <button
+                            type="button"
                             onClick={handleCalculate}
                             disabled={loading}
-                            className="w-full py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white font-bold text-lg uppercase tracking-widest hover:from-orange-500 hover:to-red-500 transition-all shadow-lg shadow-orange-500/20 rounded-xl disabled:opacity-50"
+                            aria-busy={loading}
+                            className="w-full min-h-12 px-4 bg-gradient-to-r from-amber-700 via-orange-700 to-red-800 text-white font-bold text-base tracking-[0.18em] hover:from-amber-600 hover:to-red-700 transition-all shadow-lg shadow-orange-950/40 rounded-xl disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
                         >
                             {loading ? '排盘中...' : '开始排盘'}
                         </button>
+                        </section>
                     </div>
                 ) : (
                     // --- RESULT VIEW ---
-                    <div className="max-w-2xl mx-auto space-y-6 animate-in fade-in duration-300 pb-20">
+                    <div className="max-w-2xl mx-auto space-y-5 animate-in fade-in duration-300" role="region" aria-label="八字排盘结果">
                         {baziResult ? (
                             <>
                                 {/* 农历信息 */}
-                                <div className="text-center text-gray-400 text-sm">
+                                <div className="rounded-2xl border border-amber-100/10 bg-stone-950/60 px-4 py-3 text-center text-stone-300 text-sm shadow-lg shadow-black/20">
                                     农历 {baziResult.lunarInfo.year}年 {baziResult.lunarInfo.month}月{baziResult.lunarInfo.day}
-                                    <span className="ml-2">生肖: {baziResult.lunarInfo.zodiac}</span>
+                                    <span className="mx-2 text-amber-300/40" aria-hidden="true">·</span>
+                                    <span>生肖 {baziResult.lunarInfo.zodiac}</span>
                                 </div>
 
                                 {/* 四柱八字 */}
-                                <div className="bg-black/40 backdrop-blur-md border border-orange-500/30 rounded-2xl p-6">
+                                <section className="bg-stone-950/75 backdrop-blur-md border border-amber-500/25 rounded-[24px] p-4 sm:p-6 shadow-xl shadow-black/25" aria-labelledby="bazi-pillars-title">
                                     <h3 className="text-lg font-bold text-orange-400 mb-4 flex items-center gap-2">
-                                        <Sparkles className="w-5 h-5" /> 四柱八字
+                                        <span className="size-7 rounded-md border border-red-500/40 bg-red-950/40 text-xs text-red-200 inline-flex items-center justify-center">壹</span>
+                                        <span id="bazi-pillars-title">四柱八字</span>
+                                        <Sparkles className="w-4 h-4 text-amber-300/60" aria-hidden="true" />
                                     </h3>
-                                    <div className="flex gap-2">
+                                    <div className="grid grid-cols-4 gap-1.5 sm:gap-3">
                                         {baziResult.pillars.map((pillar, i) => (
                                             <PillarCard key={i} pillar={pillar} />
                                         ))}
@@ -444,16 +492,19 @@ export default function BaziDivination({ onBack }) {
 
                                     {/* 日主信息 */}
                                     <div className="mt-4 pt-4 border-t border-white/10 text-center">
-                                        <span className="text-gray-400">日主: </span>
+                                        <span className="text-stone-400">日主：</span>
                                         <span className={`font-bold ${WUXING_COLORS[baziResult.dayMasterWuxing]?.text}`}>
                                             {baziResult.dayMaster}{baziResult.dayMasterWuxing}
                                         </span>
                                     </div>
-                                </div>
+                                </section>
 
                                 {/* 五行分析 */}
-                                <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-                                    <h3 className="text-lg font-bold text-white mb-4">五行分布</h3>
+                                <section className="bg-stone-950/75 backdrop-blur-md border border-white/10 rounded-[24px] p-4 sm:p-6 shadow-xl shadow-black/25" aria-labelledby="wuxing-title">
+                                    <h3 id="wuxing-title" className="text-lg font-bold text-stone-100 mb-4 flex items-center gap-2">
+                                        <span className="size-7 rounded-md border border-red-500/40 bg-red-950/40 text-xs text-red-200 inline-flex items-center justify-center">贰</span>
+                                        五行分布
+                                    </h3>
                                     <div className="space-y-3">
                                         {Object.entries(baziResult.wuxingCount).map(([wx, count]) => (
                                             <WuxingBar key={wx} label={wx} count={count} />
@@ -476,15 +527,17 @@ export default function BaziDivination({ onBack }) {
                                             );
                                         })()}
                                     </div>
-                                </div>
+                                </section>
 
                                 {/* 大运 */}
                                 {baziResult.yun && (
-                                    <div className="bg-black/40 backdrop-blur-md border border-white/10 rounded-2xl p-6">
-                                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                                            <TrendingUp className="w-5 h-5 text-purple-400" /> 大运流年
+                                    <section className="bg-stone-950/75 backdrop-blur-md border border-white/10 rounded-[24px] p-4 sm:p-6 shadow-xl shadow-black/25" aria-labelledby="dayun-title">
+                                        <h3 className="text-lg font-bold text-stone-100 mb-4 flex items-center gap-2">
+                                            <span className="size-7 rounded-md border border-red-500/40 bg-red-950/40 text-xs text-red-200 inline-flex items-center justify-center">叁</span>
+                                            <span id="dayun-title">大运流年</span>
+                                            <TrendingUp className="w-4 h-4 text-purple-300/70" aria-hidden="true" />
                                         </h3>
-                                        <div className="grid grid-cols-4 gap-2">
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                                             {baziResult.yun.daYun.map((dy, i) => (
                                                 <div
                                                     key={i}
@@ -512,25 +565,26 @@ export default function BaziDivination({ onBack }) {
                                                 </div>
                                             </div>
                                         )}
-                                    </div>
+                                    </section>
                                 )}
 
                                 {/* 重新排盘按钮 */}
                                 <button
+                                    type="button"
                                     onClick={() => setStep('input')}
-                                    className="w-full py-3 border border-orange-500/30 text-orange-400 font-bold rounded-xl hover:bg-orange-500/10 transition-all"
+                                    className="w-full min-h-11 px-4 border border-orange-500/30 text-orange-300 font-bold rounded-xl hover:bg-orange-500/10 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
                                 >
                                     重新排盘
                                 </button>
                             </>
                         ) : (
-                            <div className="text-center text-red-400 py-10">
+                            <div className="text-center text-red-300 py-10" role="alert">
                                 计算失败，请检查输入的日期是否正确
                             </div>
                         )}
                     </div>
                 )}
-            </div>
+            </main>
         </div>
     );
 }

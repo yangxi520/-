@@ -71,7 +71,7 @@ const HEAVENLY_STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', 
 const EARTHLY_BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
 
 const TIME_RANGES = [
-    "23:00-01:00", // Zi
+    "00:00-01:00（早子时）", // Early Zi
     "01:00-03:00", // Chou
     "03:00-05:00", // Yin
     "05:00-07:00", // Mao
@@ -82,7 +82,8 @@ const TIME_RANGES = [
     "15:00-17:00", // Shen
     "17:00-19:00", // You
     "19:00-21:00", // Xu
-    "21:00-23:00"  // Hai
+    "21:00-23:00", // Hai
+    "23:00-24:00（晚子时）" // Late Zi
 ];
 
 // Helper: Get Year Stem (0-9 index)
@@ -128,6 +129,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     const [showAiMenu, setShowAiMenu] = React.useState(false);
     const [menuView, setMenuView] = React.useState('main'); // 'main', 'fortune', 'baby'
     const [promptPreview, setPromptPreview] = React.useState(null);
+    const [mobileChartMode, setMobileChartMode] = React.useState('simple');
     // Lunar Tip State
     const [showLunarTip, setShowLunarTip] = React.useState(false);
 
@@ -137,12 +139,21 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     const [partnerInfo, setPartnerInfo] = React.useState({
         gender: 'female',
         birthday: '',
-        birthTime: '子'
+        birthTime: TIME_RANGES[0]
     });
     const [isCalculating, setIsCalculating] = React.useState(false);
 
     // State for Donation Modal
     const [showDonationModal, setShowDonationModal] = React.useState(false);
+
+    const selectedDaxianPalace = selection.daxianIndex !== null
+        ? palaces[selection.daxianIndex]
+        : null;
+
+    const closeAiMenu = () => {
+        setShowAiMenu(false);
+        setMenuView('main');
+    };
 
     // Helper to calculate stems (extracted for reuse)
     const calculateActiveStems = (sel, horo, info) => {
@@ -340,6 +351,16 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                 ${isMing ? 'bg-red-50/30' : ''}
             `}
                 onClick={() => setFocusedIndex(palaces.findIndex(p => p.earthlyBranch === branch))}
+                onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setFocusedIndex(palaces.findIndex(p => p.earthlyBranch === branch));
+                    }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isFocused}
+                aria-label={`${palace.name}，${palace.heavenlyStem}${palace.earthlyBranch}宫`}
             >
                 {/* --- TOP AREA: Stars --- */}
                 <div className="flex flex-row gap-0.5 h-full relative">
@@ -456,6 +477,93 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             </div>
         );
     };
+
+    const renderSimplePalaceCard = (palace) => {
+        if (!palace) return null;
+
+        const isFocused = focusedIndex === palace.index;
+        const isSelectedDaxian = selection.daxianIndex === palace.index;
+        const majorStars = palace.majorStars || [];
+        const minorStars = palace.minorStars || [];
+        const visibleMinorStars = minorStars.slice(0, 5);
+        const hiddenMinorStarCount = Math.max(minorStars.length - visibleMinorStars.length, 0);
+
+        return (
+            <button
+                key={palace.earthlyBranch}
+                type="button"
+                onClick={() => setFocusedIndex(palace.index)}
+                aria-pressed={isFocused}
+                aria-label={`${palace.name}，${palace.heavenlyStem}${palace.earthlyBranch}，大限${palace.decadal.range[0]}至${palace.decadal.range[1]}岁`}
+                className={`min-h-36 rounded-2xl border p-3 text-left shadow-sm transition active:scale-[0.98]
+                    ${isFocused
+                        ? 'border-amber-400 bg-amber-50 ring-2 ring-amber-300/60'
+                        : 'border-stone-200 bg-white hover:border-purple-300'
+                    }`}
+            >
+                <div className="flex items-start justify-between gap-2 border-b border-stone-100 pb-2">
+                    <div>
+                        <div className="flex items-center gap-1.5">
+                            <span className={`text-base font-black ${palace.name === '命宫' ? 'text-red-700' : 'text-slate-800'}`}>
+                                {palace.name}
+                            </span>
+                            {palace.isBodyPalace && (
+                                <span className="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700">
+                                    身宫
+                                </span>
+                            )}
+                        </div>
+                        <div className="mt-0.5 font-mono text-xs text-stone-500">
+                            {palace.heavenlyStem}{palace.earthlyBranch} · {palace.changsheng12}
+                        </div>
+                    </div>
+                    <div className="text-right">
+                        <div className="text-xs font-bold text-blue-600">
+                            大限 {palace.decadal.range[0]}-{palace.decadal.range[1]}
+                        </div>
+                        {isSelectedDaxian && (
+                            <span className="mt-1 inline-block rounded-full bg-green-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                                {currentFortuneContext ? '当前大限' : '已选大限'}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                <div className="mt-2 space-y-2">
+                    <div>
+                        <div className="mb-1 text-[10px] font-bold tracking-wider text-stone-400">主星</div>
+                        <div className="flex flex-wrap gap-1.5">
+                            {majorStars.length > 0 ? majorStars.map((star) => (
+                                <span key={star.name} className="rounded-lg bg-red-50 px-2 py-1 text-sm font-bold text-red-700">
+                                    {star.name}
+                                    {star.brightness && <span className="ml-0.5 text-[10px] font-normal text-red-400">{star.brightness}</span>}
+                                </span>
+                            )) : (
+                                <span className="text-sm text-stone-400">无主星</span>
+                            )}
+                        </div>
+                    </div>
+
+                    <div>
+                        <div className="mb-1 text-[10px] font-bold tracking-wider text-stone-400">辅星</div>
+                        <div className="flex flex-wrap gap-1 text-xs text-purple-700">
+                            {visibleMinorStars.length > 0 ? visibleMinorStars.map((star) => (
+                                <span key={star.name} className="rounded-md bg-purple-50 px-1.5 py-1 font-semibold">
+                                    {star.name}
+                                </span>
+                            )) : (
+                                <span className="text-stone-400">无辅星</span>
+                            )}
+                            {hiddenMinorStarCount > 0 && (
+                                <span className="rounded-md bg-stone-100 px-1.5 py-1 text-stone-500">+{hiddenMinorStarCount}</span>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            </button>
+        );
+    };
+
     // Calculate connection lines for San Fang Si Zheng
     const renderConnections = () => {
         if (focusedIndex === null) return null;
@@ -682,9 +790,97 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     };
 
     return (
-        <div className="w-full max-w-3xl mx-auto bg-stone-200 text-slate-900 p-1 select-none flex flex-col gap-2 overflow-x-auto shadow-2xl rounded-sm">
+        <div className="w-full max-w-3xl mx-auto bg-stone-200 text-slate-900 p-2 pb-28 md:p-1 select-none flex flex-col gap-3 overflow-x-visible md:overflow-x-auto shadow-2xl rounded-sm">
+            {/* Mobile-only readable summary and chart mode selector. */}
+            <section
+                className="md:hidden rounded-2xl border border-purple-200 bg-gradient-to-br from-white via-purple-50 to-cyan-50 p-4 shadow-sm"
+                aria-label="命盘基本信息摘要"
+            >
+                <div className="flex items-start justify-between gap-3">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-xl font-black text-slate-900">{basicInfo.name || '未命名命盘'}</span>
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${basicInfo.gender === 'male' ? 'bg-cyan-100 text-cyan-700' : 'bg-pink-100 text-pink-700'}`}>
+                                {basicInfo.gender === 'male' ? '男命' : '女命'}
+                            </span>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-600">{basicInfo.birthday} · {basicInfo.birthTime}</p>
+                    </div>
+                    <div className="rounded-xl bg-purple-700 px-3 py-2 text-right text-white shadow-sm">
+                        <div className="text-[10px] text-purple-100">五行局</div>
+                        <div className="text-sm font-black">{horoscope.fiveElementsClass}</div>
+                    </div>
+                </div>
+
+                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-xl bg-white/80 p-2.5">
+                        <div className="text-slate-400">四柱</div>
+                        <div className="mt-0.5 font-semibold text-slate-700">{horoscope.chineseDate || '-'}</div>
+                    </div>
+                    <div className="rounded-xl bg-white/80 p-2.5">
+                        <div className="text-slate-400">农历</div>
+                        <div className="mt-0.5 font-semibold text-slate-700">{horoscope.lunarDate || '-'}</div>
+                    </div>
+                    <div className="rounded-xl bg-white/80 p-2.5">
+                        <div className="text-slate-400">命主 / 身主</div>
+                        <div className="mt-0.5 font-semibold text-slate-700">{horoscope.soul || '-'} / {horoscope.body || '-'}</div>
+                    </div>
+                    <div className="rounded-xl bg-white/80 p-2.5">
+                        <div className="text-slate-400">当前查看</div>
+                        <div className="mt-0.5 font-semibold text-slate-700">
+                            {selectedDaxianPalace
+                                ? `${selectedDaxianPalace.decadal.range[0]}-${selectedDaxianPalace.decadal.range[1]}岁 ${selectedDaxianPalace.heavenlyStem}${selectedDaxianPalace.earthlyBranch}`
+                                : '尚未选择大限'}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <div
+                className="md:hidden grid grid-cols-2 gap-1 rounded-xl bg-stone-300 p-1"
+                role="group"
+                aria-label="手机命盘显示方式"
+            >
+                <button
+                    type="button"
+                    onClick={() => setMobileChartMode('simple')}
+                    aria-pressed={mobileChartMode === 'simple'}
+                    className={`min-h-11 rounded-lg px-3 py-2 text-sm font-bold transition ${mobileChartMode === 'simple' ? 'bg-white text-purple-700 shadow' : 'text-stone-600'}`}
+                >
+                    简洁盘
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setMobileChartMode('professional')}
+                    aria-pressed={mobileChartMode === 'professional'}
+                    className={`min-h-11 rounded-lg px-3 py-2 text-sm font-bold transition ${mobileChartMode === 'professional' ? 'bg-slate-900 text-white shadow' : 'text-stone-600'}`}
+                >
+                    专业盘
+                </button>
+            </div>
+
+            {mobileChartMode === 'simple' && (
+                <section className="md:hidden" aria-label="简洁十二宫命盘">
+                    <div className="mb-2 flex items-center justify-between px-1">
+                        <h2 className="text-sm font-black text-slate-800">十二宫速览</h2>
+                        <span className="text-[11px] text-stone-500">点宫位可高亮查看</span>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 min-[390px]:grid-cols-2">
+                        {BRANCH_ORDER
+                            .map((branch) => palaces.find((palace) => palace.earthlyBranch === branch))
+                            .filter(Boolean)
+                            .map(renderSimplePalaceCard)}
+                    </div>
+                </section>
+            )}
+
+            {mobileChartMode === 'professional' && (
+                <p className="md:hidden px-1 text-center text-[11px] text-stone-500">左右滑动查看完整传统命盘</p>
+            )}
+
             {/* Chart Grid - Min width to ensure readability on mobile */}
-            <div className="aspect-square grid grid-cols-4 grid-rows-4 gap-[1px] bg-stone-300 border-2 border-stone-400 relative min-w-[600px] md:min-w-0 shadow-inner">
+            <div className={`${mobileChartMode === 'professional' ? 'block' : 'hidden'} md:block overflow-x-auto rounded-lg`}>
+                <div className="aspect-square grid grid-cols-4 grid-rows-4 gap-[1px] bg-stone-300 border-2 border-stone-400 relative min-w-[600px] md:min-w-0 shadow-inner">
                 {renderConnections()}
                 {/* Row 1 */}
                 <div className="bg-stone-50">{renderPalace('巳')}</div>
@@ -785,10 +981,13 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                             ].map(layer => (
                                 <button
                                     key={layer.key}
+                                    type="button"
                                     className={`border rounded px-1 py-0.5 flex items-center justify-center gap-1
                                         ${activeLayers[layer.key] ? 'bg-stone-100 border-stone-300 shadow-inner' : 'bg-stone-50 border-stone-200 text-gray-300'}
                                     `}
                                     onClick={() => setActiveLayers(prev => ({ ...prev, [layer.key]: !prev[layer.key] }))}
+                                    aria-pressed={activeLayers[layer.key]}
+                                    aria-label={`${activeLayers[layer.key] ? '隐藏' : '显示'}${layer.label}层四化`}
                                 >
                                     <span className={`font-bold ${activeLayers[layer.key] ? layer.color : ''}`}>{layer.label}</span>
                                     {activeStems[layer.key] && <span className="font-mono text-stone-500">{activeStems[layer.key]}</span>}
@@ -813,21 +1012,25 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                 <div className="bg-stone-50">{renderPalace('丑')}</div>
                 <div className="bg-stone-50">{renderPalace('子')}</div>
                 <div className="bg-stone-50">{renderPalace('亥')}</div>
+                </div>
             </div>
 
             {/* Cascading Timeline Table */}
-            <div className="bg-white border border-gray-300 text-xs overflow-x-auto">
-                <table className="w-full text-center border-collapse">
+            <div className="overflow-x-auto rounded-xl border border-stone-300 bg-white text-[11px] shadow-sm md:text-xs">
+                <table className="min-w-full text-center border-collapse" aria-label="运限时间选择">
                     <tbody>
                         {/* Da Xian Row */}
                         <tr className="border-b border-gray-200">
-                            <td className="bg-gray-100 font-bold p-1 w-12 border-r">大限</td>
-                            <td className="p-1 overflow-x-auto">
-                                <div className="flex gap-1 overflow-x-auto">
+                            <td className="sticky left-0 z-10 min-w-14 border-r bg-stone-100 p-2 font-bold">大限</td>
+                            <td className="overflow-x-auto p-2">
+                                <div className="flex gap-2 overflow-x-auto touch-pan-x">
                                     {[...palaces].sort((a, b) => a.decadal.range[0] - b.decadal.range[0]).map((p, idx) => (
                                         <button
                                             key={idx}
-                                            className={`px - 2 py - 1 rounded whitespace - nowrap ${selection.daxianIndex === p.index ? 'bg-green-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
+                                            type="button"
+                                            aria-pressed={selection.daxianIndex === p.index}
+                                            aria-label={`选择${p.decadal.range[0]}至${p.decadal.range[1]}岁大限，${p.heavenlyStem}${p.earthlyBranch}`}
+                                            className={`min-h-12 min-w-16 rounded-lg px-3 py-2 whitespace-nowrap transition active:scale-95 ${selection.daxianIndex === p.index ? 'bg-green-600 text-white shadow' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
                                             onClick={() => handleSelection('daxian', p.index)}
                                         >
                                             {p.decadal.range[0]}-{p.decadal.range[1]}<br />
@@ -841,9 +1044,9 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                         {/* Liu Nian Row (Only if Da Xian selected) */}
                         {selection.daxianIndex !== null && (
                             <tr className="border-b border-gray-200">
-                                <td className="bg-gray-100 font-bold p-1 border-r">流年</td>
-                                <td className="p-1">
-                                    <div className="flex gap-1 overflow-x-auto">
+                                <td className="sticky left-0 z-10 min-w-14 border-r bg-stone-100 p-2 font-bold">流年</td>
+                                <td className="p-2">
+                                    <div className="flex gap-2 overflow-x-auto touch-pan-x">
                                         {(() => {
                                             const p = palaces[selection.daxianIndex];
                                             const startAge = p.decadal.range[0];
@@ -858,7 +1061,10 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                             return years.map(year => (
                                                 <button
                                                     key={year}
-                                                    className={`px - 2 py - 1 rounded whitespace - nowrap ${selection.year === year ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
+                                                    type="button"
+                                                    aria-pressed={selection.year === year}
+                                                    aria-label={`选择${year}流年`}
+                                                    className={`min-h-12 min-w-16 rounded-lg px-3 py-2 whitespace-nowrap transition active:scale-95 ${selection.year === year ? 'bg-blue-600 text-white shadow' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
                                                     onClick={() => handleSelection('year', year)}
                                                 >
                                                     {year}年<br />
@@ -875,10 +1081,16 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                         {selection.year && (
                             <tr className="border-b border-gray-200">
 
-                                <td className="bg-gray-100 font-bold p-1 border-r relative">
-                                    <div className="flex items-center justify-center gap-1 cursor-pointer hover:text-blue-600" onClick={() => setShowLunarTip(!showLunarTip)}>
+                                <td className="sticky left-0 z-20 min-w-14 border-r bg-stone-100 p-2 font-bold">
+                                    <button
+                                        type="button"
+                                        className="flex min-h-10 w-full items-center justify-center gap-1 rounded-lg hover:bg-white hover:text-blue-600"
+                                        onClick={() => setShowLunarTip(!showLunarTip)}
+                                        aria-expanded={showLunarTip}
+                                        aria-label="查看流月农历说明"
+                                    >
                                         流月 <HelpCircle size={10} />
-                                    </div>
+                                    </button>
                                     {showLunarTip && (
                                         <div className="absolute left-0 top-full mt-1 z-50 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg text-left font-normal leading-relaxed">
                                             <div className="font-bold text-yellow-400 mb-1">⚠️ 农历提醒</div>
@@ -886,17 +1098,20 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                             <br />
                                             例如：今日阳历12月6日，对应农历十月，请选择【10月】。
                                             <div className="mt-2 text-right">
-                                                <button className="text-blue-300 underline" onClick={(e) => { e.stopPropagation(); setShowLunarTip(false); }}>知道了</button>
+                                                <button type="button" className="min-h-10 px-2 text-blue-300 underline" onClick={(e) => { e.stopPropagation(); setShowLunarTip(false); }}>知道了</button>
                                             </div>
                                         </div>
                                     )}
                                 </td>
-                                <td className="p-1">
-                                    <div className="grid grid-cols-6 gap-1">
+                                <td className="p-2">
+                                    <div className="grid grid-cols-4 gap-2 md:grid-cols-6">
                                         {getLunarMonthOptions(selection.lunarYear || selection.year).map(monthOption => (
                                             <button
                                                 key={`${monthOption.month}-${monthOption.isLeap ? 'leap' : 'regular'}`}
-                                                className={`px-2 py-1 rounded whitespace-nowrap text-center ${selection.month === monthOption.month && selection.isLeapMonth === monthOption.isLeap ? 'bg-yellow-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
+                                                type="button"
+                                                aria-pressed={selection.month === monthOption.month && selection.isLeapMonth === monthOption.isLeap}
+                                                aria-label={`选择${monthOption.label}`}
+                                                className={`min-h-11 rounded-lg px-2 py-2 whitespace-nowrap text-center transition active:scale-95 ${selection.month === monthOption.month && selection.isLeapMonth === monthOption.isLeap ? 'bg-yellow-500 text-white shadow' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
                                                 onClick={() => handleSelection('month', monthOption)}
                                             >
                                                 {monthOption.label}
@@ -910,9 +1125,9 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                         {/* Liu Ri Row (Only if Month selected) */}
                         {selection.month && (
                             <tr className="border-b border-gray-200">
-                                <td className="bg-gray-100 font-bold p-1 border-r">流日</td>
-                                <td className="p-1">
-                                    <div className="grid grid-cols-7 gap-1">
+                                <td className="sticky left-0 z-10 min-w-14 border-r bg-stone-100 p-2 font-bold">流日</td>
+                                <td className="p-2">
+                                    <div className="grid grid-cols-7 gap-1.5">
                                         {(() => {
                                             const daysInMonth = getLunarMonthDays(
                                                 selection.lunarYear || selection.year,
@@ -922,7 +1137,10 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                             return Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
                                                 <button
                                                     key={day}
-                                                    className={`px-1 py-1 rounded whitespace-nowrap text-center text-[10px] ${selection.day === day ? 'bg-purple-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
+                                                    type="button"
+                                                    aria-pressed={selection.day === day}
+                                                    aria-label={`选择农历${day}日`}
+                                                    className={`min-h-10 rounded-lg px-1 py-2 whitespace-nowrap text-center text-[11px] transition active:scale-95 ${selection.day === day ? 'bg-purple-600 text-white shadow' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
                                                     onClick={() => handleSelection('day', day)}
                                                 >
                                                     {day}
@@ -937,13 +1155,16 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                         {/* Liu Shi Row (Only if Day selected) */}
                         {selection.day && (
                             <tr className="border-b border-gray-200">
-                                <td className="bg-gray-100 font-bold p-1 border-r">流时</td>
-                                <td className="p-1">
-                                    <div className="flex gap-1 overflow-x-auto">
+                                <td className="sticky left-0 z-10 min-w-14 border-r bg-stone-100 p-2 font-bold">流时</td>
+                                <td className="p-2">
+                                    <div className="flex gap-2 overflow-x-auto touch-pan-x">
                                         {FORTUNE_HOUR_OPTIONS.map((hourOption) => (
                                             <button
                                                 key={hourOption.index}
-                                                className={`px-2 py-1 rounded whitespace-nowrap flex flex-col items-center ${selection.hour === hourOption.index ? 'bg-cyan-500 text-white' : 'text-gray-700 hover:bg-gray-100'} `}
+                                                type="button"
+                                                aria-pressed={selection.hour === hourOption.index}
+                                                aria-label={`选择${hourOption.name}，${hourOption.range}`}
+                                                className={`min-h-12 min-w-24 rounded-lg px-3 py-2 whitespace-nowrap flex flex-col items-center justify-center transition active:scale-95 ${selection.hour === hourOption.index ? 'bg-cyan-600 text-white shadow' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
                                                 onClick={() => handleSelection('hour', hourOption.index)}
                                             >
                                                 <span>{hourOption.name}</span>
@@ -959,68 +1180,110 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             </div>
 
             {/* --- Unified Floating Action Buttons (Stack) --- */}
-            <div className="fixed bottom-6 right-4 z-50 flex flex-col gap-3 items-end pointer-events-none">
-                {/* Buttons wrapper - enable pointer events */}
-                <div className="pointer-events-auto flex flex-col gap-3 items-end">
+            <div className="fixed inset-x-0 bottom-0 z-50 pointer-events-none md:inset-x-auto md:right-4 md:bottom-6">
+                <nav
+                    className="pointer-events-auto grid grid-cols-4 gap-2 border-t border-white/10 bg-black/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex md:flex-col md:items-end md:border-0 md:bg-transparent md:p-0 md:shadow-none"
+                    aria-label="命盘操作"
+                >
 
                     {/* 1. Archive List Button */}
                     <button
+                        type="button"
                         onClick={onOpenArchive}
-                        className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-cyan-600 text-white shadow-lg hover:bg-cyan-500 hover:scale-110 transition-all duration-300"
+                        className="group relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-cyan-700 text-white shadow-lg transition active:scale-95 md:h-12 md:min-h-0 md:w-12 md:rounded-full md:bg-cyan-600 md:hover:scale-110 md:hover:bg-cyan-500"
                         title="查看档案"
+                        aria-label="查看档案"
                     >
                         <Archive className="w-5 h-5" />
-                        <span className="absolute right-14 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        <span className="text-[11px] font-bold md:hidden">档案</span>
+                        <span className="absolute right-14 hidden bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none md:block">
                             查看档案
                         </span>
                     </button>
 
                     {/* 2. Save Button */}
                     <button
+                        type="button"
                         onClick={onSave}
-                        className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-indigo-600 text-white shadow-lg hover:bg-indigo-500 hover:scale-110 transition-all duration-300"
+                        className="group relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-indigo-700 text-white shadow-lg transition active:scale-95 md:h-12 md:min-h-0 md:w-12 md:rounded-full md:bg-indigo-600 md:hover:scale-110 md:hover:bg-indigo-500"
                         title="保存档案"
+                        aria-label="保存档案"
                     >
                         <Save className="w-5 h-5" />
-                        <span className="absolute right-14 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        <span className="text-[11px] font-bold md:hidden">保存</span>
+                        <span className="absolute right-14 hidden bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none md:block">
                             保存档案
                         </span>
                     </button>
 
                     {/* 2. AI Analysis Button */}
                     <button
-                        onClick={() => setShowAiMenu(!showAiMenu)}
-                        className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-lg hover:scale-110 transition-all duration-300"
+                        type="button"
+                        onClick={() => {
+                            if (showAiMenu) closeAiMenu();
+                            else setShowAiMenu(true);
+                        }}
+                        className="group relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-purple-700 to-pink-700 text-white shadow-lg transition active:scale-95 md:h-12 md:min-h-0 md:w-12 md:rounded-full md:from-purple-600 md:to-pink-600 md:hover:scale-110"
                         title="AI 分析"
+                        aria-label="打开 AI 分析菜单"
+                        aria-expanded={showAiMenu}
+                        aria-controls="ai-analysis-menu"
                     >
                         <Sparkles className="w-5 h-5" />
-                        <span className="absolute right-14 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        <span className="text-[11px] font-bold md:hidden">AI 分析</span>
+                        <span className="absolute right-14 hidden bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none md:block">
                             AI 分析
                         </span>
                     </button>
 
                     {/* 3. Coffee Button */}
                     <button
+                        type="button"
                         onClick={() => setShowDonationModal(true)}
-                        className="group relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-lg hover:scale-110 transition-all duration-300"
+                        className="group relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-lg transition active:scale-95 md:h-12 md:min-h-0 md:w-12 md:rounded-full md:from-red-500 md:to-orange-500 md:hover:scale-110"
                         title="请喝咖啡"
+                        aria-label="打开支持作者二维码"
                     >
                         <Coffee className="w-5 h-5" />
-                        <span className="absolute right-14 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                        <span className="text-[11px] font-bold md:hidden">支持</span>
+                        <span className="absolute right-14 hidden bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none md:block">
                             请喝咖啡
                         </span>
                     </button>
-                </div>
+                </nav>
             </div>
 
-            {/* AI Analysis Menu (Drawer) - Repositioned relative to new button location? 
-                Actually, let's keep it fixed absolute relative to this container or viewport.
-                Since the stack is fixed bottom-right, the menu should probably open to the left or center.
-                Original was bottom-left. Let's make it fixed centered-bottom or fixed bottom-right (shifted left).
-            */}
+            {/* Mobile bottom sheet / desktop popover for AI actions. */}
             {showAiMenu && (
-                <div className="fixed bottom-24 right-20 z-[60] w-64 bg-[#111]/95 backdrop-blur-xl border border-purple-500/30 rounded-xl shadow-2xl p-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
-                    <div className="space-y-2">
+                <div className="fixed inset-0 z-[60]">
+                    <button
+                        type="button"
+                        className="absolute inset-0 h-full w-full bg-black/60 md:bg-transparent"
+                        onClick={closeAiMenu}
+                        aria-label="关闭 AI 分析菜单"
+                    />
+                    <div
+                        id="ai-analysis-menu"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="AI 分析菜单"
+                        className="absolute inset-x-0 bottom-0 max-h-[78vh] overflow-hidden rounded-t-3xl border border-purple-500/30 bg-[#111]/95 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 fade-in duration-300 md:inset-x-auto md:right-20 md:bottom-24 md:w-72 md:rounded-xl md:pb-4"
+                    >
+                        <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-3 md:hidden">
+                            <div>
+                                <div className="text-base font-black text-white">AI 分析</div>
+                                <div className="text-[11px] text-gray-400">选择要生成的话术</div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={closeAiMenu}
+                                className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-xl text-white"
+                                aria-label="关闭 AI 分析菜单"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="max-h-[62vh] space-y-2 overflow-y-auto overscroll-contain md:max-h-none">
                         {menuView === 'main' && (
                             <>
                                 <button onClick={() => handleGeneratePrompt('scumbag')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-gray-200 border border-transparent hover:border-purple-500/30 transition-all">
@@ -1083,6 +1346,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                 </button>
                             </>
                         )}
+                        </div>
                     </div>
                 </div>
             )}
@@ -1132,13 +1396,13 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
             {/* Partner Info Modal */}
             {showPartnerModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden animate-in zoom-in-95 duration-200">
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" role="dialog" aria-modal="true" aria-labelledby="partner-dialog-title">
+                    <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-hidden rounded-xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="bg-purple-600 px-4 py-3 flex justify-between items-center">
-                            <h3 className="text-white font-bold text-lg">💑 输入配偶信息</h3>
-                            <button onClick={() => setShowPartnerModal(false)} className="text-white/80 hover:text-white">✕</button>
+                            <h3 id="partner-dialog-title" className="text-white font-bold text-lg">💑 输入配偶信息</h3>
+                            <button type="button" aria-label="关闭配偶信息" onClick={() => setShowPartnerModal(false)} className="text-white/80 hover:text-white">✕</button>
                         </div>
-                        <div className="p-4 space-y-4">
+                        <div className="overflow-y-auto p-4 space-y-4">
                             <div className="text-sm text-gray-500 bg-purple-50 p-2 rounded">
                                 为了更精准地进行优生备孕择吉，请提供另一半的生辰信息，系统将结合双人命盘进行推算。
                             </div>
@@ -1168,19 +1432,6 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                     </label>
                                 </div>
                             </div>
-
-                            <button
-                                onClick={() => {
-                                    setMenuView('baby');
-                                    setShowAiMenu(false);
-                                }}
-                                className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white p-3 rounded-lg shadow-md transition-all flex items-center justify-center gap-2 font-bold"
-                            >
-                                <span className="text-xl">👶</span>
-                                <span>紫微备孕 (起居注)</span>
-                            </button>
-
-
 
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-gray-700">出生日期 (阳历)</label>
@@ -1239,18 +1490,18 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             )}
             {/* Donation Modal */}
             {showDonationModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setShowDonationModal(false)}>
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={() => setShowDonationModal(false)} role="dialog" aria-modal="true" aria-labelledby="donation-dialog-title">
+                    <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
                         <div className="bg-gradient-to-r from-red-500 to-orange-500 p-4 text-white flex justify-between items-center">
-                            <h3 className="font-bold text-lg flex items-center gap-2">
+                            <h3 id="donation-dialog-title" className="font-bold text-lg flex items-center gap-2">
                                 <Coffee className="w-5 h-5" />
                                 随喜打赏 (Buy me a coffee)
                             </h3>
-                            <button onClick={() => setShowDonationModal(false)} className="hover:bg-white/20 rounded-full p-1">
+                            <button type="button" aria-label="关闭打赏窗口" onClick={() => setShowDonationModal(false)} className="hover:bg-white/20 rounded-full p-1">
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
                             </button>
                         </div>
-                        <div className="p-6 flex flex-col items-center gap-6">
+                        <div className="overflow-y-auto p-6 flex flex-col items-center gap-6">
                             <p className="text-center text-gray-600 text-sm">
                                 如果觉得这个工具对您有帮助，<br />欢迎请作者喝杯咖啡，支持持续开发！☕️
                             </p>

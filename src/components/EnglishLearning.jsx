@@ -3,7 +3,10 @@ import { ArrowLeft, BookOpen, Mic, MessageCircle, ExternalLink } from 'lucide-re
 
 const EnglishLearning = ({ onBack }) => {
     return (
-        <div className="flex-1 overflow-auto p-4 md:p-8 relative animate-in fade-in zoom-in duration-500">
+        <div
+            className="flex-1 overflow-auto p-4 md:p-8 relative animate-in fade-in zoom-in duration-500"
+            style={{ paddingTop: 'max(clamp(1rem, 3vw, 2rem), env(safe-area-inset-top))' }}
+        >
             {/* Dynamic Background */}
             <div className="fixed inset-0 pointer-events-none z-0">
                 <div className="absolute top-1/4 left-1/4 w-[30%] h-[30%] bg-blue-900/20 rounded-full blur-[100px] animate-pulse"></div>

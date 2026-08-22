@@ -45,7 +45,7 @@ export default function App() {
   // Archive Save Modal State
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [saveNote, setSaveNote] = useState('');
-  const [saveGroup, setSaveGroup] = useState('friend');
+  const [saveGroup, setSaveGroup] = useState('self');
 
   React.useEffect(() => {
     const handler = (e) => {
@@ -56,11 +56,28 @@ export default function App() {
     return () => window.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
+  React.useEffect(() => {
+    const handleEscape = (event) => {
+      if (event.key !== 'Escape') return;
+      if (showInstallModal) setShowInstallModal(false);
+      if (isSaveModalOpen) setIsSaveModalOpen(false);
+    };
+
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
+  }, [showInstallModal, isSaveModalOpen]);
+
   const handleInstallClick = async () => {
     if (deferredPrompt) {
-      deferredPrompt.prompt();
-      const { outcome } = await deferredPrompt.userChoice;
-      if (outcome === 'accepted') {
+      try {
+        await deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+      } catch (error) {
+        console.warn('Native install prompt unavailable:', error);
+        setShowInstallModal(true);
+      } finally {
+        // A BeforeInstallPromptEvent can only be consumed once, including when
+        // the user dismisses it. Future clicks should show the manual guide.
         setDeferredPrompt(null);
       }
     } else {
@@ -90,20 +107,32 @@ export default function App() {
 
   const handleLoadRecord = (record) => {
     if (record.type === 'ziwei') {
-      setName(record.name);
-      setGender(record.gender);
-      // Assuming stored date is solar for simplicity or we should store type
-      // If the record has type 'lunar', we should handle that.
-      // For now, let's assume we store the solar date string in saving logic
-      setBirthday(record.solarDate);
-      setBirthTime(record.timeHour);
-      setCalendarType('solar');
+      // Records created before calendarType/birthDate existed were always
+      // reloaded as solar dates. Keep that fallback while preserving the
+      // original calendar for all newly saved records.
+      const recordCalendarType = record.calendarType === 'lunar' ? 'lunar' : 'solar';
+      const recordBirthDate = record.birthDate || record.solarDate;
+      const recordBirthTime = Number(record.timeHour) || 0;
+      const recordGender = record.gender === 'female' ? 'female' : 'male';
+
+      if (!recordBirthDate) {
+        alert('读取档案失败，缺少出生日期');
+        return;
+      }
 
       try {
-        const newHoroscope = iztro.astro.astrolabeBySolarDate(record.solarDate, record.timeHour, record.gender);
+        const newHoroscope = recordCalendarType === 'lunar'
+          ? iztro.astro.astrolabeByLunarDate(recordBirthDate, recordBirthTime, recordGender)
+          : iztro.astro.astrolabeBySolarDate(recordBirthDate, recordBirthTime, recordGender);
+
+        setName(record.name || '');
+        setGender(recordGender);
+        setBirthday(recordBirthDate);
+        setBirthTime(recordBirthTime);
+        setCalendarType(recordCalendarType);
         setHoroscope(newHoroscope);
         setView('chart');
-      } catch (e) {
+      } catch {
         alert('读取档案失败，数据可能损坏');
       }
     }
@@ -116,7 +145,11 @@ export default function App() {
       name: name || '未命名',
       gender, // 'male' | 'female'
       type: 'ziwei',
-      solarDate: birthday, // Current input state
+      calendarType,
+      birthDate: birthday,
+      // Keep the legacy field so existing archive-list displays and exports
+      // remain compatible. Loading now uses birthDate + calendarType first.
+      solarDate: birthday,
       timeHour: birthTime,
       group: saveGroup,
       note: saveNote,
@@ -129,286 +162,332 @@ export default function App() {
     alert('保存成功！');
   };
 
+  const usesOwnHeader = ['money', 'bazi', 'videos', 'english'].includes(view);
+
   return (
-    <div className="min-h-screen bg-[#050505] text-gray-100 font-sans selection:bg-cyan-500/30 overflow-hidden flex flex-col">
-      {/* Background Effects */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-900/20 rounded-full blur-[120px] animate-pulse"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-cyan-900/20 rounded-full blur-[120px] animate-pulse delay-1000"></div>
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150"></div>
-      </div>
+    <div className="app-shell">
+      <div className="app-ambient" aria-hidden="true"></div>
 
       {/* Header */}
-      <header className="relative z-50 border-b border-white/10 bg-black/50 backdrop-blur-md">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      {!usesOwnHeader && <header className="app-header">
+        <div className="header-inner">
+          <div className="brand-lockup">
             {view !== 'home' && (
               <button
+                type="button"
+                aria-label={view === 'chart' ? '返回生辰输入' : '返回首页'}
                 onClick={() => {
                   if (view === 'chart') setView('input');
                   else setView('home');
                 }}
-                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                className="icon-button"
               >
-                <ArrowLeft className="w-5 h-5 text-cyan-400" />
+                <ArrowLeft className="w-5 h-5" aria-hidden="true" />
               </button>
             )}
-            <div className="w-8 h-8 bg-gradient-to-tr from-cyan-500 to-purple-600 rounded flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.5)]">
-              <span className="text-lg font-black text-white font-orbitron">古</span>
+            <div className="brand-seal" aria-hidden="true">古</div>
+            <div className="brand-copy">
+              <h1 className="brand-name">古书派·紫微</h1>
+              <p className="brand-caption">传统命理 · 当代排盘</p>
             </div>
-            <h1 className="text-xl font-bold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400 font-orbitron">
-              古书派·紫微
-            </h1>
           </div>
-          <div className="flex items-center gap-3">
-            {/* Archive Entry (Desktop/Mobile Header) */}
+          <nav className="header-actions" aria-label="快捷入口">
             {view === 'home' && (
               <button
+                type="button"
+                aria-label="打开命盘档案"
                 onClick={() => setView('archive')}
-                className="flex items-center gap-2 text-sm font-bold text-gray-400 hover:text-white transition-colors"
+                className="header-action header-action--archive"
               >
-                📂 档案
+                <span aria-hidden="true">册</span>
+                <span className="archive-label">我的档案</span>
               </button>
             )}
 
             <button
+              type="button"
+              aria-haspopup="dialog"
+              aria-expanded={showInstallModal}
               onClick={handleInstallClick}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-cyan-900/50 to-purple-900/50 border border-cyan-500/30 text-xs font-bold text-cyan-300 hover:border-cyan-400 transition-all shadow-[0_0_10px_rgba(6,182,212,0.2)]"
+              className="header-action header-action--install"
             >
-              📲 下载APP
+              <span aria-hidden="true">＋</span>
+              {deferredPrompt ? '安装到手机' : '添加到主屏幕'}
             </button>
-          </div>
+          </nav>
         </div>
-      </header>
+      </header>}
 
       {/* Main Content */}
-      <main className="flex-1 relative z-10 overflow-hidden flex flex-col">
+      <main className="app-main">
         {view === 'home' ? (
           // --- HOME PORTAL VIEW ---
-          <div className="flex-1 flex flex-col items-center justify-center p-6 gap-8 animate-in fade-in zoom-in duration-500">
-            <div className="text-center space-y-4 max-w-2xl">
-              <h2 className="text-4xl md:text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-purple-400 font-orbitron">
-                探索命运的玄机
+          <div className="home-page animate-in fade-in duration-500">
+            <section className="home-hero" aria-labelledby="home-title">
+              <p className="section-kicker">古法为体 · 数理为用</p>
+              <h2 id="home-title" className="home-title">
+                以星曜为镜，<em>观人生脉络</em>
               </h2>
-              <p className="text-gray-400 text-lg">
-                融合古老智慧与现代科技，为您揭示生命的奥秘。
+              <p className="home-subtitle">
+                从一张命盘开始，查看本命格局、大限与流年。传统术数，用更清晰的方式呈现。
               </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-4xl mt-8">
-              {/* Ziwei Entry Card */}
-              <button
-                onClick={() => setView('input')}
-                className="group relative overflow-hidden rounded-2xl border border-purple-500/30 bg-gradient-to-br from-purple-900/40 to-black p-8 text-left transition-all hover:scale-[1.02] hover:border-purple-500/60 hover:shadow-[0_0_30px_rgba(168,85,247,0.3)]"
-              >
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
-                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl group-hover:bg-purple-500/30 transition-all"></div>
-
-                <div className="relative z-10 flex flex-col h-full justify-between gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center border border-purple-500/30 group-hover:scale-110 transition-transform">
-                    <span className="text-2xl">🔮</span>
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-purple-300 transition-colors">紫微斗数</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">
-                      排盘定命，洞察流年。通过生辰八字，全方位解析您的人生轨迹、事业财富与情感姻缘。
-                    </p>
-                  </div>
-                  <div className="flex items-center text-purple-400 text-sm font-bold mt-2 group-hover:translate-x-2 transition-transform">
-                    开始排盘 <ArrowLeft className="w-4 h-4 ml-1 rotate-180" />
-                  </div>
-                </div>
-              </button>
-
-              {/* Money Divination Entry Card */}
-              <button
-                onClick={() => setView('money')}
-                className="group relative overflow-hidden rounded-2xl border border-yellow-500/30 bg-gradient-to-br from-yellow-900/40 to-black p-8 text-left transition-all hover:scale-[1.02] hover:border-yellow-500/60 hover:shadow-[0_0_30px_rgba(234,179,8,0.3)]"
-              >
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
-                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-yellow-500/20 rounded-full blur-3xl group-hover:bg-yellow-500/30 transition-all"></div>
-
-                <div className="relative z-10 flex flex-col h-full justify-between gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-yellow-500/20 flex items-center justify-center border border-yellow-500/30 group-hover:scale-110 transition-transform">
-                    {/* Chinese Copper Coin SVG */}
-                    <svg viewBox="0 0 100 100" className="w-8 h-8 text-yellow-500 fill-current">
-                      <circle cx="50" cy="50" r="45" stroke="currentColor" strokeWidth="5" fill="none" />
-                      <rect x="32" y="32" width="36" height="36" stroke="currentColor" strokeWidth="5" fill="none" />
-                      <path d="M50 5 L50 25 M50 75 L50 95 M5 50 L25 50 M75 50 L95 50" stroke="currentColor" strokeWidth="5" strokeLinecap="round" />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-yellow-300 transition-colors">金钱卦</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">
-                      六爻预测，指点迷津。针对具体财运、投资或决策问题，提供即时的占卜指引。
-                    </p>
-                  </div>
-                  <div className="flex items-center text-yellow-400 text-sm font-bold mt-2 group-hover:translate-x-2 transition-transform">
-                    立即占卜 <ArrowLeft className="w-4 h-4 ml-1 rotate-180" />
-                  </div>
-                </div>
-              </button>
-
-              {/* Bazi Entry Card - NEW */}
-              <button
-                onClick={() => setView('bazi')}
-                className="group relative overflow-hidden rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-900/40 to-red-900/40 p-8 text-left transition-all hover:scale-[1.02] hover:border-orange-500/60 hover:shadow-[0_0_30px_rgba(249,115,22,0.3)]"
-              >
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
-                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-orange-500/20 rounded-full blur-3xl group-hover:bg-orange-500/30 transition-all"></div>
-
-                <div className="relative z-10 flex flex-col h-full justify-between gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center border border-orange-500/30 group-hover:scale-110 transition-transform">
-                    <span className="text-2xl">🔥</span>
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-orange-300 transition-colors">八字排盘</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">
-                      四柱八字，五行分析。通过生辰推演命格，洞察大运流年与人生轨迹。
-                    </p>
-                  </div>
-                  <div className="flex items-center text-orange-400 text-sm font-bold mt-2 group-hover:translate-x-2 transition-transform">
-                    立即排盘 <ArrowLeft className="w-4 h-4 ml-1 rotate-180" />
-                  </div>
-                </div>
-              </button>
-
-              {/* English Learning Entry Card */}
-              <button
-                onClick={() => setView('english')}
-                className="group relative overflow-hidden rounded-2xl border border-blue-500/30 bg-gradient-to-br from-blue-900/40 to-green-900/40 p-8 text-left transition-all hover:scale-[1.02] hover:border-blue-500/60 hover:shadow-[0_0_30px_rgba(59,130,246,0.3)]"
-              >
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
-                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl group-hover:bg-blue-500/30 transition-all"></div>
-
-                <div className="relative z-10 flex flex-col h-full justify-between gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30 group-hover:scale-110 transition-transform">
-                    <span className="text-2xl">📚</span>
-                  </div>
-                  <div>
-                    <h3 className="text-2xl font-bold text-white mb-2 group-hover:text-blue-300 transition-colors">英语学习</h3>
-                    <p className="text-gray-400 text-sm leading-relaxed">
-                      AI驱动的英语学习平台，发音评估、智能对话、千小时进阶计划助您掌握英语。
-                    </p>
-                  </div>
-                  <div className="flex items-center text-blue-400 text-sm font-bold mt-2 group-hover:translate-x-2 transition-transform">
-                    开始学习 <ArrowLeft className="w-4 h-4 ml-1 rotate-180" />
-                  </div>
-                </div>
-              </button>
-
-              {/* Video Lessons Entry Card */}
-              <button
-                onClick={() => setView('videos')}
-                className="group relative overflow-hidden rounded-2xl border border-red-500/30 bg-gradient-to-br from-red-900/40 to-black p-8 text-left transition-all hover:scale-[1.02] hover:border-orange-500/60 hover:shadow-[0_0_30px_rgba(239,68,68,0.3)] md:col-span-3"
-              >
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10"></div>
-                <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-red-500/20 rounded-full blur-3xl group-hover:bg-orange-500/30 transition-all"></div>
-
-                <div className="relative z-10 flex flex-col h-full justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-red-500/20 flex items-center justify-center border border-red-500/30 group-hover:scale-110 transition-transform">
-                      <span className="text-2xl">📹</span>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-white mb-1 group-hover:text-orange-300 transition-colors">紫微课程</h3>
-                      <p className="text-gray-400 text-sm leading-relaxed">
-                        跟随古书派学习紫微斗数，从入门到精通，系统掌握命理玄学。
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center text-orange-400 text-sm font-bold group-hover:translate-x-2 transition-transform">
-                    开始学习 <ArrowLeft className="w-4 h-4 ml-1 rotate-180" />
-                  </div>
-                </div>
-              </button>
-              {/* Version Footer */}
-              <div className="mt-8 text-center col-span-1 md:col-span-3">
-                <p className="text-white/20 text-xs font-mono">v2026.08.22.Fortune-Fix</p>
-                <button
-                  onClick={async () => {
-                    if (window.confirm('确定要清除所有缓存并强制更新吗？')) {
-                      try {
-                        if ('serviceWorker' in navigator) {
-                          const registrations = await navigator.serviceWorker.getRegistrations();
-                          await Promise.all(registrations.map((registration) => registration.unregister()));
-                        }
-                        if ('caches' in window) {
-                          const cacheNames = await window.caches.keys();
-                          await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)));
-                        }
-                      } finally {
-                        const refreshUrl = new URL(window.location.href);
-                        refreshUrl.searchParams.set('refresh', Date.now().toString());
-                        window.location.replace(refreshUrl.toString());
-                      }
-                    }
-                  }}
-                  className="mt-2 text-cyan-500/50 text-[10px] hover:text-cyan-400 underline cursor-pointer"
-                >
-                  强制更新 / Force Update
-                </button>
+              <div className="home-assurances" aria-label="产品特点">
+                <span className="assurance-chip">专业命盘</span>
+                <span className="assurance-chip">运限推演</span>
+                <span className="assurance-chip">AI 辅助解读</span>
               </div>
+            </section>
+
+            <section aria-label="核心功能">
+              <button
+                type="button"
+                aria-label="进入紫微斗数专业排盘"
+                onClick={() => setView('input')}
+                className="primary-destiny-card"
+              >
+                <div className="primary-card-copy">
+                  <p className="card-overline">主入口 · 紫微斗数</p>
+                  <h3 className="primary-card-title">紫微斗数专业排盘</h3>
+                  <p className="primary-card-description">
+                    输入出生年月日与时辰，生成十二宫命盘；继续查看大限、流年、流月、流日与 AI 解读。
+                  </p>
+                  <ul className="primary-card-features" aria-hidden="true">
+                    <li>本命十二宫</li>
+                    <li>大限流年</li>
+                    <li>命理话术</li>
+                  </ul>
+                  <span className="primary-card-cta">
+                    输入生辰，开始排盘 <span aria-hidden="true">→</span>
+                  </span>
+                </div>
+                <div className="destiny-orbit" aria-hidden="true">
+                  <span className="orbit-label orbit-label--top">天</span>
+                  <span className="orbit-label orbit-label--right">命</span>
+                  <span className="orbit-label orbit-label--bottom">地</span>
+                  <span className="orbit-label orbit-label--left">运</span>
+                  <span className="orbit-center">紫微</span>
+                </div>
+              </button>
+            </section>
+
+            <div className="section-heading">
+              <h3>更多术数工具</h3>
+              <p>按你的问题，选择合适的推演方式</p>
             </div>
+
+            <section className="secondary-tools" aria-label="术数工具">
+              <button
+                type="button"
+                onClick={() => setView('bazi')}
+                className="tool-card tool-card--cinnabar"
+              >
+                <span className="tool-card-copy">
+                  <span className="tool-card-eyebrow">四柱 · 五行</span>
+                  <span className="tool-card-title">八字排盘</span>
+                  <span className="tool-card-description">以年、月、日、时四柱，查看十神、五行与大运流年。</span>
+                  <span className="tool-card-action">进入排盘 <span aria-hidden="true">→</span></span>
+                </span>
+                <span className="tool-symbol" aria-hidden="true">柱</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setView('money')}
+                className="tool-card"
+              >
+                <span className="tool-card-copy">
+                  <span className="tool-card-eyebrow">一事一问 · 即时起卦</span>
+                  <span className="tool-card-title">金钱卦</span>
+                  <span className="tool-card-description">针对财运、选择与具体问题，模拟摇卦并查看卦象提示。</span>
+                  <span className="tool-card-action">立即起卦 <span aria-hidden="true">→</span></span>
+                </span>
+                <span className="tool-symbol" aria-hidden="true">卦</span>
+              </button>
+            </section>
+
+            <div className="section-heading">
+              <h3>我的内容</h3>
+              <p>档案与学习功能</p>
+            </div>
+
+            <nav className="quiet-links" aria-label="档案与学习">
+              <button type="button" onClick={() => setView('archive')} className="quiet-link">
+                <span className="quiet-link-icon" aria-hidden="true">册</span>
+                <span className="quiet-link-copy">
+                  <span className="quiet-link-title">命盘档案</span>
+                  <span className="quiet-link-caption">查看已保存的人物命盘</span>
+                </span>
+                <span className="quiet-link-arrow" aria-hidden="true">›</span>
+              </button>
+              <button type="button" onClick={() => setView('videos')} className="quiet-link">
+                <span className="quiet-link-icon" aria-hidden="true">学</span>
+                <span className="quiet-link-copy">
+                  <span className="quiet-link-title">紫微课程</span>
+                  <span className="quiet-link-caption">从基础概念到实盘解析</span>
+                </span>
+                <span className="quiet-link-arrow" aria-hidden="true">›</span>
+              </button>
+              <button type="button" onClick={() => setView('english')} className="quiet-link">
+                <span className="quiet-link-icon" aria-hidden="true">EN</span>
+                <span className="quiet-link-copy">
+                  <span className="quiet-link-title">英语学习</span>
+                  <span className="quiet-link-caption">发音评估与智能对话</span>
+                </span>
+                <span className="quiet-link-arrow" aria-hidden="true">›</span>
+              </button>
+            </nav>
+
+            <footer className="home-footer">
+              <p>v2026.08.22.Jade-UI</p>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (window.confirm('确定要清除所有缓存并强制更新吗？')) {
+                    try {
+                      if ('serviceWorker' in navigator) {
+                        const registrations = await navigator.serviceWorker.getRegistrations();
+                        await Promise.all(registrations.map((registration) => registration.unregister()));
+                      }
+                      if ('caches' in window) {
+                        const cacheNames = await window.caches.keys();
+                        await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)));
+                      }
+                    } finally {
+                      const refreshUrl = new URL(window.location.href);
+                      refreshUrl.searchParams.set('refresh', Date.now().toString());
+                      window.location.replace(refreshUrl.toString());
+                    }
+                  }
+                }}
+                className="force-update-button"
+              >
+                页面显示异常？清除缓存并更新
+              </button>
+            </footer>
           </div>
         ) : view === 'input' ? (
           // --- INPUT VIEW ---
-          <div className="flex-1 flex items-center justify-center p-4 overflow-y-auto">
-            <div className="w-full max-w-md bg-[#0a0a0a]/90 backdrop-blur-xl border border-white/10 shadow-2xl rounded-2xl p-6 md:p-8 space-y-8 animate-in fade-in zoom-in duration-500">
-              <div className="text-center space-y-2">
-                <h2 className="text-2xl font-bold text-white">开启您的紫微之旅</h2>
-                <p className="text-gray-400 text-sm">输入生辰，洞察命运玄机</p>
-              </div>
+          <div className="input-page animate-in fade-in duration-500">
+            <section className="input-panel" aria-labelledby="birth-form-title">
+              <header className="input-panel-header">
+                <p className="input-panel-eyebrow">紫微斗数 · 生辰排盘</p>
+                <h2 id="birth-form-title" className="panel-title">请录入生辰</h2>
+                <p className="panel-subtitle">日期与时辰会影响命宫及星曜位置，请按出生资料准确填写。</p>
+              </header>
 
-              {/* Date Type */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest">日期类型</label>
-                <div className="flex bg-black/50 p-1 rounded border border-white/10">
-                  <button onClick={() => setCalendarType('solar')} className={`flex-1 py-2 text-xs font-bold transition-all rounded ${calendarType === 'solar' ? 'bg-cyan-900/50 text-cyan-300 border border-cyan-500/50' : 'text-gray-500'}`}>阳历</button>
-                  <button onClick={() => setCalendarType('lunar')} className={`flex-1 py-2 text-xs font-bold transition-all rounded ${calendarType === 'lunar' ? 'bg-purple-900/50 text-purple-300 border border-purple-500/50' : 'text-gray-500'}`}>农历</button>
+              <form
+                className="birth-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  handleStartScan();
+                }}
+              >
+                <fieldset className="form-fieldset">
+                  <legend className="field-legend">历法</legend>
+                  <div className="segmented-control" aria-label="选择出生日期历法">
+                    <button
+                      type="button"
+                      aria-pressed={calendarType === 'solar'}
+                      onClick={() => setCalendarType('solar')}
+                      className="segment-button"
+                    >
+                      阳历
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={calendarType === 'lunar'}
+                      onClick={() => setCalendarType('lunar')}
+                      className="segment-button"
+                    >
+                      农历
+                    </button>
+                  </div>
+                </fieldset>
+
+                <div className="form-fieldset">
+                  <label htmlFor="birth-date" className="field-label">出生日期</label>
+                  <input
+                    id="birth-date"
+                    type={calendarType === 'solar' ? 'date' : 'text'}
+                    inputMode={calendarType === 'lunar' ? 'numeric' : undefined}
+                    placeholder={calendarType === 'solar' ? 'YYYY-MM-DD' : '例如：1990-08-15'}
+                    value={birthday}
+                    onChange={(event) => setBirthday(event.target.value)}
+                    aria-describedby="birth-date-hint"
+                    className="field-control"
+                    autoComplete="bday"
+                    required
+                  />
+                  <p
+                    id="birth-date-hint"
+                    className={`field-hint ${calendarType === 'lunar' ? 'field-hint--warning' : ''}`}
+                  >
+                    {calendarType === 'solar'
+                      ? '请选择公历出生日期。'
+                      : '请按 YYYY-MM-DD 输入农历日期；当前不支持闰月标记。'}
+                  </p>
                 </div>
-              </div>
 
-              {/* Birthday Input */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest">出生日期</label>
-                <input type="text" placeholder="YYYY-MM-DD" value={birthday} onChange={(e) => setBirthday(e.target.value)} className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white rounded outline-none focus:border-cyan-500/50 transition-all font-mono text-sm" />
-              </div>
-
-              {/* Birth Time Input */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest">出生时辰</label>
-                <select value={birthTime} onChange={(e) => setBirthTime(Number(e.target.value))} className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white rounded outline-none focus:border-cyan-500/50 transition-all font-mono text-sm appearance-none cursor-pointer">
-                  {Array.from({ length: 13 }).map((_, i) => (
-                    <option key={i} value={i}>{getTimeDescription(i)}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Name Input */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest">您的姓名</label>
-                <input type="text" placeholder="请输入姓名" value={name} onChange={(e) => setName(e.target.value)} className="w-full px-4 py-3 bg-black/50 border border-white/10 text-white rounded outline-none focus:border-cyan-500/50 transition-all text-sm" />
-              </div>
-
-              {/* Gender Input */}
-              <div className="space-y-3">
-                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest">您的性别</label>
-                <div className="grid grid-cols-2 gap-4">
-                  <button onClick={() => setGender('male')} className={`py-3 border rounded transition-all flex items-center justify-center gap-2 ${gender === 'male' ? 'bg-cyan-900/20 border-cyan-500 text-cyan-400' : 'bg-black/50 border-white/10 text-gray-500'}`}>
-                    <span className="font-bold">男</span>
-                  </button>
-                  <button onClick={() => setGender('female')} className={`py-3 border rounded transition-all flex items-center justify-center gap-2 ${gender === 'female' ? 'bg-pink-900/20 border-pink-500 text-pink-400' : 'bg-black/50 border-white/10 text-gray-500'}`}>
-                    <span className="font-bold">女</span>
-                  </button>
+                <div className="form-fieldset">
+                  <label htmlFor="birth-time" className="field-label">出生时辰</label>
+                  <select
+                    id="birth-time"
+                    value={birthTime}
+                    onChange={(event) => setBirthTime(Number(event.target.value))}
+                    aria-describedby="birth-time-hint"
+                    className="field-control"
+                  >
+                    {Array.from({ length: 13 }).map((_, i) => (
+                      <option key={i} value={i}>{getTimeDescription(i)}</option>
+                    ))}
+                  </select>
+                  <p id="birth-time-hint" className="field-hint">23:00 后请选择“晚子时”，00:00 后请选择“早子时”。</p>
                 </div>
-              </div>
 
-              {/* Start Button */}
-              <button onClick={handleStartScan} className="w-full py-4 bg-gradient-to-r from-cyan-600 to-purple-600 text-white font-bold text-lg uppercase tracking-widest hover:from-cyan-500 hover:to-purple-500 transition-all shadow-lg shadow-cyan-500/20 rounded">
-                开始排盘
-              </button>
-            </div>
+                <div className="form-fieldset">
+                  <label htmlFor="birth-name" className="field-label">
+                    姓名<span className="field-optional">选填</span>
+                  </label>
+                  <input
+                    id="birth-name"
+                    type="text"
+                    placeholder="用于区分命盘档案"
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    className="field-control"
+                    autoComplete="name"
+                  />
+                </div>
+
+                <fieldset className="form-fieldset">
+                  <legend className="field-legend">性别</legend>
+                  <div className="choice-grid">
+                    <button
+                      type="button"
+                      aria-pressed={gender === 'male'}
+                      onClick={() => setGender('male')}
+                      className="choice-button"
+                    >
+                      男命
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={gender === 'female'}
+                      onClick={() => setGender('female')}
+                      className="choice-button"
+                    >
+                      女命
+                    </button>
+                  </div>
+                </fieldset>
+
+                <button type="submit" className="submit-button">生成紫微命盘</button>
+                <p className="privacy-note">
+                  <span aria-hidden="true">◇</span>
+                  生辰资料仅用于本次排盘；只有主动保存档案后，才会存入当前设备的浏览器。
+                </p>
+              </form>
+            </section>
           </div>
         ) : view === 'money' ? (
           // --- MONEY DIVINATION VIEW ---
@@ -472,8 +551,8 @@ export default function App() {
           // --- CHART VIEW ---
           <div className="flex-1 relative overflow-hidden flex flex-col">
             {/* Chart Area */}
-            <div className="flex-1 overflow-auto p-2 md:p-4 pb-24">
-              <div className="max-w-3xl mx-auto bg-slate-50/95 rounded-lg overflow-hidden shadow-2xl border border-cyan-500/30 relative">
+            <div className="chart-scroll-area flex-1 overflow-auto p-2 md:p-4">
+              <div className="max-w-3xl mx-auto bg-slate-50/95 rounded-lg overflow-hidden shadow-2xl border border-emerald-700/30 relative">
 
                 <ProfessionalChart
                   horoscope={horoscope}
@@ -495,25 +574,31 @@ export default function App() {
 
       {/* Save Modal */}
       {isSaveModalOpen && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 safe-modal-padding">
           {/* Backdrop with blur */}
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity"
             onClick={() => setIsSaveModalOpen(false)}
           ></div>
 
-          <div className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-sm space-y-5 shadow-2xl animate-in fade-in zoom-in duration-200">
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="save-dialog-title"
+            className="relative bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto space-y-5 shadow-2xl animate-in fade-in zoom-in duration-200"
+          >
             <div className="flex justify-between items-center">
-              <h3 className="text-xl font-bold text-white flex items-center gap-2">
-                <Save className="w-5 h-5 text-cyan-500" />
+              <h3 id="save-dialog-title" className="text-xl font-bold text-white flex items-center gap-2">
+                <Save className="w-5 h-5 text-emerald-400" aria-hidden="true" />
                 保存到档案
               </h3>
-              <button onClick={() => setIsSaveModalOpen(false)} className="text-gray-500 hover:text-white transition-colors">✕</button>
+              <button type="button" aria-label="关闭保存档案弹窗" onClick={() => setIsSaveModalOpen(false)} className="min-w-11 min-h-11 text-gray-500 hover:text-white transition-colors">✕</button>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">姓名</label>
+              <label htmlFor="archive-name" className="text-xs font-bold text-gray-500 uppercase tracking-widest">姓名</label>
               <input
+                id="archive-name"
                 value={name}
                 onChange={e => setName(e.target.value)}
                 className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-cyan-500/50 transition-all outline-none"
@@ -535,8 +620,10 @@ export default function App() {
                   { id: 'other', label: '其他' }
                 ].map(g => (
                   <button
+                    type="button"
                     key={g.id}
                     onClick={() => setSaveGroup(g.id)}
+                    aria-pressed={saveGroup === g.id}
                     className={`px-3 py-1.5 rounded-full text-xs font-bold border transition-all ${saveGroup === g.id
                       ? 'bg-cyan-900/50 border-cyan-500 text-cyan-300 shadow-[0_0_10px_rgba(6,182,212,0.3)]'
                       : 'bg-white/5 border-white/5 text-gray-400 hover:bg-white/10 hover:border-white/20'
@@ -549,8 +636,9 @@ export default function App() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-widest">备注</label>
+              <label htmlFor="archive-note" className="text-xs font-bold text-gray-500 uppercase tracking-widest">备注</label>
               <textarea
+                id="archive-note"
                 value={saveNote}
                 onChange={e => setSaveNote(e.target.value)}
                 placeholder="备注信息..."
@@ -559,34 +647,60 @@ export default function App() {
             </div>
 
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setIsSaveModalOpen(false)} className="flex-1 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 text-sm font-bold transition-all">取消</button>
-              <button onClick={handleSaveToArchive} className="flex-1 py-3 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white text-sm font-bold shadow-lg shadow-cyan-500/20 transition-all">确认保存</button>
+              <button type="button" onClick={() => setIsSaveModalOpen(false)} className="flex-1 min-h-11 py-3 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 text-sm font-bold transition-all">取消</button>
+              <button type="button" onClick={handleSaveToArchive} className="flex-1 min-h-11 py-3 rounded-xl bg-gradient-to-r from-emerald-700 to-teal-700 hover:from-emerald-600 hover:to-teal-600 text-white text-sm font-bold shadow-lg shadow-emerald-950/30 transition-all">确认保存</button>
             </div>
-          </div>
+          </section>
         </div>
       )}
 
       {/* PWA Install Modal */}
       {showInstallModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <button onClick={() => setShowInstallModal(false)} className="absolute top-4 right-4 text-gray-500 hover:text-white">✕</button>
-          <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <span className="text-2xl">📲</span> 安装 App
-          </h3>
-          <div className="space-y-4 text-sm text-gray-300">
-            <p>为了获得最佳体验（全屏、离线使用），请将本应用添加到主屏幕。</p>
-            <div className="bg-white/5 p-3 rounded border border-white/10">
-              <p className="font-bold text-cyan-400 mb-1">🍎 iOS (Safari):</p>
-              <p>点击底部中间的分享按钮 <span className="inline-block border border-gray-500 px-1 rounded">⎋</span>，然后选择 <span className="font-bold text-white">"添加到主屏幕"</span>。</p>
+        <div
+          className="modal-overlay animate-in fade-in duration-200"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setShowInstallModal(false);
+          }}
+        >
+          <section
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="install-dialog-title"
+            aria-describedby="install-dialog-description"
+            className="install-dialog"
+          >
+            <button
+              type="button"
+              aria-label="关闭添加到主屏幕说明"
+              onClick={() => setShowInstallModal(false)}
+              className="install-close"
+            >
+              ✕
+            </button>
+            <p className="install-eyebrow">手机快捷入口</p>
+            <h3 id="install-dialog-title" className="install-title">添加到主屏幕</h3>
+            <p id="install-dialog-description" className="install-intro">
+              添加后可像普通 App 一样从桌面快速打开，无需经过应用商店。
+            </p>
+
+            <div className="install-steps">
+              <div className="install-step">
+                <p className="install-step-title">iPhone / iPad · Safari</p>
+                <p>点击浏览器的“分享”按钮，再向下找到并选择“添加到主屏幕”，最后点击“添加”。</p>
+              </div>
+              <div className="install-step">
+                <p className="install-step-title">Android · Chrome</p>
+                <p>点击右上角“⋮”菜单，选择“添加到主屏幕”或“安装应用”，按提示确认。</p>
+              </div>
             </div>
-            <div className="bg-white/5 p-3 rounded border border-white/10">
-              <p className="font-bold text-green-400 mb-1">🤖 Android (Chrome):</p>
-              <p>点击右上角菜单 <span className="font-bold text-white">⋮</span>，然后选择 <span className="font-bold text-white">"安装应用"</span> 或 <span className="font-bold text-white">"添加到主屏幕"</span>。</p>
-            </div>
-          </div>
-          <button onClick={() => setShowInstallModal(false)} className="w-full mt-6 py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded transition-colors">
-            知道了
-          </button>
+
+            <p className="install-note">
+              这是网页快捷方式，不是 App Store 下载。网络可用性与当前网站一致，不代表所有内容都能离线使用。
+            </p>
+            <button type="button" onClick={() => setShowInstallModal(false)} className="install-confirm">
+              我知道了
+            </button>
+          </section>
         </div>
       )}
     </div>
