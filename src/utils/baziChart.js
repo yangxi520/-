@@ -165,16 +165,53 @@ const getPillar = (eightChar, definition) => {
 
 const getGanShiShen = (dayGan, gan) => LunarUtil.SHI_SHEN[`${dayGan}${gan}`] ?? '';
 
+const getHiddenGanDetails = (dayGan, zhi) => {
+  const hiddenGans = Array.from(LunarUtil.ZHI_HIDE_GAN[zhi] ?? []);
+  return hiddenGans.map((gan) => ({
+    gan,
+    shiShen: getGanShiShen(dayGan, gan),
+    wuxing: GAN_WUXING[gan] ?? '',
+  }));
+};
+
+// 与 EightChar#get*DiShi 使用同一口径：以日主天干观察目标地支，
+// 并非以目标干支的天干计算“自坐”。
+const getDayMasterDiShi = (dayGan, zhi) => {
+  const dayGanIndex = LunarUtil.GAN.indexOf(dayGan) - 1;
+  const zhiIndex = LunarUtil.ZHI.indexOf(zhi) - 1;
+  const offset = LunarUtil.CHANG_SHENG_OFFSET[dayGan];
+  if (dayGanIndex < 0 || zhiIndex < 0 || !Number.isInteger(offset)) {
+    return '';
+  }
+
+  const rawIndex = offset + (dayGanIndex % 2 === 0 ? zhiIndex : -zhiIndex);
+  const index = ((rawIndex % 12) + 12) % 12;
+  return LunarUtil.CHANG_SHENG[index] ?? '';
+};
+
 const buildLiuNian = (liuNian, currentBaziYear, dayGan) => {
   const ganZhi = liuNian.getGanZhi();
+  const gan = ganZhi.slice(0, 1);
+  const zhi = ganZhi.slice(1, 2);
+  const hiddenGanDetails = getHiddenGanDetails(dayGan, zhi);
   return {
+    name: '流年',
+    type: 'liuNian',
     index: liuNian.getIndex(),
     year: liuNian.getYear(),
     age: liuNian.getAge(),
     ganZhi,
-    gan: ganZhi.slice(0, 1),
-    zhi: ganZhi.slice(1, 2),
-    ganShiShen: getGanShiShen(dayGan, ganZhi.slice(0, 1)),
+    gan,
+    zhi,
+    ganWuxing: GAN_WUXING[gan] ?? '',
+    zhiWuxing: ZHI_WUXING[zhi] ?? '',
+    ganShiShen: getGanShiShen(dayGan, gan),
+    hiddenGans: hiddenGanDetails.map((detail) => detail.gan),
+    hiddenShiShens: hiddenGanDetails.map((detail) => detail.shiShen),
+    hiddenGanDetails,
+    naYin: LunarUtil.NAYIN[ganZhi] ?? '',
+    diShi: getDayMasterDiShi(dayGan, zhi),
+    diShiBasis: '日主临支',
     xun: liuNian.getXun(),
     xunKong: liuNian.getXunKong(),
     // 八字流年以立春为界，不能直接用公历年份判断。
@@ -195,7 +232,7 @@ const buildDaYun = (daYun, now, yunStartSolar, currentBaziYear, dayGan) => {
   const ganZhi = daYun.getGanZhi();
   const gan = ganZhi.slice(0, 1);
   const zhi = ganZhi.slice(1, 2);
-  const hiddenGans = LunarUtil.ZHI_HIDE_GAN[zhi] ? [...LunarUtil.ZHI_HIDE_GAN[zhi]] : [];
+  const hiddenGanDetails = getHiddenGanDetails(dayGan, zhi);
   const yearOffset = (daYun.getIndex() - 1) * 10;
   const exactStartSolar = yunStartSolar.nextYear(yearOffset);
   const exactEndSolar = yunStartSolar.nextYear(yearOffset + 10);
@@ -204,6 +241,8 @@ const buildDaYun = (daYun, now, yunStartSolar, currentBaziYear, dayGan) => {
   const exactEndTimestamp = solarToLocalTimestamp(exactEndSolar);
 
   return {
+    name: '大运',
+    type: 'dayun',
     index: daYun.getIndex(),
     startAge: daYun.getStartAge(),
     endAge: daYun.getEndAge(),
@@ -214,9 +253,15 @@ const buildDaYun = (daYun, now, yunStartSolar, currentBaziYear, dayGan) => {
     ganZhi,
     gan,
     zhi,
+    ganWuxing: GAN_WUXING[gan] ?? '',
+    zhiWuxing: ZHI_WUXING[zhi] ?? '',
     ganShiShen: getGanShiShen(dayGan, gan),
-    hiddenGans,
-    hiddenShiShens: hiddenGans.map((hiddenGan) => getGanShiShen(dayGan, hiddenGan)),
+    hiddenGans: hiddenGanDetails.map((detail) => detail.gan),
+    hiddenShiShens: hiddenGanDetails.map((detail) => detail.shiShen),
+    hiddenGanDetails,
+    naYin: LunarUtil.NAYIN[ganZhi] ?? '',
+    diShi: getDayMasterDiShi(dayGan, zhi),
+    diShiBasis: '日主临支',
     xun: daYun.getXun(),
     xunKong: daYun.getXunKong(),
     // 大运以实际交运时刻为边界，而不是每年元旦粗略切换。
@@ -327,6 +372,9 @@ export const buildBaziChart = (input, now = new Date()) => {
     .getDaYun(14)
     .filter((item) => item.getIndex() > 0 && item.getGanZhi())
     .map((item) => buildDaYun(item, now, startSolar, currentBaziYear, dayMasterGan));
+  const currentLiuNian = dayun
+    .flatMap((item) => item.liuNian)
+    .find((item) => item.isCurrent) ?? null;
 
   return {
     input: {
@@ -367,6 +415,7 @@ export const buildBaziChart = (input, now = new Date()) => {
       startHour: yunSource.getStartHour(),
       startSolar: startSolar.toYmdHms(),
       forward: yunSource.isForward(),
+      currentLiuNian,
       dayun,
     },
   };

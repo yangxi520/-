@@ -177,3 +177,104 @@ test('当前大运按交运时刻切换，流年按立春切换', () => {
     '丙午',
   );
 });
+
+test('交运年份同时保留精确当前大运与全局当前流年', () => {
+  const chart = buildBaziChart({
+    calendarType: 'solar',
+    year: 1970,
+    month: 7,
+    day: 23,
+    hourIndex: 4,
+    gender: 'male',
+  }, new Date(2025, 2, 1, 12));
+  const currentDaYun = chart.yun.dayun.find(({ isCurrent }) => isCurrent);
+
+  assert.equal(currentDaYun.ganZhi, '戊子');
+  assert.equal(currentDaYun.liuNian.some(({ isCurrent }) => isCurrent), false);
+  assert.equal(chart.yun.currentLiuNian.year, 2025);
+  assert.equal(chart.yun.currentLiuNian.ganZhi, '乙巳');
+});
+
+test('大运与流年提供专业对照表字段', () => {
+  const chart = buildBaziChart({
+    calendarType: 'solar',
+    year: 1970,
+    month: 7,
+    day: 23,
+    hourIndex: 4,
+    gender: 'male',
+  }, new Date(2026, 7, 22, 12));
+  const dayun = chart.yun.dayun.find(({ isCurrent }) => isCurrent);
+  const liuNian = dayun.liuNian.find(({ isCurrent }) => isCurrent);
+
+  assert.deepEqual(
+    {
+      name: dayun.name,
+      type: dayun.type,
+      ganZhi: dayun.ganZhi,
+      gan: dayun.gan,
+      zhi: dayun.zhi,
+      ganWuxing: dayun.ganWuxing,
+      zhiWuxing: dayun.zhiWuxing,
+      ganShiShen: dayun.ganShiShen,
+      naYin: dayun.naYin,
+      diShi: dayun.diShi,
+      diShiBasis: dayun.diShiBasis,
+      xunKong: dayun.xunKong,
+    },
+    {
+      name: '大运',
+      type: 'dayun',
+      ganZhi: '己丑',
+      gan: '己',
+      zhi: '丑',
+      ganWuxing: '土',
+      zhiWuxing: '土',
+      ganShiShen: '正财',
+      naYin: '霹雳火',
+      diShi: '冠带',
+      diShiBasis: '日主临支',
+      xunKong: '午未',
+    },
+  );
+  assert.deepEqual(dayun.hiddenGanDetails, [
+    { gan: '己', shiShen: '正财', wuxing: '土' },
+    { gan: '癸', shiShen: '正印', wuxing: '水' },
+    { gan: '辛', shiShen: '正官', wuxing: '金' },
+  ]);
+
+  assert.deepEqual(
+    {
+      name: liuNian.name,
+      type: liuNian.type,
+      ganZhi: liuNian.ganZhi,
+      gan: liuNian.gan,
+      zhi: liuNian.zhi,
+      ganWuxing: liuNian.ganWuxing,
+      zhiWuxing: liuNian.zhiWuxing,
+      ganShiShen: liuNian.ganShiShen,
+      naYin: liuNian.naYin,
+      diShi: liuNian.diShi,
+      diShiBasis: liuNian.diShiBasis,
+      xunKong: liuNian.xunKong,
+    },
+    {
+      name: '流年',
+      type: 'liuNian',
+      ganZhi: '丙午',
+      gan: '丙',
+      zhi: '午',
+      ganWuxing: '火',
+      zhiWuxing: '火',
+      ganShiShen: '食神',
+      naYin: '天河水',
+      diShi: '死',
+      diShiBasis: '日主临支',
+      xunKong: '寅卯',
+    },
+  );
+  assert.deepEqual(liuNian.hiddenGanDetails, [
+    { gan: '丁', shiShen: '伤官', wuxing: '火' },
+    { gan: '己', shiShen: '正财', wuxing: '土' },
+  ]);
+});

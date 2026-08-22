@@ -2,7 +2,7 @@
  * 八字排盘组件 - 古书派·紫微
  * 计算由 baziChart 统一提供；页面采用紧凑、专业的命盘信息架构。
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Calendar, Clock, Printer, Sparkles, TrendingUp, User } from 'lucide-react';
 import {
     BAZI_HOUR_OPTIONS,
@@ -21,6 +21,16 @@ const WUXING_STYLES = {
 
 const WUXING_ORDER = ['木', '火', '土', '金', '水'];
 const wuxingText = (wuxing) => WUXING_STYLES[wuxing]?.text ?? 'text-[#302a25]';
+
+const GAN_WUXING = {
+    '甲': '木', '乙': '木', '丙': '火', '丁': '火', '戊': '土',
+    '己': '土', '庚': '金', '辛': '金', '壬': '水', '癸': '水',
+};
+
+const ZHI_WUXING = {
+    '子': '水', '丑': '土', '寅': '木', '卯': '木', '辰': '土', '巳': '火',
+    '午': '火', '未': '土', '申': '金', '酉': '金', '戌': '土', '亥': '水',
+};
 
 const SectionHeading = ({ seal, title, note, icon: Icon }) => (
     <div className="flex items-start gap-2.5">
@@ -43,7 +53,7 @@ const PillarCell = ({ pillar, children, className = '' }) => (
     </td>
 );
 
-const PillarTable = ({ pillars, mode }) => (
+const PillarTable = ({ pillars }) => (
     <div className="mt-4 overflow-hidden rounded-xl border border-[#b9ad98]/80 bg-[#fffaf0]/75">
         <table className="w-full table-fixed border-collapse" aria-label="四柱八字专业命盘">
             <colgroup>
@@ -111,30 +121,137 @@ const PillarTable = ({ pillars, mode }) => (
                         </PillarCell>
                     ))}
                 </tr>
-                {mode === 'professional' && (
-                    <>
-                        <tr>
-                            <th scope="row" className="border-b border-[#cabfac]/70 bg-[#e9dfcd]/45 px-1 py-2 text-[10px] font-medium text-[#756d63] sm:text-xs">地势</th>
-                            {pillars.map((pillar) => (
-                                <PillarCell key={pillar.key} pillar={pillar}>
-                                    <span className="text-[10px] font-medium text-[#2d6b62] sm:text-xs">{pillar.diShi}</span>
-                                </PillarCell>
-                            ))}
-                        </tr>
-                        <tr>
-                            <th scope="row" className="bg-[#e9dfcd]/45 px-1 py-2 text-[10px] font-medium text-[#756d63] sm:text-xs">空亡</th>
-                            {pillars.map((pillar) => (
-                                <td key={pillar.key} className={`border-l border-[#cabfac]/70 px-1 py-2 text-center ${pillar.key === 'day' ? 'bg-[#a33b30]/[0.045]' : ''}`}>
-                                    <span className="text-[10px] text-[#5c544b] sm:text-xs">{pillar.xunKong}</span>
-                                </td>
-                            ))}
-                        </tr>
-                    </>
-                )}
             </tbody>
         </table>
     </div>
 );
+
+const normalizeComparisonColumn = (source, key, fallbackName, meta = '') => {
+    const ganZhi = source?.ganZhi ?? '';
+    const gan = source?.gan ?? ganZhi.slice(0, 1);
+    const zhi = source?.zhi ?? ganZhi.slice(1, 2);
+    const hiddenGanDetails = source?.hiddenGanDetails?.length
+        ? source.hiddenGanDetails
+        : (source?.hiddenGans ?? []).map((hiddenGan, index) => ({
+            gan: hiddenGan,
+            shiShen: source?.hiddenShiShens?.[index] ?? '',
+            wuxing: GAN_WUXING[hiddenGan] ?? '',
+        }));
+
+    return {
+        ...source,
+        key,
+        name: source?.name ?? fallbackName,
+        meta,
+        gan,
+        zhi,
+        ganWuxing: source?.ganWuxing ?? GAN_WUXING[gan] ?? '',
+        zhiWuxing: source?.zhiWuxing ?? ZHI_WUXING[zhi] ?? '',
+        hiddenGanDetails,
+    };
+};
+
+const comparisonTone = (column) => {
+    if (column.key === 'liu-nian') return 'bg-[#a33b30]/[0.055]';
+    if (column.key === 'da-yun') return 'bg-[#2d6b62]/[0.06]';
+    if (column.key === 'day') return 'bg-[#a33b30]/[0.035]';
+    return 'bg-[#fffaf0]/65';
+};
+
+const ProfessionalComparisonTable = ({ pillars, daYun, liuNian }) => {
+    const columns = [
+        normalizeComparisonColumn(
+            liuNian,
+            'liu-nian',
+            '流年',
+            liuNian ? `${liuNian.year}年 · ${liuNian.age}虚岁` : '',
+        ),
+        normalizeComparisonColumn(
+            daYun,
+            'da-yun',
+            '大运',
+            daYun ? `${daYun.startAge}-${daYun.endAge}虚岁` : '',
+        ),
+        ...pillars.map((pillar) => normalizeComparisonColumn(pillar, pillar.key, pillar.name)),
+    ];
+    const rowHeaderClass = 'sticky left-0 z-20 w-14 border-b border-r border-[#b9ad98]/80 bg-[#e7ddcc] px-1.5 py-2 text-[11px] font-semibold text-[#685f56] shadow-[3px_0_5px_rgba(76,62,46,0.06)] print:static print:text-[8px] print:shadow-none sm:w-16 sm:text-xs';
+    const dataCellClass = (column) => `border-b border-r border-[#cabfac]/70 px-1.5 py-2 text-center align-middle last:border-r-0 ${comparisonTone(column)}`;
+
+    return (
+        <div className="-mx-2 mt-4 overflow-x-auto rounded-xl border border-[#b9ad98]/80 bg-[#fffaf0]/75 print:mx-0 print:overflow-visible sm:mx-0">
+            <table className="w-full min-w-[680px] table-fixed border-collapse print:min-w-0" aria-label="流年、大运与本命四柱专业对照表">
+                <colgroup>
+                    <col className="w-14 print:w-12 sm:w-16" />
+                    {columns.map((column) => <col key={column.key} />)}
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th className="sticky left-0 z-30 border-b border-r border-[#b9ad98]/80 bg-[#dfd3c0] px-1 py-2 text-[10px] font-semibold text-[#756d63] print:static print:text-[8px] sm:text-xs">对照</th>
+                        {columns.map((column) => (
+                            <th key={column.key} scope="col" className={`border-b border-r border-[#b9ad98]/80 px-1 py-2 text-xs font-bold last:border-r-0 print:text-[9px] sm:text-sm ${column.key === 'liu-nian' ? 'bg-[#a33b30]/10 text-[#96372e]' : column.key === 'da-yun' ? 'bg-[#2d6b62]/10 text-[#2d6b62]' : column.key === 'day' ? 'bg-[#a33b30]/[0.07] text-[#96372e]' : 'bg-[#e9dfcd]/45 text-[#514941]'}`}>
+                                <span className="block">{column.name}</span>
+                                {column.meta && <span className="mt-0.5 block text-[10px] font-normal tabular-nums opacity-70 print:text-[6px]">{column.meta}</span>}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <th scope="row" className={rowHeaderClass}>主星</th>
+                        {columns.map((column) => <td key={column.key} className={dataCellClass(column)}><span className="text-[11px] font-semibold text-[#514941] print:text-[8px] sm:text-sm">{column.ganShiShen || '—'}</span></td>)}
+                    </tr>
+                    <tr>
+                        <th scope="row" className={rowHeaderClass}>天干</th>
+                        {columns.map((column) => (
+                            <td key={column.key} className={`${dataCellClass(column)} py-3`}>
+                                <span className={`font-serif text-2xl font-bold leading-none print:text-lg sm:text-3xl ${wuxingText(column.ganWuxing)}`}>{column.gan || '—'}</span>
+                                <span className="mt-1 block text-[10px] text-[#948a7d] print:hidden">{column.ganWuxing || '—'}</span>
+                            </td>
+                        ))}
+                    </tr>
+                    <tr>
+                        <th scope="row" className={rowHeaderClass}>地支</th>
+                        {columns.map((column) => (
+                            <td key={column.key} className={`${dataCellClass(column)} py-3`}>
+                                <span className={`font-serif text-2xl font-bold leading-none print:text-lg sm:text-3xl ${wuxingText(column.zhiWuxing)}`}>{column.zhi || '—'}</span>
+                                <span className="mt-1 block text-[10px] text-[#948a7d] print:hidden">{column.zhiWuxing || '—'}</span>
+                            </td>
+                        ))}
+                    </tr>
+                    <tr>
+                        <th scope="row" className={rowHeaderClass}>藏干</th>
+                        {columns.map((column) => (
+                            <td key={column.key} className={dataCellClass(column)}>
+                                {column.hiddenGanDetails.length > 0 ? (
+                                    <div className="flex min-h-12 flex-col items-center justify-center gap-0.5">
+                                        {column.hiddenGanDetails.map((detail, index) => (
+                                            <span key={`${column.key}-${detail.gan}-${index}`} className="inline-flex items-baseline gap-0.5 whitespace-nowrap">
+                                                <b className={`font-serif text-xs print:text-[9px] sm:text-sm ${wuxingText(detail.wuxing ?? GAN_WUXING[detail.gan])}`}>{detail.gan}</b>
+                                                <small className="text-[10px] text-[#756d63] print:text-[6px]">{detail.shiShen || '—'}</small>
+                                            </span>
+                                        ))}
+                                    </div>
+                                ) : <span className="text-xs text-[#9b9185]">—</span>}
+                            </td>
+                        ))}
+                    </tr>
+                    <tr>
+                        <th scope="row" className={rowHeaderClass}>纳音</th>
+                        {columns.map((column) => <td key={column.key} className={dataCellClass(column)}><span className="text-[11px] leading-4 text-[#5c544b] print:text-[7px] sm:text-xs">{column.naYin || '—'}</span></td>)}
+                    </tr>
+                    <tr>
+                        <th scope="row" className={rowHeaderClass}>地势</th>
+                        {columns.map((column) => <td key={column.key} className={dataCellClass(column)}><span className="text-[11px] font-medium text-[#2d6b62] print:text-[7px] sm:text-xs">{column.diShi || '—'}</span></td>)}
+                    </tr>
+                    <tr>
+                        <th scope="row" className={`${rowHeaderClass} border-b-0`}>空亡</th>
+                        {columns.map((column) => <td key={column.key} className={`${dataCellClass(column)} border-b-0`}><span className="text-[11px] text-[#5c544b] print:text-[7px] sm:text-xs">{column.xunKong || '—'}</span></td>)}
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    );
+};
 
 const WuxingStructure = ({ counts }) => {
     const total = WUXING_ORDER.reduce((sum, wuxing) => sum + (counts[wuxing] ?? 0), 0);
@@ -176,7 +293,9 @@ export default function BaziDivination({ onBack }) {
     const [personName, setPersonName] = useState('');
     const [resultMode, setResultMode] = useState('basic');
     const [selectedDaYunIndex, setSelectedDaYunIndex] = useState(null);
+    const [selectedLiuNianYear, setSelectedLiuNianYear] = useState(null);
     const [loading, setLoading] = useState(false);
+    const daYunScrollerRef = useRef(null);
 
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: currentYear - 1900 + 1 }, (_, index) => 1900 + index);
@@ -214,6 +333,32 @@ export default function BaziDivination({ onBack }) {
             ?? null;
     }, [baziResult, selectedDaYunIndex]);
 
+    const selectedLiuNian = useMemo(() => {
+        const liuNian = selectedDaYun?.liuNian ?? [];
+        const currentLiuNian = baziResult?.yun?.currentLiuNian ?? null;
+        return liuNian.find((item) => item.year === selectedLiuNianYear)
+            ?? (currentLiuNian?.year === selectedLiuNianYear ? currentLiuNian : null)
+            ?? (selectedDaYun?.isCurrent ? currentLiuNian : null)
+            ?? liuNian.find((item) => item.isCurrent)
+            ?? liuNian[0]
+            ?? null;
+    }, [baziResult, selectedDaYun, selectedLiuNianYear]);
+
+    const visibleLiuNian = useMemo(() => {
+        const liuNian = selectedDaYun?.liuNian ?? [];
+        const currentLiuNian = baziResult?.yun?.currentLiuNian ?? null;
+        if (!selectedDaYun?.isCurrent || !currentLiuNian || liuNian.some((item) => item.year === currentLiuNian.year)) {
+            return liuNian;
+        }
+        return [...liuNian, currentLiuNian].sort((a, b) => a.year - b.year);
+    }, [baziResult, selectedDaYun]);
+
+    useEffect(() => {
+        if (!selectedDaYun || !daYunScrollerRef.current) return;
+        const selectedButton = daYunScrollerRef.current.querySelector(`[data-dayun-index="${selectedDaYun.index}"]`);
+        selectedButton?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }, [selectedDaYun]);
+
     const changeCalendarType = (nextType) => {
         const nextMonths = getBaziMonthOptions(nextType, birthYear);
         const nextMonth = nextMonths.find((month) => month.value === birthMonth)?.value
@@ -244,11 +389,21 @@ export default function BaziDivination({ onBack }) {
     const handleCalculate = () => {
         setLoading(true);
         setSelectedDaYunIndex(null);
+        setSelectedLiuNianYear(null);
         setResultMode('basic');
         window.setTimeout(() => {
             setStep('result');
             setLoading(false);
         }, 350);
+    };
+
+    const selectDaYun = (daYun) => {
+        const initialLiuNian = (daYun.isCurrent ? baziResult?.yun?.currentLiuNian : null)
+            ?? daYun.liuNian?.find((item) => item.isCurrent)
+            ?? daYun.liuNian?.[0]
+            ?? null;
+        setSelectedDaYunIndex(daYun.index);
+        setSelectedLiuNianYear(initialLiuNian?.year ?? null);
     };
 
     const genderLabel = gender === 'male' ? '乾造' : '坤造';
@@ -357,9 +512,9 @@ export default function BaziDivination({ onBack }) {
                                         <div className="flex items-center justify-between gap-3">
                                             <div className="flex items-center gap-2.5">
                                                 <span className="inline-flex size-9 items-center justify-center rounded-lg border border-[#a33b30]/45 bg-[#a33b30]/[0.06] font-serif text-base font-bold text-[#96372e]" aria-hidden="true">命</span>
-                                                <div><p className="font-serif text-lg font-bold tracking-[0.16em] text-[#28231f] sm:text-xl">四柱命盘</p><p className="text-[10px] tracking-[0.2em] text-[#81776b]">古书派 · 本地排盘</p></div>
+                                                <div><p className="font-serif text-lg font-bold tracking-[0.16em] text-[#28231f] sm:text-xl"><span className="print:hidden">四柱命盘</span><span className="hidden print:inline">八字专业细盘</span></p><p className="text-[10px] tracking-[0.2em] text-[#81776b]">古书派 · 本地排盘</p></div>
                                             </div>
-                                            <div className="text-right"><p className="text-sm font-bold text-[#96372e]">{personName.trim() ? `${personName.trim()} · ` : ''}{genderLabel}</p><p className="mt-0.5 text-[10px] text-[#81776b]">生肖 {baziResult.lunarInfo.zodiac}</p></div>
+                                            <div className="text-right"><p className="text-sm font-bold text-[#96372e]">{personName.trim() ? `${personName.trim()} · ` : ''}{genderLabel}</p><p className="mt-0.5 text-[10px] text-[#81776b]">生肖 {baziResult.lunarInfo.zodiac}</p><p className="mt-0.5 hidden text-[8px] text-[#81776b] print:block">生成日期 {new Date().toLocaleDateString('zh-CN')}</p></div>
                                         </div>
                                         <div className="mt-4 grid grid-cols-2 rounded-t-xl border border-b-0 border-[#b9ad98]/80 bg-[#f7f0e5] p-1 print:hidden" role="tablist" aria-label="命盘详细程度">
                                             {[{ value: 'basic', label: '基本命盘' }, { value: 'professional', label: '专业细盘' }].map((option) => (
@@ -380,8 +535,33 @@ export default function BaziDivination({ onBack }) {
                                         </section>
 
                                         <section className="px-2 py-5 sm:px-6 sm:py-6" aria-labelledby="bazi-pillars-title">
-                                            <div id="bazi-pillars-title" className="px-1 sm:px-0"><SectionHeading seal="壹" title="四柱八字" note={resultMode === 'professional' ? '专业细盘已展开日主地势与空亡' : '主星、干支、藏干十神与纳音'} icon={Sparkles} /></div>
-                                            <PillarTable pillars={baziResult.pillars} mode={resultMode} />
+                                            <div id="bazi-pillars-title" className="px-1 print:hidden sm:px-0">
+                                                <SectionHeading
+                                                    seal="壹"
+                                                    title={resultMode === 'professional' ? '专业运限同参' : '四柱八字'}
+                                                    note={resultMode === 'professional'
+                                                        ? '所选流年、大运与本命四柱并列对照；横向滑动可查看完整命盘'
+                                                        : '主星、干支、藏干十神与纳音'}
+                                                    icon={Sparkles}
+                                                />
+                                            </div>
+                                            <div className="print:hidden">
+                                                {resultMode === 'professional' ? (
+                                                    <ProfessionalComparisonTable
+                                                        pillars={baziResult.pillars}
+                                                        daYun={selectedDaYun}
+                                                        liuNian={selectedLiuNian}
+                                                    />
+                                                ) : <PillarTable pillars={baziResult.pillars} />}
+                                            </div>
+                                            <div className="hidden print:block">
+                                                <SectionHeading seal="壹" title="专业运限同参" note="所选流年、大运与本命四柱并列对照" icon={Sparkles} />
+                                                <ProfessionalComparisonTable
+                                                    pillars={baziResult.pillars}
+                                                    daYun={selectedDaYun}
+                                                    liuNian={selectedLiuNian}
+                                                />
+                                            </div>
                                         </section>
 
                                         <section className="px-3 py-5 sm:px-6 sm:py-6" aria-labelledby="wuxing-title">
@@ -391,18 +571,18 @@ export default function BaziDivination({ onBack }) {
 
                                         {baziResult.yun?.dayun?.length > 0 && (
                                             <section className="px-3 py-5 sm:px-6 sm:py-6" aria-labelledby="dayun-title">
-                                                <div id="dayun-title"><SectionHeading seal="叁" title="大运流年" note="点击大运，可展开该运所辖十个流年" icon={TrendingUp} /></div>
+                                                <div id="dayun-title"><SectionHeading seal="叁" title="大运流年" note="点击大运与流年可联动上方专业细盘；交运年份可能跨两步大运" icon={TrendingUp} /></div>
                                                 <div className="mt-4 rounded-xl border border-[#cbbfac]/75 bg-[#e9dfcd]/45 px-3 py-2.5 text-[11px] leading-5 text-[#655d54] sm:text-xs">
                                                     <span className="font-semibold text-[#2d6b62]">{baziResult.yun.forward ? '顺排' : '逆排'}</span><span className="mx-2 text-[#a79b8a]" aria-hidden="true">·</span>
                                                     出生后 {baziResult.yun.startYear}年{baziResult.yun.startMonth}月{baziResult.yun.startDay}天{baziResult.yun.startHour ? `${baziResult.yun.startHour}小时` : ''}起运
                                                     <span className="mx-2 text-[#a79b8a]" aria-hidden="true">·</span>交运 {formatStartSolar(baziResult.yun.startSolar)}
                                                 </div>
-                                                <div className="-mx-3 mt-4 overflow-x-auto px-3 pb-2 print:mx-0 print:overflow-visible print:px-0 sm:-mx-6 sm:px-6" aria-label="大运时间轴">
-                                                    <div className="flex w-max min-w-full snap-x gap-2 print:w-full print:flex-wrap">
+                                                <div ref={daYunScrollerRef} className="-mx-3 mt-4 overflow-x-auto px-3 pb-2 print:hidden sm:-mx-6 sm:px-6" aria-label="大运时间轴">
+                                                    <div className="flex w-max min-w-full snap-x gap-2">
                                                         {baziResult.yun.dayun.map((daYun) => {
                                                             const isSelected = selectedDaYun?.index === daYun.index;
                                                             return (
-                                                                <button key={daYun.index} type="button" aria-pressed={isSelected} aria-expanded={isSelected} onClick={() => setSelectedDaYunIndex(daYun.index)} className={`relative min-h-[5.75rem] w-[5.6rem] shrink-0 snap-start rounded-xl border px-2 py-2 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2d6b62] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f3ecdf] ${isSelected ? 'border-[#a33b30] bg-[#fffaf0] shadow-sm' : daYun.isCurrent ? 'border-[#2d6b62]/70 bg-[#2d6b62]/[0.07]' : 'border-[#cbbfac] bg-[#f8f1e6] hover:border-[#9e8f7a]'}`}>
+                                                                <button key={daYun.index} data-dayun-index={daYun.index} type="button" aria-pressed={isSelected} aria-expanded={isSelected} onClick={() => selectDaYun(daYun)} className={`relative min-h-[5.75rem] w-[5.6rem] shrink-0 snap-start rounded-xl border px-2 py-2 text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2d6b62] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f3ecdf] ${isSelected ? 'border-[#a33b30] bg-[#fffaf0] shadow-sm' : daYun.isCurrent ? 'border-[#2d6b62]/70 bg-[#2d6b62]/[0.07]' : 'border-[#cbbfac] bg-[#f8f1e6] hover:border-[#9e8f7a]'}`}>
                                                                     {daYun.isCurrent && <span className="absolute -top-2 left-1/2 -translate-x-1/2 rounded-full bg-[#2d6b62] px-1.5 py-0.5 text-[8px] font-bold text-white">当前</span>}
                                                                     <span className="block text-[10px] tabular-nums text-[#81776b]">{daYun.startAge}-{daYun.endAge}虚岁</span><span className="mt-1 block font-serif text-xl font-bold tracking-[0.12em] text-[#3b342e]">{daYun.ganZhi}</span><span className="mt-1 block text-[9px] tabular-nums text-[#81776b]">{daYun.startYear}-{daYun.endYear}</span>
                                                                 </button>
@@ -410,17 +590,64 @@ export default function BaziDivination({ onBack }) {
                                                         })}
                                                     </div>
                                                 </div>
+                                                <div className="hidden border-l border-t border-[#b9ad98] print:grid print:grid-cols-7">
+                                                    {baziResult.yun.dayun.map((daYun) => (
+                                                        <div key={`print-${daYun.index}`} className={`border-b border-r border-[#b9ad98] px-1 py-1.5 text-center ${selectedDaYun?.index === daYun.index ? 'bg-[#a33b30]/[0.07]' : ''}`}>
+                                                            <span className="block text-[7px] text-[#756d63]">{daYun.startAge}-{daYun.endAge}虚岁</span>
+                                                            <strong className="block font-serif text-sm text-[#3b342e]">{daYun.ganZhi}</strong>
+                                                            <span className="block text-[6px] text-[#81776b]">{daYun.startYear}-{daYun.endYear}{daYun.isCurrent ? ' · 当前' : ''}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                                 {selectedDaYun && (
-                                                    <div className="mt-3 rounded-xl border border-[#cbbfac]/80 bg-[#fffaf0]/65 p-3 sm:p-4" aria-live="polite">
+                                                    <div className="mt-3 rounded-xl border border-[#cbbfac]/80 bg-[#fffaf0]/65 p-3 print:hidden sm:p-4" aria-live="polite">
                                                         <div className="flex items-center justify-between gap-2"><div><p className="text-sm font-bold text-[#3b342e]">{selectedDaYun.ganZhi}大运 · 流年</p><p className="mt-0.5 text-[10px] text-[#81776b]">{selectedDaYun.startAge}-{selectedDaYun.endAge}虚岁</p></div>{selectedDaYun.isCurrent && <span className="rounded-full bg-[#2d6b62]/10 px-2 py-1 text-[10px] font-bold text-[#2d6b62]">当前所行大运</span>}</div>
                                                         <ul className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
-                                                            {selectedDaYun.liuNian.map((liuNian) => (
-                                                                <li key={liuNian.year} className={`relative min-h-11 rounded-lg border px-2 py-2 text-center ${liuNian.isCurrent ? 'border-[#a33b30] bg-[#a33b30]/[0.06]' : 'border-[#d5c9b8] bg-[#f7f0e5]'}`}>
-                                                                    {liuNian.isCurrent && <span className="absolute right-1 top-1 text-[8px] font-bold text-[#96372e]">今年</span>}
-                                                                    <span className="block text-[10px] tabular-nums text-[#81776b]">{liuNian.year} · {liuNian.age}虚岁</span><span className="mt-0.5 block font-serif text-base font-bold text-[#3b342e]">{liuNian.ganZhi}</span>{resultMode === 'professional' && <span className="mt-0.5 block text-[9px] text-[#2d6b62]">{liuNian.ganShiShen}</span>}
-                                                                </li>
-                                                            ))}
+                                                            {visibleLiuNian.map((liuNian) => {
+                                                                const isSelected = selectedLiuNian?.year === liuNian.year;
+                                                                return (
+                                                                    <li key={liuNian.year}>
+                                                                        <button
+                                                                            type="button"
+                                                                            aria-pressed={isSelected}
+                                                                            onClick={() => {
+                                                                                setSelectedLiuNianYear(liuNian.year);
+                                                                                setResultMode('professional');
+                                                                            }}
+                                                                            className={`relative min-h-12 w-full rounded-lg border px-2 py-2 text-center transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2d6b62] ${isSelected
+                                                                                ? 'border-[#a33b30] bg-[#a33b30]/[0.08] shadow-sm'
+                                                                                : liuNian.isCurrent
+                                                                                    ? 'border-[#2d6b62]/60 bg-[#2d6b62]/[0.06]'
+                                                                                    : 'border-[#d5c9b8] bg-[#f7f0e5] hover:border-[#a99b87]'
+                                                                            }`}
+                                                                        >
+                                                                            {isSelected && <span className="absolute left-1 top-1 text-[8px] font-bold text-[#96372e]">已选</span>}
+                                                                            {liuNian.isCurrent && <span className="absolute right-1 top-1 text-[8px] font-bold text-[#2d6b62]">今年</span>}
+                                                                            <span className="block text-[10px] tabular-nums text-[#81776b]">{liuNian.year} · {liuNian.age}虚岁</span>
+                                                                            <span className="mt-0.5 block font-serif text-base font-bold text-[#3b342e]">{liuNian.ganZhi}</span>
+                                                                            {resultMode === 'professional' && <span className="mt-0.5 block text-[9px] text-[#2d6b62]">{liuNian.ganShiShen}</span>}
+                                                                        </button>
+                                                                    </li>
+                                                                );
+                                                            })}
                                                         </ul>
+                                                        {visibleLiuNian.length > selectedDaYun.liuNian.length && (
+                                                            <p className="mt-2 text-[10px] leading-5 text-[#81776b]">当前流年跨越交运节点，已与本步大运的十个标称年份一并显示。</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                                {selectedDaYun && (
+                                                    <div className="mt-2 hidden print:block">
+                                                        <p className="mb-1 text-[8px] font-bold text-[#3b342e]">{selectedDaYun.ganZhi}大运流年对照</p>
+                                                        <div className="grid grid-cols-10 border-l border-t border-[#b9ad98]">
+                                                            {visibleLiuNian.map((liuNian) => (
+                                                                <div key={`print-year-${liuNian.year}`} className={`border-b border-r border-[#b9ad98] px-0.5 py-1 text-center ${selectedLiuNian?.year === liuNian.year ? 'bg-[#a33b30]/[0.07]' : ''}`}>
+                                                                    <span className="block text-[6px] text-[#81776b]">{liuNian.year}</span>
+                                                                    <strong className="block font-serif text-[10px] text-[#3b342e]">{liuNian.ganZhi}</strong>
+                                                                    <span className="block text-[6px] text-[#756d63]">{liuNian.age}虚岁</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
                                                     </div>
                                                 )}
                                             </section>
@@ -430,7 +657,7 @@ export default function BaziDivination({ onBack }) {
 
                                 <div className="mt-4 grid grid-cols-2 gap-3 print:hidden">
                                     <button type="button" onClick={() => setStep('input')} className="min-h-11 rounded-xl border border-orange-500/35 px-4 font-bold text-orange-300 hover:bg-orange-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400">重新排盘</button>
-                                    <button type="button" onClick={() => window.print()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2d6b62] px-3 font-bold text-white hover:bg-[#245a52] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#75b4aa]"><Printer className="size-4" aria-hidden="true" />打印 / 存为 PDF</button>
+                                    <button type="button" onClick={() => window.print()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#2d6b62] px-3 font-bold text-white hover:bg-[#245a52] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#75b4aa]"><Printer className="size-4" aria-hidden="true" />导出专业细盘</button>
                                 </div>
                             </>
                         ) : <div className="py-10 text-center text-red-300" role="alert">计算失败，请检查输入的日期是否正确</div>}
