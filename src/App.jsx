@@ -4,6 +4,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { ArrowLeft, Save } from "lucide-react";
 import * as iztro from "iztro";
 import { archiveManager } from './utils/archiveManager';
+import { buildHomeFortune, HOME_FORTUNE_PERIODS } from './utils/homeFortune';
 
 // Lazy load the heavy components
 const MoneyDivination = lazy(() => import("./components/MoneyDivination"));
@@ -41,6 +42,10 @@ export default function App() {
   const [horoscope, setHoroscope] = useState(null);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
+  const [archiveRecords, setArchiveRecords] = useState(() => archiveManager.getRecords());
+  const [homeProfileId, setHomeProfileId] = useState(null);
+  const [homePeriod, setHomePeriod] = useState('daily');
+  const [homeNow, setHomeNow] = useState(() => new Date());
 
   // Archive Save Modal State
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -54,6 +59,24 @@ export default function App() {
     };
     window.addEventListener('beforeinstallprompt', handler);
     return () => window.removeEventListener('beforeinstallprompt', handler);
+  }, []);
+
+  React.useEffect(() => {
+    const refreshArchives = () => setArchiveRecords(archiveManager.getRecords());
+    const refreshNow = () => setHomeNow(new Date());
+    const handleVisibilityChange = () => {
+      if (!document.hidden) refreshNow();
+    };
+
+    window.addEventListener('archive-updated', refreshArchives);
+    window.addEventListener('focus', refreshNow);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('archive-updated', refreshArchives);
+      window.removeEventListener('focus', refreshNow);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   React.useEffect(() => {
@@ -162,6 +185,38 @@ export default function App() {
     alert('保存成功！');
   };
 
+  const ziweiRecords = React.useMemo(
+    () => archiveRecords.filter((record) => record.type === 'ziwei'),
+    [archiveRecords],
+  );
+
+  const homeProfile = React.useMemo(() => {
+    const selected = ziweiRecords.find((record) => record.id === homeProfileId);
+    return selected
+      || ziweiRecords.find((record) => record.group === 'self')
+      || ziweiRecords[0]
+      || null;
+  }, [homeProfileId, ziweiRecords]);
+
+  const homeFortuneState = React.useMemo(() => {
+    if (!homeProfile) return { data: null, error: null };
+
+    try {
+      return {
+        data: buildHomeFortune(homeProfile, homePeriod, homeNow),
+        error: null,
+      };
+    } catch (error) {
+      console.warn('Unable to build home fortune:', error);
+      return {
+        data: null,
+        error: error instanceof Error ? error.message : '当前档案无法生成运势简报',
+      };
+    }
+  }, [homeNow, homePeriod, homeProfile]);
+
+  const homeFortune = homeFortuneState.data;
+
   const usesOwnHeader = ['money', 'bazi', 'videos', 'english'].includes(view);
 
   return (
@@ -223,20 +278,114 @@ export default function App() {
         {view === 'home' ? (
           // --- HOME PORTAL VIEW ---
           <div className="home-page animate-in fade-in duration-500">
-            <section className="home-hero" aria-labelledby="home-title">
-              <p className="section-kicker">古法为体 · 数理为用</p>
-              <h2 id="home-title" className="home-title">
-                以星曜为镜，<em>观人生脉络</em>
-              </h2>
-              <p className="home-subtitle">
-                从一张命盘开始，查看本命格局、大限与流年。传统术数，用更清晰的方式呈现。
-              </p>
-              <div className="home-assurances" aria-label="产品特点">
-                <span className="assurance-chip">专业命盘</span>
-                <span className="assurance-chip">运限推演</span>
-                <span className="assurance-chip">AI 辅助解读</span>
-              </div>
-            </section>
+            <div className="home-overview">
+              <section className="home-hero" aria-labelledby="home-title">
+                <p className="section-kicker">古法为体 · 数理为用</p>
+                <h2 id="home-title" className="home-title">
+                  以星曜为镜，<em>观人生脉络</em>
+                </h2>
+                <p className="home-subtitle">
+                  从一张命盘开始，查看本命格局、大限与流年。传统术数，用更清晰的方式呈现。
+                </p>
+                <div className="home-assurances" aria-label="产品特点">
+                  <span className="assurance-chip">专业命盘</span>
+                  <span className="assurance-chip">运限推演</span>
+                  <span className="assurance-chip">AI 辅助解读</span>
+                </div>
+              </section>
+
+              <section className={`fortune-brief ${homeFortune ? '' : 'fortune-brief--empty'}`} aria-labelledby="fortune-brief-title">
+                <header className="fortune-brief-header">
+                  <div>
+                    <p className="fortune-brief-eyebrow">私人运势简报</p>
+                    <h3 id="fortune-brief-title">{homeFortune ? `${homeFortune.profileName}的${homeFortune.periodLabel}` : '每天打开，就有当下重点'}</h3>
+                  </div>
+                  <span className="fortune-brief-seal" aria-hidden="true">今</span>
+                </header>
+
+                {homeFortune ? (
+                  <>
+                    {ziweiRecords.length > 1 && (
+                      <div className="fortune-profiles" aria-label="切换命盘档案">
+                        {ziweiRecords.slice(0, 5).map((record) => (
+                          <button
+                            key={record.id}
+                            type="button"
+                            aria-pressed={homeProfile?.id === record.id}
+                            onClick={() => setHomeProfileId(record.id)}
+                          >
+                            {record.name || '未命名'}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="fortune-periods" role="group" aria-label="选择运势时间层">
+                      {HOME_FORTUNE_PERIODS.map((period) => (
+                        <button
+                          key={period.key}
+                          type="button"
+                          aria-pressed={homePeriod === period.key}
+                          onClick={() => setHomePeriod(period.key)}
+                        >
+                          <span aria-hidden="true">{period.icon}</span>
+                          {period.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="fortune-brief-date">
+                      <span>{homeFortune.dateLabel}</span>
+                      <strong>{homeFortune.stemBranch}</strong>
+                    </div>
+
+                    <p className="fortune-summary">{homeFortune.summary}</p>
+
+                    <dl className="fortune-facts">
+                      <div>
+                        <dt>运限命宫</dt>
+                        <dd>{homeFortune.palaceName}{homeFortune.palaceBranch ? ` · ${homeFortune.palaceBranch}` : ''}</dd>
+                      </div>
+                      <div>
+                        <dt>当前大限</dt>
+                        <dd>{homeFortune.decadalPalaceName || '—'}{homeFortune.nominalAge ? ` · 虚岁${homeFortune.nominalAge}` : ''}</dd>
+                      </div>
+                    </dl>
+
+                    <div className="fortune-guidance" aria-label="当下参考">
+                      <p><span>宜</span>{homeFortune.action}</p>
+                      <p><span>慎</span>{homeFortune.caution}</p>
+                    </div>
+
+                    <div className="fortune-mutagens" aria-label="当前四化">
+                      {homeFortune.mutagens.map((item) => (
+                        <span key={item.label} data-kind={item.label}>
+                          <b>{item.label}</b>{item.star}
+                        </span>
+                      ))}
+                    </div>
+
+                    {homeFortune.movingStars.length > 0 && (
+                      <p className="fortune-moving-stars">流耀：{homeFortune.movingStars.join(' · ')}</p>
+                    )}
+                    {homeFortune.dayBoundaryNote && <p className="fortune-boundary-note">{homeFortune.dayBoundaryNote}</p>}
+
+                    <button type="button" className="fortune-open-chart" onClick={() => handleLoadRecord(homeProfile)}>
+                      查看完整命盘与专业依据 <span aria-hidden="true">→</span>
+                    </button>
+                    <p className="fortune-disclaimer">按当前设备时间自动排盘，仅供传统文化研究；具体判断需结合本命与三方四正。</p>
+                  </>
+                ) : (
+                  <div className="fortune-empty-content">
+                    <p>{homeFortuneState.error || '保存一次本人的紫微命盘，首页便会自动显示今时、今日、今月与今年的运限重点。'}</p>
+                    <button type="button" onClick={() => setView(homeFortuneState.error ? 'archive' : 'input')}>
+                      {homeFortuneState.error ? '检查命盘档案' : '保存我的第一张命盘'} <span aria-hidden="true">→</span>
+                    </button>
+                    <span>出生资料只保存在当前设备</span>
+                  </div>
+                )}
+              </section>
+            </div>
 
             <section aria-label="核心功能">
               <button
@@ -338,7 +487,7 @@ export default function App() {
             </nav>
 
             <footer className="home-footer">
-              <p>v2026.08.22.Jade-UI</p>
+              <p>v2026.08.22.Daily-Flow</p>
               <button
                 type="button"
                 onClick={async () => {

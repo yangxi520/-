@@ -18,7 +18,7 @@ import {
     getLunarMonthDays,
     getLunarMonthOptions,
 } from '../utils/fortuneContext';
-import { Sparkles, HelpCircle, Coffee, Save, Archive, Calendar } from "lucide-react";
+import { Sparkles, HelpCircle, Coffee, Save, Archive, Calendar, Printer } from "lucide-react";
 import wechatPayImg from '../assets/wechat_pay.jpg';
 import alipayImg from '../assets/alipay.jpg';
 
@@ -790,10 +790,10 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     };
 
     return (
-        <div className="w-full max-w-3xl mx-auto bg-stone-200 text-slate-900 p-2 pb-28 md:p-1 select-none flex flex-col gap-3 overflow-x-visible md:overflow-x-auto shadow-2xl rounded-sm">
+        <div className="professional-chart w-full max-w-3xl mx-auto bg-stone-200 text-slate-900 p-2 pb-28 md:p-1 select-none flex flex-col gap-3 overflow-x-visible md:overflow-x-auto shadow-2xl rounded-sm">
             {/* Mobile-only readable summary and chart mode selector. */}
             <section
-                className="md:hidden rounded-2xl border border-purple-200 bg-gradient-to-br from-white via-purple-50 to-cyan-50 p-4 shadow-sm"
+                className="chart-mobile-controls md:hidden rounded-2xl border border-purple-200 bg-gradient-to-br from-white via-purple-50 to-cyan-50 p-4 shadow-sm"
                 aria-label="命盘基本信息摘要"
             >
                 <div className="flex items-start justify-between gap-3">
@@ -837,7 +837,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             </section>
 
             <div
-                className="md:hidden grid grid-cols-2 gap-1 rounded-xl bg-stone-300 p-1"
+                className="chart-mobile-controls md:hidden grid grid-cols-2 gap-1 rounded-xl bg-stone-300 p-1"
                 role="group"
                 aria-label="手机命盘显示方式"
             >
@@ -860,7 +860,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             </div>
 
             {mobileChartMode === 'simple' && (
-                <section className="md:hidden" aria-label="简洁十二宫命盘">
+                <section className="chart-simple-grid md:hidden" aria-label="简洁十二宫命盘">
                     <div className="mb-2 flex items-center justify-between px-1">
                         <h2 className="text-sm font-black text-slate-800">十二宫速览</h2>
                         <span className="text-[11px] text-stone-500">点宫位可高亮查看</span>
@@ -879,7 +879,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             )}
 
             {/* Chart Grid - Min width to ensure readability on mobile */}
-            <div className={`${mobileChartMode === 'professional' ? 'block' : 'hidden'} md:block overflow-x-auto rounded-lg`}>
+            <div className={`chart-professional-grid ${mobileChartMode === 'professional' ? 'block' : 'hidden'} md:block overflow-x-auto rounded-lg`}>
                 <div className="aspect-square grid grid-cols-4 grid-rows-4 gap-[1px] bg-stone-300 border-2 border-stone-400 relative min-w-[600px] md:min-w-0 shadow-inner">
                 {renderConnections()}
                 {/* Row 1 */}
@@ -1016,7 +1016,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             </div>
 
             {/* Cascading Timeline Table */}
-            <div className="overflow-x-auto rounded-xl border border-stone-300 bg-white text-[11px] shadow-sm md:text-xs">
+            <div className="chart-timeline overflow-x-auto rounded-xl border border-stone-300 bg-white text-[11px] shadow-sm md:text-xs">
                 <table className="min-w-full text-center border-collapse" aria-label="运限时间选择">
                     <tbody>
                         {/* Da Xian Row */}
@@ -1180,7 +1180,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             </div>
 
             {/* --- Unified Floating Action Buttons (Stack) --- */}
-            <div className="fixed inset-x-0 bottom-0 z-50 pointer-events-none md:inset-x-auto md:right-4 md:bottom-6">
+            <div className="chart-action-bar fixed inset-x-0 bottom-0 z-50 pointer-events-none md:inset-x-auto md:right-4 md:bottom-6">
                 <nav
                     className="pointer-events-auto grid grid-cols-4 gap-2 border-t border-white/10 bg-black/95 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.35)] backdrop-blur-xl md:flex md:flex-col md:items-end md:border-0 md:bg-transparent md:p-0 md:shadow-none"
                     aria-label="命盘操作"
@@ -1236,18 +1236,18 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                         </span>
                     </button>
 
-                    {/* 3. Coffee Button */}
+                    {/* 4. Print / PDF Export Button */}
                     <button
                         type="button"
-                        onClick={() => setShowDonationModal(true)}
-                        className="group relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-red-600 to-orange-600 text-white shadow-lg transition active:scale-95 md:h-12 md:min-h-0 md:w-12 md:rounded-full md:from-red-500 md:to-orange-500 md:hover:scale-110"
-                        title="请喝咖啡"
-                        aria-label="打开支持作者二维码"
+                        onClick={() => window.print()}
+                        className="group relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-amber-700 to-orange-700 text-white shadow-lg transition active:scale-95 md:h-12 md:min-h-0 md:w-12 md:rounded-full md:from-amber-600 md:to-orange-600 md:hover:scale-110"
+                        title="打印 / 存为 PDF"
+                        aria-label="打印命盘或存为 PDF"
                     >
-                        <Coffee className="w-5 h-5" />
-                        <span className="text-[11px] font-bold md:hidden">支持</span>
+                        <Printer className="w-5 h-5" />
+                        <span className="text-[11px] font-bold md:hidden">导出</span>
                         <span className="absolute right-14 hidden bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none md:block">
-                            请喝咖啡
+                            打印 / 存为 PDF
                         </span>
                     </button>
                 </nav>
@@ -1255,7 +1255,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
             {/* Mobile bottom sheet / desktop popover for AI actions. */}
             {showAiMenu && (
-                <div className="fixed inset-0 z-[60]">
+                <div className="chart-modal fixed inset-0 z-[60]">
                     <button
                         type="button"
                         className="absolute inset-0 h-full w-full bg-black/60 md:bg-transparent"
@@ -1303,6 +1303,17 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                 <button onClick={() => setMenuView('baby')} className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center justify-between text-sm font-bold text-green-300 border border-transparent hover:border-green-500/30 transition-all">
                                     <div className="flex items-center gap-3"><span className="text-xl">👶</span> 起居注 (备孕)</div>
                                     <span>›</span>
+                                </button>
+                                <div className="h-px bg-white/10 my-2"></div>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        closeAiMenu();
+                                        setShowDonationModal(true);
+                                    }}
+                                    className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-orange-300 border border-transparent hover:border-orange-500/30 transition-all"
+                                >
+                                    <Coffee className="h-5 w-5" /> 支持作者
                                 </button>
                             </>
                         )}
@@ -1353,7 +1364,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
             {/* Generated fortune prompt preview */}
             {promptPreview && (
-                <div className="fixed inset-0 z-[90] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 md:p-6">
+                <div className="chart-modal fixed inset-0 z-[90] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 md:p-6">
                     <div className="w-full max-w-3xl max-h-[88vh] bg-stone-50 text-slate-900 rounded-2xl shadow-2xl border border-purple-300 flex flex-col overflow-hidden">
                         <div className="px-4 py-3 md:px-6 md:py-4 bg-gradient-to-r from-purple-700 to-cyan-700 text-white flex items-center justify-between gap-3">
                             <div>
@@ -1396,7 +1407,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
             {/* Partner Info Modal */}
             {showPartnerModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" role="dialog" aria-modal="true" aria-labelledby="partner-dialog-title">
+                <div className="chart-modal fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" role="dialog" aria-modal="true" aria-labelledby="partner-dialog-title">
                     <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-sm flex-col overflow-hidden rounded-xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
                         <div className="bg-purple-600 px-4 py-3 flex justify-between items-center">
                             <h3 id="partner-dialog-title" className="text-white font-bold text-lg">💑 输入配偶信息</h3>
@@ -1490,7 +1501,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             )}
             {/* Donation Modal */}
             {showDonationModal && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={() => setShowDonationModal(false)} role="dialog" aria-modal="true" aria-labelledby="donation-dialog-title">
+                <div className="chart-modal fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4" onClick={() => setShowDonationModal(false)} role="dialog" aria-modal="true" aria-labelledby="donation-dialog-title">
                     <div className="flex max-h-[calc(100dvh-2rem)] w-full max-w-md flex-col overflow-hidden rounded-xl bg-white shadow-2xl animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
                         <div className="bg-gradient-to-r from-red-500 to-orange-500 p-4 text-white flex justify-between items-center">
                             <h3 id="donation-dialog-title" className="font-bold text-lg flex items-center gap-2">
