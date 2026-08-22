@@ -3,15 +3,20 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.jsx'
 
-// ☢️ NUCLEAR OPTION: Auto-unregister all Service Workers to fix zombie cache
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then(function (registrations) {
-    for (let registration of registrations) {
-      console.log('Nuclear: Unregistering SW', registration);
-      registration.unregister();
-    }
-  });
-}
+// Remove the legacy PWA worker. It used to serve an old cached index before
+// the new bundle could load, which made the custom domain appear out of date.
+const removeLegacyServiceWorkers = async () => {
+  if (!('serviceWorker' in navigator)) return;
+
+  try {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map((registration) => registration.unregister()));
+  } catch (error) {
+    console.warn('Unable to remove legacy service worker:', error);
+  }
+};
+
+void removeLegacyServiceWorkers();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

@@ -1,35 +1,14 @@
 {
-  "redirects": [
-    {
-      "source": "/",
-      "has": [
-        {
-          "type": "query",
-          "key": "v",
-          "value": "(?!nuclear).*"
-        }
-      ],
-      "destination": "/?v=nuclear",
-      "permanent": false
-    },
-    {
-      "source": "/test-redirect",
-      "destination": "https://google.com",
-      "permanent": false
-    },
-    {
-      "source": "/",
-      "missing": [
-        {
-          "type": "query",
-          "key": "v"
-        }
-      ],
-      "destination": "/?v=nuclear",
-      "permanent": false
-    }
-  ],
   "headers": [
+    {
+      "source": "/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, no-store, must-revalidate"
+        }
+      ]
+    },
     {
       "source": "/sw.js",
       "headers": [
@@ -48,7 +27,7 @@
       ]
     },
     {
-      "source": "/index.html",
+      "source": "/(.*)\\.html",
       "headers": [
         {
           "key": "Cache-Control",
@@ -65,7 +44,7 @@
       ]
     },
     {
-      "source": "/workbox-(.*)\\.js",
+      "source": "/manifest.json",
       "headers": [
         {
           "key": "Cache-Control",

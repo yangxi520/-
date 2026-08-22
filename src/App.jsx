@@ -324,17 +324,23 @@ export default function App() {
               </button>
               {/* Version Footer */}
               <div className="mt-8 text-center col-span-1 md:col-span-3">
-                <p className="text-white/20 text-xs font-mono">v2025.12.09.Archive</p>
+                <p className="text-white/20 text-xs font-mono">v2026.08.22.Fortune-Fix</p>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (window.confirm('确定要清除所有缓存并强制更新吗？')) {
-                      if ('serviceWorker' in navigator) {
-                        navigator.serviceWorker.getRegistrations().then(function (registrations) {
-                          for (let registration of registrations) registration.unregister();
-                          window.location.reload();
-                        });
-                      } else {
-                        window.location.reload();
+                      try {
+                        if ('serviceWorker' in navigator) {
+                          const registrations = await navigator.serviceWorker.getRegistrations();
+                          await Promise.all(registrations.map((registration) => registration.unregister()));
+                        }
+                        if ('caches' in window) {
+                          const cacheNames = await window.caches.keys();
+                          await Promise.all(cacheNames.map((cacheName) => window.caches.delete(cacheName)));
+                        }
+                      } finally {
+                        const refreshUrl = new URL(window.location.href);
+                        refreshUrl.searchParams.set('refresh', Date.now().toString());
+                        window.location.replace(refreshUrl.toString());
                       }
                     }
                   }}
