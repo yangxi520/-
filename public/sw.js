@@ -8,6 +8,7 @@ globalThis.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const cacheNames = await globalThis.caches.keys();
     await Promise.all(cacheNames.map((cacheName) => globalThis.caches.delete(cacheName)));
+    await globalThis.clients.claim();
     await globalThis.registration.unregister();
 
     const windows = await globalThis.clients.matchAll({
