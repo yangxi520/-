@@ -2657,6 +2657,115 @@ select.field-control { cursor: pointer; }
   .primary-card-title { font-size: 29px; }
 }
 
+/* ===== Gesture Divination Styles ===== */
+
+/* Camera preview window */
+.gesture-camera-preview {
+  width: 128px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1.5px solid rgba(139, 69, 19, 0.25);
+  background: rgba(248, 240, 228, 0.6);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 20px rgba(93, 64, 55, 0.15);
+}
+
+.gesture-camera-video {
+  display: block;
+  width: 100%;
+  height: 96px;
+  object-fit: cover;
+  border-radius: 14px 14px 0 0;
+  transform: scaleX(-1); /* mirror */
+  background: #1a1a1a;
+}
+
+.gesture-camera-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: #5d4037;
+}
+
+.gesture-camera-icon {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.gesture-camera-label {
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+/* Gesture HUD — fixed bottom center, replaces shake button in gesture mode */
+.gesture-hud {
+  position: fixed;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 28px;
+  border-radius: 20px;
+  background: rgba(168, 40, 40, 0.88);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(168, 40, 40, 0.35);
+  color: rgba(255, 255, 255, 0.95);
+  animation: gestureHudPulse 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.gesture-hud-emoji {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.gesture-hud-text {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-align: center;
+  white-space: nowrap;
+}
+
+@keyframes gestureHudPulse {
+  0%, 100% { box-shadow: 0 4px 24px rgba(168, 40, 40, 0.35); }
+  50% { box-shadow: 0 4px 32px rgba(168, 40, 40, 0.55); }
+}
+
+/* Mobile adjustments for gesture elements */
+@media (max-width: 767px) {
+  .gesture-camera-preview {
+    width: 100px;
+  }
+  .gesture-camera-video {
+    height: 75px;
+  }
+  .gesture-camera-status {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+  .gesture-camera-icon {
+    font-size: 14px;
+  }
+  .gesture-hud {
+    padding: 10px 22px;
+    border-radius: 16px;
+  }
+  .gesture-hud-emoji {
+    font-size: 24px;
+  }
+  .gesture-hud-text {
+    font-size: 11px;
+  }
+}
+
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     scroll-behavior: auto !important;

@@ -1,12 +1,13 @@
 /* eslint-disable react-hooks/set-state-in-effect */
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 // eslint-disable-next-line no-unused-vars
 import { useSpring, animated } from '@react-spring/three';
 import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Hand } from 'lucide-react';
 import { getHexagram } from '../utils/hexagramLogic';
+import useGestureDivination from '../hooks/useGestureDivination';
 
 // --- Assets ---
 import coinYangTexture from '../assets/coin_yang_perfect.png';
@@ -190,6 +191,30 @@ export default function MoneyDivination({ onBack }) {
     // Responsive State
     const [isMobile, setIsMobile] = useState(false);
 
+    // --- Gesture Mode State ---
+    const {
+        isGestureMode, currentGesture,
+        throwDetected, videoRef, startCamera, stopCamera,
+        cameraError, clearThrow
+    } = useGestureDivination();
+    const [showGestureGuide, setShowGestureGuide] = useState(false);
+    const gestureGuideShownRef = useRef(false);
+
+    // Toggle gesture mode
+    const toggleGestureMode = useCallback(async () => {
+        if (isGestureMode) {
+            stopCamera();
+        } else {
+            await startCamera();
+            // Show guide on first use
+            if (!gestureGuideShownRef.current) {
+                gestureGuideShownRef.current = true;
+                setShowGestureGuide(true);
+                setTimeout(() => setShowGestureGuide(false), 5000);
+            }
+        }
+    }, [isGestureMode, stopCamera, startCamera]);
+
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
         checkMobile();
@@ -318,7 +343,22 @@ export default function MoneyDivination({ onBack }) {
         setIsThrown(false);
         isProcessingRef.current = false;
         setIsProcessing(false);
+        clearThrow();
     };
+
+    // --- Bridge gesture throw to handleThrow ---
+    const handleThrowRef = useRef(null);
+
+    useEffect(() => {
+        handleThrowRef.current = handleThrow;
+    });
+
+    useEffect(() => {
+        if (throwDetected && isGestureMode) {
+            clearThrow();
+            handleThrowRef.current?.();
+        }
+    }, [throwDetected, isGestureMode, clearThrow]);
 
     return (
         <div className="relative w-full h-[100dvh] min-h-[100dvh] overflow-hidden text-[#2b2b2b]"
@@ -387,6 +427,100 @@ export default function MoneyDivination({ onBack }) {
             >
                 <ArrowLeft size={19} aria-hidden="true" />
             </button>
+
+            {/* --- GESTURE MODE TOGGLE --- */}
+            <button
+                type="button"
+                onClick={toggleGestureMode}
+                className={`absolute z-[100] size-11 rounded-full border backdrop-blur-sm flex items-center justify-center shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a83232]
+                    ${isGestureMode
+                        ? 'border-[#a83232]/50 bg-[#a83232]/20 text-[#a83232]'
+                        : 'border-[#8b4513]/30 bg-[#f8f0e4]/70 text-[#5d4037] hover:border-[#5d4037] hover:bg-[#f8f0e4]'
+                    }
+                    ${isMobile ? 'right-16' : 'top-6 right-24'}
+                `}
+                style={isMobile ? { top: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
+                aria-label={isGestureMode ? '关闭手势模式' : '开启手势模式'}
+                aria-pressed={isGestureMode}
+            >
+                <Hand size={18} aria-hidden="true" />
+            </button>
+
+            {/* --- CAMERA ERROR TOAST --- */}
+            {cameraError && (
+                <div
+                    className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] max-w-xs px-4 py-3 rounded-2xl bg-[#1a1a1a]/90 text-white text-xs text-center backdrop-blur-md shadow-lg animate-[fadeIn_0.3s_ease]"
+                    role="alert"
+                >
+                    {cameraError}
+                </div>
+            )}
+
+            {/* --- GESTURE GUIDE TOAST --- */}
+            {showGestureGuide && (
+                <div
+                    className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] max-w-xs px-5 py-4 rounded-2xl bg-[#1a1a1a]/90 text-white text-center backdrop-blur-md shadow-lg animate-[fadeIn_0.3s_ease]"
+                    role="status"
+                >
+                    <div className="text-2xl mb-2">✊</div>
+                    <div className="text-xs leading-5 opacity-90">
+                        握紧拳头，即可投掷铜钱<br />
+                        <span className="opacity-60">Clench fist to throw</span>
+                    </div>
+                </div>
+            )}
+
+            {/* --- CAMERA PREVIEW (gesture mode) --- */}
+            {isGestureMode && (
+                <div
+                    className={`gesture-camera-preview absolute z-[90]
+                        ${isMobile ? 'bottom-28 left-4' : 'bottom-8 left-8'}
+                    `}
+                    style={isMobile ? { paddingBottom: 'env(safe-area-inset-bottom)' } : undefined}
+                >
+                    <video
+                        ref={videoRef}
+                        autoPlay
+                        muted
+                        playsInline
+                        className="gesture-camera-video"
+                        aria-hidden="true"
+                    />
+                    {/* Gesture status indicator */}
+                    <div className="gesture-camera-status">
+                        <span className="gesture-camera-icon">
+                            {currentGesture === 'fist' ? '✊' : currentGesture === 'palm' ? '🖐' : currentGesture === 'point' ? '☝' : '…'}
+                        </span>
+                        <span className="gesture-camera-label">
+                            {currentGesture === 'fist' ? '投掷！' : currentGesture === 'palm' ? '张掌' : currentGesture === 'point' ? '伸指' : '等待手势'}
+                        </span>
+                    </div>
+                </div>
+            )}
+
+            {/* --- GESTURE HUD (replaces shake prompt when in gesture mode) --- */}
+            {isGestureMode && !finalHexagram && yaos.length < 6 && (
+                <div className="gesture-hud" role="status" aria-live="polite">
+                    {isProcessing ? (
+                        <div className="gesture-hud-text">铜钱落定中…</div>
+                    ) : currentGesture === 'fist' ? (
+                        <>
+                            <div className="gesture-hud-emoji">✊</div>
+                            <div className="gesture-hud-text">投掷！</div>
+                        </>
+                    ) : currentGesture === 'palm' ? (
+                        <>
+                            <div className="gesture-hud-emoji">🖐</div>
+                            <div className="gesture-hud-text">张掌中…</div>
+                        </>
+                    ) : (
+                        <>
+                            <div className="gesture-hud-emoji" style={{ opacity: 0.5 }}>✊</div>
+                            <div className="gesture-hud-text">握紧拳头 · 第{currentThrow}爻</div>
+                        </>
+                    )}
+                </div>
+            )}
 
             {/* --- MAIN CONTENT AREA (Yao List & Result) --- */}
             {/* Mobile: Top Right (for Yao list), avoid center overlap */}
@@ -503,8 +637,8 @@ export default function MoneyDivination({ onBack }) {
             )}
 
 
-            {/* --- SHAKE BUTTON --- */}
-            {!finalHexagram && yaos.length < 6 && (
+            {/* --- SHAKE BUTTON (hidden during gesture mode) --- */}
+            {!finalHexagram && yaos.length < 6 && !isGestureMode && (
                 <button
                     type="button"
                     onClick={handleThrow}
