@@ -1,10 +1,19 @@
 import { util } from 'iztro';
 
 export const MUTAGEN_META = Object.freeze([
-  { key: 'lu', mutagen: '禄', color: '#18a05e' },
-  { key: 'quan', mutagen: '权', color: '#8d3daf' },
-  { key: 'ke', mutagen: '科', color: '#1686d9' },
-  { key: 'ji', mutagen: '忌', color: '#ef3d35' },
+  { key: 'lu', mutagen: '禄', code: 'A', color: '#18a05e' },
+  { key: 'quan', mutagen: '权', code: 'B', color: '#8d3daf' },
+  { key: 'ke', mutagen: '科', code: 'C', color: '#1686d9' },
+  { key: 'ji', mutagen: '忌', code: 'D', color: '#ef3d35' },
+]);
+
+export const MUTAGEN_LAYER_META = Object.freeze([
+  Object.freeze({ key: 'origin', label: '本', name: '本命', layerColor: '#d73b32' }),
+  Object.freeze({ key: 'decadal', label: '限', name: '大限', layerColor: '#24964b' }),
+  Object.freeze({ key: 'yearly', label: '年', name: '流年', layerColor: '#167bd8' }),
+  Object.freeze({ key: 'monthly', label: '月', name: '流月', layerColor: '#e47b19' }),
+  Object.freeze({ key: 'daily', label: '日', name: '流日', layerColor: '#8d3daf' }),
+  Object.freeze({ key: 'hourly', label: '时', name: '流时', layerColor: '#078f9d' }),
 ]);
 
 // iztro 默认采用《紫微斗数全书》的十干四化表。
@@ -35,6 +44,30 @@ export const getMutagenStarMap = (heavenlyStem) => {
 export const getAllMutagenStarMaps = () => Object.fromEntries(
   Object.keys(MUTAGEN_STAR_MAP).map((heavenlyStem) => [heavenlyStem, getMutagenStarMap(heavenlyStem)]),
 );
+
+export const getActiveMutagenBadges = ({
+  starName,
+  activeStems = {},
+  activeLayers = {},
+}) => MUTAGEN_LAYER_META.flatMap((layer) => {
+  if (!activeLayers[layer.key]) return [];
+
+  const stem = activeStems[layer.key];
+  if (!stem) return [];
+
+  const map = getMutagenStarMap(stem);
+  const meta = MUTAGEN_META.find((item) => map[item.key] === starName);
+  if (!meta) return [];
+
+  return [{
+    ...layer,
+    stem,
+    type: meta.mutagen,
+    code: meta.code,
+    mutagenColor: meta.color,
+    color: meta.color,
+  }];
+});
 
 /**
  * Build the four palace-stem transformations for every palace.
@@ -89,3 +122,45 @@ export const groupSelfMutationsByBranch = (flights) => flights.reduce((result, f
   result[flight.sourceBranch].push(flight);
   return result;
 }, {});
+
+/**
+ * Build the compact 四化 diagram used by the dedicated 四化 board.
+ *
+ * 离心与向心都以发起宫为视觉锚点。真实落宫仍保留在 targetBranch，
+ * 供点击说明与算法核验使用，不能拿来替代箭头的起宫位置。
+ */
+export const buildSihuaDiagramEntries = (flights = []) => flights
+  .filter((flight) => flight.kind === 'outward' || flight.kind === 'inward')
+  .map((flight) => ({
+    ...flight,
+    // 文墨式自化符号始终挂在发起宫：离心从发起宫向盘外，
+    // 向心从发起宫内缘朝中宫；targetBranch 只保留作真实落宫解释。
+    anchorBranch: flight.sourceBranch,
+    track: flight.kind === 'inward' ? 'source-to-center' : 'source-to-outer',
+  }));
+
+/**
+ * Map every year in a selected formal decade to the natal palace occupied by
+ * that year's 流年命宫. Ten years therefore populate ten palaces and leave two
+ * palaces empty, matching the compact 飞星盘 convention.
+ */
+export const buildFlyYearMarkers = ({ astrolabe, years = [], birthYear }) => years.map((year) => {
+  try {
+    const fortune = astrolabe.horoscope(`${year}-06-15`);
+    return {
+      year,
+      nominalAge: fortune?.age?.nominalAge ?? (year - birthYear + 1),
+      ganZhi: `${fortune?.yearly?.heavenlyStem || ''}${fortune?.yearly?.earthlyBranch || ''}`,
+      yearlyPalaceIndex: fortune?.yearly?.index ?? null,
+      decadalPalaceNames: fortune?.decadal?.palaceNames || [],
+    };
+  } catch {
+    return {
+      year,
+      nominalAge: year - birthYear + 1,
+      ganZhi: '',
+      yearlyPalaceIndex: null,
+      decadalPalaceNames: [],
+    };
+  }
+});

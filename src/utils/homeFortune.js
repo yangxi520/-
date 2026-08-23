@@ -1,9 +1,8 @@
-import { astro } from 'iztro';
-
 import {
   buildCurrentFortuneContext,
   formatFortuneTime,
 } from './fortuneContext.js';
+import { createZiweiHoroscope } from './ziweiBirth.js';
 
 export const HOME_FORTUNE_PERIODS = Object.freeze([
   Object.freeze({ key: 'hourly', label: '今时运势', icon: '⏰' }),
@@ -224,22 +223,13 @@ export const createHoroscopeFromRecord = (record) => {
   } = normalized;
 
   try {
-    const horoscope = calendarType === 'lunar'
-      ? astro.byLunar(
-        birthDate.normalized,
-        timeHour,
-        genderLabel,
-        isLeapMonth,
-        true,
-        'zh-CN',
-      )
-      : astro.bySolar(
-        birthDate.normalized,
-        timeHour,
-        genderLabel,
-        true,
-        'zh-CN',
-      );
+    const horoscope = createZiweiHoroscope({
+      calendarType,
+      birthDate: birthDate.normalized,
+      timeIndex: timeHour,
+      gender: genderLabel,
+      isLeapMonth,
+    });
 
     if (!horoscope || !Array.isArray(horoscope.palaces) || horoscope.palaces.length !== 12) {
       throw new Error('排盘结果缺少十二宫');

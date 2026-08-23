@@ -3,9 +3,10 @@ import ProfessionalChart from "./components/ProfessionalChart";
 import ErrorBoundary from "./components/ErrorBoundary";
 import WelcomeCover from "./components/WelcomeCover";
 import { AlertCircle, ArrowLeft, CheckCircle2, Save } from "lucide-react";
-import * as iztro from "iztro";
 import { archiveManager } from './utils/archiveManager';
 import { buildHomeFortune, HOME_FORTUNE_PERIODS } from './utils/homeFortune';
+import { getLunarMonthDays, getLunarMonthOptions } from './utils/fortuneContext';
+import { createZiweiHoroscope } from './utils/ziweiBirth';
 
 // Lazy load the heavy components
 const MoneyDivination = lazy(() => import("./components/MoneyDivination"));
@@ -192,8 +193,22 @@ const getBirthDateParts = (value) => {
   };
 };
 
-const getBirthDayCount = (calendarType, year, month) => {
-  if (calendarType === 'lunar') return 30;
+const lunarMonthSupportsLeap = (year, month) => {
+  if (!/^\d{4}$/.test(year) || !/^\d{2}$/.test(month)) return false;
+
+  try {
+    return getLunarMonthOptions(Number(year)).some((option) => (
+      option.month === Number(month) && option.isLeap
+    ));
+  } catch {
+    return false;
+  }
+};
+
+const getBirthDayCount = (calendarType, year, month, isLeapMonth = false) => {
+  if (calendarType === 'lunar') {
+    return getLunarMonthDays(Number(year), Number(month), isLeapMonth) || 30;
+  }
   if (!year || !month) return 31;
   return new Date(Date.UTC(Number(year), Number(month), 0)).getUTCDate();
 };
@@ -212,6 +227,7 @@ export default function App() {
   const [name, setName] = useState('');
   const [birthday, setBirthday] = useState('');
   const [birthTime, setBirthTime] = useState(0);
+  const [isLeapMonth, setIsLeapMonth] = useState(false);
   const [horoscope, setHoroscope] = useState(null);
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
@@ -223,29 +239,76 @@ export default function App() {
   const [isMoreOpen, setIsMoreOpen] = useState(false);
 
   const birthDateParts = getBirthDateParts(birthday);
-  const birthDayCount = getBirthDayCount(calendarType, birthDateParts.year, birthDateParts.month);
+  const leapMonthAvailable = calendarType === 'lunar'
+    && lunarMonthSupportsLeap(birthDateParts.year, birthDateParts.month);
+  const effectiveIsLeapMonth = leapMonthAvailable && isLeapMonth;
+  const birthDayCount = getBirthDayCount(
+    calendarType,
+    birthDateParts.year,
+    birthDateParts.month,
+    effectiveIsLeapMonth,
+  );
   const birthDayOptions = Array.from(
-    { length: birthDayCount },
+    { length: calendarType === 'lunar' ? 30 : birthDayCount },
     (_, index) => String(index + 1).padStart(2, '0'),
   );
 
+  React.useEffect(() => {
+    if (!birthDateParts.day || Number(birthDateParts.day) <= birthDayCount) return;
+    setBirthday(`${birthDateParts.year}-${birthDateParts.month}-${String(birthDayCount).padStart(2, '0')}`);
+  }, [birthDateParts.day, birthDateParts.month, birthDateParts.year, birthDayCount]);
+
   const updateBirthDatePart = (part, value) => {
     const nextParts = { ...birthDateParts, [part]: value };
-    const nextDayCount = getBirthDayCount(calendarType, nextParts.year, nextParts.month);
+    const nextLeapMonthAvailable = calendarType === 'lunar'
+      && lunarMonthSupportsLeap(nextParts.year, nextParts.month);
+    const nextIsLeapMonth = nextLeapMonthAvailable && isLeapMonth;
+    const nextDayCount = getBirthDayCount(
+      calendarType,
+      nextParts.year,
+      nextParts.month,
+      nextIsLeapMonth,
+    );
     if (nextParts.day && Number(nextParts.day) > nextDayCount) {
       nextParts.day = String(nextDayCount).padStart(2, '0');
     }
+    if (!nextLeapMonthAvailable) setIsLeapMonth(false);
     setBirthday(`${nextParts.year}-${nextParts.month}-${nextParts.day}`);
   };
 
   const updateCalendarType = (nextCalendarType) => {
     const nextParts = { ...birthDateParts };
-    const nextDayCount = getBirthDayCount(nextCalendarType, nextParts.year, nextParts.month);
+    const nextLeapMonthAvailable = nextCalendarType === 'lunar'
+      && lunarMonthSupportsLeap(nextParts.year, nextParts.month);
+    const nextIsLeapMonth = nextLeapMonthAvailable && isLeapMonth;
+    const nextDayCount = getBirthDayCount(
+      nextCalendarType,
+      nextParts.year,
+      nextParts.month,
+      nextIsLeapMonth,
+    );
     if (nextParts.day && Number(nextParts.day) > nextDayCount) {
       nextParts.day = String(nextDayCount).padStart(2, '0');
       setBirthday(`${nextParts.year}-${nextParts.month}-${nextParts.day}`);
     }
+    if (!nextLeapMonthAvailable) setIsLeapMonth(false);
     setCalendarType(nextCalendarType);
+  };
+
+  const toggleLeapMonth = () => {
+    if (!leapMonthAvailable) return;
+
+    const nextIsLeapMonth = !effectiveIsLeapMonth;
+    const nextDayCount = getBirthDayCount(
+      'lunar',
+      birthDateParts.year,
+      birthDateParts.month,
+      nextIsLeapMonth,
+    );
+    if (birthDateParts.day && Number(birthDateParts.day) > nextDayCount) {
+      setBirthday(`${birthDateParts.year}-${birthDateParts.month}-${String(nextDayCount).padStart(2, '0')}`);
+    }
+    setIsLeapMonth(nextIsLeapMonth);
   };
 
   // Archive Save Modal State
@@ -403,9 +466,13 @@ export default function App() {
       return;
     }
     try {
-      const newHoroscope = calendarType === 'lunar'
-        ? iztro.astro.astrolabeByLunarDate(birthday, birthTime, gender)
-        : iztro.astro.astrolabeBySolarDate(birthday, birthTime, gender);
+      const newHoroscope = createZiweiHoroscope({
+        calendarType,
+        birthDate: birthday,
+        timeIndex: birthTime,
+        gender,
+        isLeapMonth: effectiveIsLeapMonth,
+      });
       setHoroscope(newHoroscope);
       setView('chart');
     } catch (error) {
@@ -438,6 +505,8 @@ export default function App() {
         || record.data?.solarDate;
       const recordBirthTime = Number(record.timeHour) || 0;
       const recordGender = record.gender === 'female' ? 'female' : 'male';
+      const recordIsLeapMonth = recordCalendarType === 'lunar'
+        && Boolean(record.isLeapMonth ?? record.isLeap);
 
       if (!recordBirthDate) {
         alert('读取档案失败，缺少出生日期');
@@ -445,14 +514,19 @@ export default function App() {
       }
 
       try {
-        const newHoroscope = recordCalendarType === 'lunar'
-          ? iztro.astro.astrolabeByLunarDate(recordBirthDate, recordBirthTime, recordGender)
-          : iztro.astro.astrolabeBySolarDate(recordBirthDate, recordBirthTime, recordGender);
+        const newHoroscope = createZiweiHoroscope({
+          calendarType: recordCalendarType,
+          birthDate: recordBirthDate,
+          timeIndex: recordBirthTime,
+          gender: recordGender,
+          isLeapMonth: recordIsLeapMonth,
+        });
 
         setName(record.name || '');
         setGender(recordGender);
         setBirthday(recordBirthDate);
         setBirthTime(recordBirthTime);
+        setIsLeapMonth(recordIsLeapMonth);
         setCalendarType(recordCalendarType);
         setHoroscope(newHoroscope);
         setView('chart');
@@ -475,6 +549,7 @@ export default function App() {
       // remain compatible. Loading now uses birthDate + calendarType first.
       solarDate: horoscope?.solarDate || (calendarType === 'solar' ? birthday : ''),
       timeHour: birthTime,
+      isLeapMonth: effectiveIsLeapMonth,
       group: saveGroup,
       note: saveNote,
       data: {}
@@ -1032,7 +1107,11 @@ export default function App() {
                         required
                       >
                         <option value="">选择</option>
-                        {birthDayOptions.map((day) => <option key={day} value={day}>{Number(day)}</option>)}
+                        {birthDayOptions.map((day) => (
+                          <option key={day} value={day} disabled={Number(day) > birthDayCount}>
+                            {Number(day)}
+                          </option>
+                        ))}
                       </select>
                       <span aria-hidden="true">日</span>
                     </label>
@@ -1043,8 +1122,25 @@ export default function App() {
                   >
                     {calendarType === 'solar'
                       ? '请依次选择出生年、月、日。'
-                      : '请依次选择农历年、月、日；当前不支持闰月标记。'}
+                      : '请依次选择农历年、月、日；如为闰月，请开启下方闰月标记。'}
                   </p>
+                  {calendarType === 'lunar' && (
+                    <button
+                      type="button"
+                      className="lunar-leap-toggle"
+                      aria-pressed={effectiveIsLeapMonth}
+                      disabled={!leapMonthAvailable}
+                      onClick={toggleLeapMonth}
+                    >
+                      <span aria-hidden="true">闰</span>
+                      <strong>
+                        {leapMonthAvailable
+                          ? `${effectiveIsLeapMonth ? '已选择' : '选择'}闰${Number(birthDateParts.month)}月`
+                          : '所选年月无对应闰月'}
+                      </strong>
+                      <small>{leapMonthAvailable ? '请按出生资料确认' : '选择有闰月的年份与月份后可用'}</small>
+                    </button>
+                  )}
                 </div>
 
                 <div className="form-fieldset">
@@ -1180,6 +1276,9 @@ export default function App() {
                     gender,
                     birthday,
                     birthTime: getTimeDescription(birthTime),
+                    birthTimeIndex: Number(birthTime),
+                    calendarType,
+                    isLeapMonth: effectiveIsLeapMonth,
                     lunarDate: horoscope?.lunarDate
                   }}
                   onSave={openSaveArchive}
