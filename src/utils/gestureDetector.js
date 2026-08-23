@@ -34,7 +34,7 @@ export function mirrorLandmarks(landmarks) {
  */
 export function classifyGesture(landmarks) {
   if (!Array.isArray(landmarks) || landmarks.length < 21) {
-    return 'none';
+    return { gesture: 'none', points: [], metrics: null };
   }
 
   const points = mirrorLandmarks(landmarks);
@@ -71,28 +71,39 @@ export function classifyGesture(landmarks) {
     ([, ratio]) => ratio < CURL_THRESHOLD
   );
 
-  // Point: only index extended, others curled (check before fist to avoid
-  // misclassifying a pointing hand as a fist)
+  let gesture = 'none';
+
+  // Point: only index extended, others curled
   if (
     ratios.index > EXTEND_THRESHOLD &&
     ratios.middle < CURL_THRESHOLD &&
     ratios.ring < CURL_THRESHOLD &&
     ratios.pinky < CURL_THRESHOLD
   ) {
-    return 'point';
+    gesture = 'point';
+  } else if (curled.length >= 4) {
+    // Fist: most fingers curled (4+ out of 5)
+    gesture = 'fist';
+  } else if (extended.length >= 4) {
+    // Palm: most fingers extended (4+ out of 5)
+    gesture = 'palm';
   }
 
-  // Fist: most fingers curled (4+ out of 5)
-  if (curled.length >= 4) {
-    return 'fist';
-  }
-
-  // Palm: most fingers extended (4+ out of 5)
-  if (extended.length >= 4) {
-    return 'palm';
-  }
-
-  return 'none';
+  return {
+    gesture,
+    points,
+    metrics: {
+      ratios,
+      extendedCount: extended.length,
+      fingerLength: distance2d(points[5], points[8]),
+      palm: points[9],
+      wrist,
+      roll: Math.atan2(
+        points[5].y - points[17].y,
+        points[5].x - points[17].x
+      )
+    }
+  };
 }
 
 // ---- Throw detection ----
@@ -161,12 +172,12 @@ export async function initHandTracking(videoElement, onFrame) {
   hands.onResults((results) => {
     const landmarks = results.multiHandLandmarks?.[0];
     if (!landmarks) {
-      onFrame('none', null, false);
+      onFrame({ gesture: 'none', points: null, metrics: null }, false);
       return;
     }
-    const gesture = classifyGesture(landmarks);
-    const isThrow = throwDetector(gesture);
-    onFrame(gesture, landmarks, isThrow);
+    const handResult = classifyGesture(landmarks);
+    const isThrow = throwDetector(handResult.gesture);
+    onFrame(handResult, isThrow);
   });
 
   // Start processing loop

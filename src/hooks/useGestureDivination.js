@@ -23,6 +23,7 @@ export default function useGestureDivination() {
   const [isGestureMode, setIsGestureMode] = useState(false);
   const [isCameraReady, setIsCameraReady] = useState(false);
   const [currentGesture, setCurrentGesture] = useState('none');
+  const [handData, setHandData] = useState(null);
   const [throwDetected, setThrowDetected] = useState(false);
   const [cameraError, setCameraError] = useState(null);
 
@@ -55,6 +56,7 @@ export default function useGestureDivination() {
     setIsGestureMode(false);
     setIsCameraReady(false);
     setCurrentGesture('none');
+    setHandData(null);
     setThrowDetected(false);
     setCameraError(null);
   }, []);
@@ -96,8 +98,10 @@ export default function useGestureDivination() {
 
       const cleanup = await initHandTracking(
         videoRef.current,
-        (gesture, _landmarks, isThrow) => {
+        (handResult, isThrow) => {
+          const gesture = handResult.gesture;
           setCurrentGesture(gesture);
+          setHandData(handResult);
           if (isThrow) {
             setThrowDetected(true);
           }
@@ -135,6 +139,7 @@ export default function useGestureDivination() {
     isGestureMode,
     isCameraReady,
     currentGesture,
+    handData,
     throwDetected,
     videoRef,
     startCamera,

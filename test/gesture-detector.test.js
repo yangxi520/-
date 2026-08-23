@@ -94,36 +94,36 @@ function makeLandmarks(fingerExtensions) {
 }
 
 test('classifyGesture: null 输入返回 none', () => {
-  assert.equal(classifyGesture(null), 'none');
+  assert.equal(classifyGesture(null).gesture, 'none');
 });
 
 test('classifyGesture: 空数组返回 none', () => {
-  assert.equal(classifyGesture([]), 'none');
+  assert.equal(classifyGesture([]).gesture, 'none');
 });
 
 test('classifyGesture: 不足 21 个点返回 none', () => {
-  assert.equal(classifyGesture([{ x: 0, y: 0 }]), 'none');
+  assert.equal(classifyGesture([{ x: 0, y: 0 }]).gesture, 'none');
 });
 
 test('classifyGesture: 全部蜷缩检测为握拳', () => {
   const landmarks = makeLandmarks({
     thumb: 0.5, index: 0.5, middle: 0.5, ring: 0.5, pinky: 0.5
   });
-  assert.equal(classifyGesture(landmarks), 'fist');
+  assert.equal(classifyGesture(landmarks).gesture, 'fist');
 });
 
 test('classifyGesture: 全部伸展检测为张掌', () => {
   const landmarks = makeLandmarks({
     thumb: 2.0, index: 2.0, middle: 2.0, ring: 2.0, pinky: 2.0
   });
-  assert.equal(classifyGesture(landmarks), 'palm');
+  assert.equal(classifyGesture(landmarks).gesture, 'palm');
 });
 
 test('classifyGesture: 仅食指伸展检测为指点', () => {
   const landmarks = makeLandmarks({
     thumb: 0.5, index: 2.0, middle: 0.5, ring: 0.5, pinky: 0.5
   });
-  assert.equal(classifyGesture(landmarks), 'point');
+  assert.equal(classifyGesture(landmarks).gesture, 'point');
 });
 
 // ---- createThrowDetector ----

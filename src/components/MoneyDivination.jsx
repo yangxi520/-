@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { ArrowLeft, Hand } from 'lucide-react';
 import { getHexagram } from '../utils/hexagramLogic';
 import useGestureDivination from '../hooks/useGestureDivination';
+import BaguaBackground from './BaguaBackground/index.jsx';
 
 // --- Assets ---
 import coinYangTexture from '../assets/coin_yang_perfect.png';
@@ -193,7 +194,7 @@ export default function MoneyDivination({ onBack }) {
 
     // --- Gesture Mode State ---
     const {
-        isGestureMode, currentGesture,
+        isGestureMode, currentGesture, handData,
         throwDetected, videoRef, startCamera, stopCamera,
         cameraError, clearThrow
     } = useGestureDivination();
@@ -363,11 +364,13 @@ export default function MoneyDivination({ onBack }) {
     return (
         <div className="relative w-full h-[100dvh] min-h-[100dvh] overflow-hidden text-[#2b2b2b]"
             style={{
-                backgroundImage: `url(${bgImage})`,
+                backgroundImage: isGestureMode ? 'none' : `url(${bgImage})`,
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
+                backgroundColor: isGestureMode ? '#030806' : 'transparent',
                 fontFamily: '"Noto Serif SC", "Songti SC", "KaiTi", "STKaiti", serif',
             }}>
+            <BaguaBackground handData={handData} isGestureMode={isGestureMode} />
             {/* Soft Ambient Overlay */}
             <div className="absolute inset-0 bg-[#f0e6dc] opacity-20 pointer-events-none" />
 
