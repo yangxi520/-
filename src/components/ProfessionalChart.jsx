@@ -898,6 +898,12 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                         onKeyDown={(event) => handleMutationKeyDown(event, entry, 'self')}
                     >
                         <title>{`${formatPalaceName(entry.sourceName)}干化${entry.mutagen}·${entry.kind === 'outward' ? '离心自化' : '向心自化'}`}</title>
+                        <circle
+                            className="wenmo-arrow-hit-pad"
+                            cx={(entry.geometry.start.x + entry.geometry.end.x) / 2}
+                            cy={(entry.geometry.start.y + entry.geometry.end.y) / 2}
+                            r="4.5"
+                        />
                         <line
                             className="wenmo-arrow-hit-target"
                             x1={entry.geometry.start.x}

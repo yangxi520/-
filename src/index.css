@@ -1089,6 +1089,11 @@ select.field-control { cursor: pointer; }
   cursor: pointer;
   pointer-events: stroke;
 }
+.wenmo-arrow-hit-pad {
+  fill: rgba(0, 0, 0, 0.001);
+  cursor: pointer;
+  pointer-events: all;
+}
 .wenmo-self-arrow-line,
 .wenmo-fly-path { pointer-events: none; }
 .wenmo-mutation-hit:focus-visible .wenmo-self-arrow-line,
