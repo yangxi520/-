@@ -647,10 +647,10 @@ export default function App() {
   };
 
   const showsMobileNav = !showWelcomeCover && ['home', 'input', 'archive'].includes(view);
-  const usesOwnHeader = ['money', 'bazi', 'archive', 'videos', 'english'].includes(view);
+  const usesOwnHeader = ['money', 'bazi', 'archive', 'videos', 'english', 'chart'].includes(view);
 
   return (
-    <div className={`app-shell ${showsMobileNav ? 'app-shell--mobile-nav' : ''}`}>
+    <div className={`app-shell ${showsMobileNav ? 'app-shell--mobile-nav' : ''} ${view === 'chart' ? 'app-shell--chart' : ''}`}>
       <div className="app-ambient" aria-hidden="true"></div>
 
       {/* Header */}
@@ -1168,7 +1168,7 @@ export default function App() {
           </Suspense>
         ) : (
           // --- CHART VIEW ---
-          <div className="flex-1 relative overflow-hidden flex flex-col">
+          <div className="chart-workspace flex-1 relative overflow-hidden flex flex-col">
             {/* Chart Area */}
             <div className="chart-scroll-area flex-1 overflow-auto p-2 md:p-4">
               <div className="chart-frame relative mx-auto w-full overflow-hidden">
@@ -1184,6 +1184,7 @@ export default function App() {
                   }}
                   onSave={openSaveArchive}
                   onOpenArchive={() => setView('archive')}
+                  onQuickChart={() => setView('input')}
                 />
               </div>
             </div>

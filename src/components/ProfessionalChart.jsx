@@ -18,7 +18,7 @@ import {
     getLunarMonthDays,
     getLunarMonthOptions,
 } from '../utils/fortuneContext';
-import { Sparkles, HelpCircle, Coffee, Save, Archive, Calendar, Printer } from "lucide-react";
+import { Sparkles, Coffee, Save, Archive, Calendar, Printer } from "lucide-react";
 import wechatPayImg from '../assets/wechat_pay.jpg';
 import alipayImg from '../assets/alipay.jpg';
 
@@ -86,10 +86,25 @@ const TIME_RANGES = [
     "23:00-24:00（晚子时）" // Late Zi
 ];
 
+const LUNAR_MONTH_NAMES = ['正月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '冬月', '腊月'];
+const LUNAR_DAY_NAMES = [
+    '初一', '初二', '初三', '初四', '初五', '初六', '初七', '初八', '初九', '初十',
+    '十一', '十二', '十三', '十四', '十五', '十六', '十七', '十八', '十九', '二十',
+    '廿一', '廿二', '廿三', '廿四', '廿五', '廿六', '廿七', '廿八', '廿九', '三十',
+];
+const GANZHI_TONES = {
+    甲: 'wood', 乙: 'wood', 寅: 'wood', 卯: 'wood',
+    丙: 'fire', 丁: 'fire', 巳: 'fire', 午: 'fire',
+    戊: 'earth', 己: 'earth', 辰: 'earth', 戌: 'earth', 丑: 'earth', 未: 'earth',
+    庚: 'metal', 辛: 'metal', 申: 'metal', 酉: 'metal',
+    壬: 'water', 癸: 'water', 子: 'water', 亥: 'water',
+};
+const getGanzhiTone = (ganzhi = '') => GANZHI_TONES[ganzhi[0]] || 'ink';
+
 // Helper: Get Year Stem (0-9 index)
 const getYearStemIndex = (year) => (year - 4) % 10;
 
-function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive }) {
+function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, onQuickChart }) {
     const palaces = useMemo(() => {
         if (!horoscope) return [];
         return horoscope.palaces;
@@ -115,6 +130,9 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     // Let's make it independent but initialized by Da Xian selection.
     const [focusedIndex, setFocusedIndex] = React.useState(null);
     const [showConnections, setShowConnections] = React.useState(true);
+    const [showChartSettings, setShowChartSettings] = React.useState(false);
+    const [showCommonMenu, setShowCommonMenu] = React.useState(false);
+    const [professionalToolMode, setProfessionalToolMode] = React.useState('sanhe');
 
     // Active Layer Visibility State (Toggle)
     const [activeLayers, setActiveLayers] = React.useState({
@@ -131,9 +149,6 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     const [menuView, setMenuView] = React.useState('main'); // 'main', 'fortune', 'baby'
     const [promptPreview, setPromptPreview] = React.useState(null);
     const [mobileChartMode, setMobileChartMode] = React.useState('professional');
-    // Lunar Tip State
-    const [showLunarTip, setShowLunarTip] = React.useState(false);
-
     // State for Partner Modal (Conception Planner)
     const [showPartnerModal, setShowPartnerModal] = React.useState(false);
     const [selectedBabyType, setSelectedBabyType] = React.useState(null);
@@ -188,15 +203,67 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
         };
     }, [focusedPalace]);
 
-    const relationshipLabels = useMemo(() => {
-        if (!palaceRelationship) return null;
-        const getName = (branch) => palaces.find((palace) => palace.earthlyBranch === branch)?.name || `${branch}宫`;
-        return {
-            self: getName(palaceRelationship.self),
-            sanHe: palaceRelationship.sanHe.map(getName),
-            opposite: getName(palaceRelationship.opposite),
-        };
-    }, [palaceRelationship, palaces]);
+    const sortedDaxianPalaces = useMemo(
+        () => [...palaces].sort((a, b) => a.decadal.range[0] - b.decadal.range[0]),
+        [palaces],
+    );
+    const birthYear = Number(String(horoscope.solarDate || basicInfo.birthday || '').slice(0, 4)) || new Date().getFullYear();
+    const currentYear = new Date().getFullYear();
+    const currentHoroscope = useMemo(() => {
+        try {
+            return horoscope.horoscope(new Date());
+        } catch (error) {
+            console.error('Unable to read current horoscope:', error);
+            return null;
+        }
+    }, [horoscope]);
+    const virtualAge = currentHoroscope?.age?.nominalAge ?? (currentYear - birthYear + 1);
+    const currentDaxianPalace = palaces.find((palace) => palace.index === currentHoroscope?.decadal?.index)
+        || sortedDaxianPalaces.find((palace) => (
+            virtualAge >= palace.decadal.range[0] && virtualAge <= palace.decadal.range[1]
+        ))
+        || sortedDaxianPalaces[0]
+        || null;
+    const timelineDaxianPalace = selectedDaxianPalace || currentDaxianPalace;
+    const timelineYears = useMemo(() => (
+        timelineDaxianPalace
+            ? Array.from(
+                { length: timelineDaxianPalace.decadal.range[1] - timelineDaxianPalace.decadal.range[0] + 1 },
+                (_, offset) => birthYear + timelineDaxianPalace.decadal.range[0] + offset - 1,
+            )
+            : []
+    ), [birthYear, timelineDaxianPalace]);
+    const timelineYearModels = useMemo(() => timelineYears.map((year) => {
+        try {
+            const fortune = horoscope.horoscope(`${year}-06-15`);
+            return {
+                year,
+                nominalAge: fortune?.age?.nominalAge ?? (year - birthYear + 1),
+                ganZhi: `${fortune?.yearly?.heavenlyStem || ''}${fortune?.yearly?.earthlyBranch || ''}`,
+            };
+        } catch {
+            return {
+                year,
+                nominalAge: year - birthYear + 1,
+                ganZhi: `${HEAVENLY_STEMS[getYearStemIndex(year)]}${EARTHLY_BRANCHES[(year - 4 + 12) % 12]}`,
+            };
+        }
+    }), [birthYear, horoscope, timelineYears]);
+    const timelineMonthOptions = getLunarMonthOptions(selection.lunarYear || selection.year || currentYear);
+    const timelineDayCount = selection.month
+        ? getLunarMonthDays(
+            selection.lunarYear || selection.year || currentYear,
+            selection.month,
+            selection.isLeapMonth,
+        )
+        : 30;
+    const pillarParts = typeof horoscope.chineseDate === 'string'
+        ? horoscope.chineseDate.trim().split(/\s+/).slice(0, 4)
+        : [];
+    const currentTimeLabel = new Intl.DateTimeFormat('zh-CN', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(new Date()).replaceAll('/', '-');
 
     const closeAiMenu = () => {
         setShowAiMenu(false);
@@ -345,6 +412,28 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
         });
     };
 
+    const handleTimelineYear = (year) => {
+        if (selection.daxianIndex !== null || !timelineDaxianPalace) {
+            handleSelection('year', year);
+            return;
+        }
+
+        setCurrentFortuneContext(null);
+        setFocusedIndex(timelineDaxianPalace.index);
+        setActiveLayers((prev) => ({ ...prev, decadal: true, yearly: true }));
+        setSelection((prev) => ({
+            ...prev,
+            daxianIndex: timelineDaxianPalace.index,
+            year,
+            lunarYear: year,
+            month: null,
+            day: null,
+            hour: null,
+            isLeapMonth: false,
+            targetSolarDate: null,
+        }));
+    };
+
     // Helper to render a palace cell
     const renderPalace = (branch) => {
         const palace = palaces.find(p => p.earthlyBranch === branch);
@@ -394,6 +483,12 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
         // Display Logic: Limit to ~5 entries to prevent overflow
         const displayLiuNian = liuNianAges.slice(0, 5); // e.g. 11, 23, 35, 47, 59
         const displayXiaoXian = xiaoXianAges.slice(0, 5);
+        const starColumns = [
+            ...palace.majorStars.map((star) => ({ star, kind: 'major' })),
+            ...softStars.map((star) => ({ star, kind: 'soft' })),
+            ...toughStars.map((star) => ({ star, kind: 'tough' })),
+            ...adjectiveStars.map((star) => ({ star, kind: 'adjective' })),
+        ];
 
         return (
             <div
@@ -414,77 +509,19 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                 aria-pressed={isFocused}
                 aria-label={`${palace.name}，${palace.heavenlyStem}${palace.earthlyBranch}宫`}
             >
-                {/* --- TOP AREA: Stars --- */}
-                <div className="flex flex-row gap-0.5 h-full relative">
-
-                    {/* Left Column: Major & Minor */}
-                    <div className="flex flex-col items-start gap-0.5 min-w-[42%] z-10">
-
-                        {/* Major Stars (Red) */}
-                        {palace.majorStars.map((star, idx) => {
-                            const activeSiHua = getActiveSiHua(star.name);
-                            return (
-                                <div key={`major-${idx}`} className="wenmo-star wenmo-star--major flex items-center gap-0.5 font-serif font-bold text-sm md:text-base text-red-600 leading-none whitespace-nowrap">
-                                    <span>{star.name}</span>
-                                    <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
-                                    {activeSiHua.map((badge, bIdx) => (
-                                        <span key={bIdx} className={`text-[8px] px-0.5 rounded-sm text-white scale-90 origin-left shadow-sm ${badge.color}`}>
-                                            {badge.type}
-                                        </span>
-                                    ))}
-                                </div>
-                            );
-                        })}
-
-                        {/* Soft Stars (Purple) */}
-                        {softStars.map((star, idx) => {
-                            const activeSiHua = getActiveSiHua(star.name);
-                            return (
-                                <div key={`soft-${idx}`} className="wenmo-star wenmo-star--soft flex items-center gap-0.5 text-xs md:text-sm font-bold text-purple-600 leading-none whitespace-nowrap">
-                                    <span>{star.name}</span>
-                                    <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
-                                    {activeSiHua.map((badge, bIdx) => (
-                                        <span key={bIdx} className={`wenmo-sihua-badge text-[8px] px-0.5 rounded-sm text-white ${badge.color}`}>
-                                            {badge.type}
-                                        </span>
-                                    ))}
-                                </div>
-                            );
-                        })}
-
-                        {/* Tough Stars (Black) */}
-                        {toughStars.map((star, idx) => {
-                            const activeSiHua = getActiveSiHua(star.name);
-                            return (
-                                <div key={`tough-${idx}`} className="wenmo-star wenmo-star--tough flex items-center gap-0.5 text-xs md:text-sm font-bold text-gray-900 leading-none whitespace-nowrap">
-                                    <span>{star.name}</span>
-                                    <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
-                                    {activeSiHua.map((badge, bIdx) => (
-                                        <span key={bIdx} className={`wenmo-sihua-badge text-[8px] px-0.5 rounded-sm text-white ${badge.color}`}>
-                                            {badge.type}
-                                        </span>
-                                    ))}
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    {/* Right Area: Adjective Stars (Blue) */}
-                    <div className="wenmo-adjective-stars flex flex-wrap content-start items-start gap-x-1 gap-y-0.5 text-[10px] md:text-xs pl-1">
-                        {adjectiveStars.map((star, idx) => {
-                            const activeSiHua = getActiveSiHua(star.name);
-                            return (
-                                <span key={`adj-${idx}`} className="inline-flex items-center gap-px text-blue-500 font-medium leading-tight">
-                                    {star.name}
-                                    {activeSiHua.map((badge, bIdx) => (
-                                        <span key={bIdx} className={`wenmo-sihua-badge text-[7px] px-px rounded-sm text-white ${badge.color}`}>
-                                            {badge.type}
-                                        </span>
-                                    ))}
-                                </span>
-                            );
-                        })}
-                    </div>
+                <div className="wenmo-star-columns">
+                    {starColumns.slice(0, 10).map(({ star, kind }, idx) => {
+                        const activeSiHua = getActiveSiHua(star.name);
+                        return (
+                            <span key={`${kind}-${star.name}-${idx}`} className="wenmo-star-column" data-kind={kind}>
+                                <b>{star.name}</b>
+                                {star.brightness && <small>{star.brightness}</small>}
+                                {activeSiHua.slice(0, 1).map((badge, badgeIndex) => (
+                                    <em key={badgeIndex} className={`wenmo-star-transform ${badge.color}`}>{badge.type}</em>
+                                ))}
+                            </span>
+                        );
+                    })}
                 </div>
 
                 {/* --- BOTTOM AREA: Meta Info (Wen Mo Style) --- */}
@@ -899,73 +936,34 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
     return (
         <div className="professional-chart wenmo-chart">
-            {/* Mobile-only readable summary and chart mode selector. */}
-            <section
-                className="chart-mobile-controls chart-mobile-summary md:hidden"
-                aria-label="命盘基本信息摘要"
-            >
-                <div className="flex items-start justify-between gap-3">
+            <header className="wenmo-professional-bar print:hidden">
+                <button type="button" onClick={onOpenArchive} aria-label="打开命例档案">
+                    <span aria-hidden="true">‹</span> 命例
+                </button>
+                <h1 data-testid="ziwei-chart-title">古书派紫微专业版</h1>
+                <button
+                    type="button"
+                    onClick={() => setShowChartSettings((visible) => !visible)}
+                    aria-expanded={showChartSettings}
+                    aria-controls="chart-settings-panel"
+                >
+                    设置 <span aria-hidden="true">›</span>
+                </button>
+            </header>
+
+            {showChartSettings && (
+                <section id="chart-settings-panel" className="wenmo-settings-panel print:hidden" aria-label="命盘设置">
                     <div>
-                        <div className="flex items-center gap-2">
-                            <span className="text-xl font-black text-slate-900">{basicInfo.name || '未命名命盘'}</span>
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${basicInfo.gender === 'male' ? 'bg-cyan-100 text-cyan-700' : 'bg-pink-100 text-pink-700'}`}>
-                                {basicInfo.gender === 'male' ? '男命' : '女命'}
-                            </span>
-                        </div>
-                        <p className="mt-1 text-sm text-slate-600">{basicInfo.birthday} · {basicInfo.birthTime}</p>
+                        <span>显示模式</span>
+                        <button type="button" aria-pressed={mobileChartMode === 'professional'} onClick={() => setMobileChartMode('professional')}>专业盘</button>
+                        <button type="button" aria-pressed={mobileChartMode === 'simple'} onClick={() => setMobileChartMode('simple')}>简洁盘</button>
                     </div>
-                    <div className="rounded-xl bg-purple-700 px-3 py-2 text-right text-white shadow-sm">
-                        <div className="text-[10px] text-purple-100">五行局</div>
-                        <div className="text-sm font-black">{horoscope.fiveElementsClass}</div>
+                    <div>
+                        <span>关系图层</span>
+                        <button type="button" aria-pressed={showConnections} onClick={() => setShowConnections((visible) => !visible)}>三方四正</button>
                     </div>
-                </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-xl bg-white/80 p-2.5">
-                        <div className="text-slate-400">四柱</div>
-                        <div className="mt-0.5 font-semibold text-slate-700">{horoscope.chineseDate || '-'}</div>
-                    </div>
-                    <div className="rounded-xl bg-white/80 p-2.5">
-                        <div className="text-slate-400">农历</div>
-                        <div className="mt-0.5 font-semibold text-slate-700">{horoscope.lunarDate || '-'}</div>
-                    </div>
-                    <div className="rounded-xl bg-white/80 p-2.5">
-                        <div className="text-slate-400">命主 / 身主</div>
-                        <div className="mt-0.5 font-semibold text-slate-700">{horoscope.soul || '-'} / {horoscope.body || '-'}</div>
-                    </div>
-                    <div className="rounded-xl bg-white/80 p-2.5">
-                        <div className="text-slate-400">当前查看</div>
-                        <div className="mt-0.5 font-semibold text-slate-700">
-                            {selectedDaxianPalace
-                                ? `${selectedDaxianPalace.decadal.range[0]}-${selectedDaxianPalace.decadal.range[1]}岁 ${selectedDaxianPalace.heavenlyStem}${selectedDaxianPalace.earthlyBranch}`
-                                : '尚未选择大限'}
-                        </div>
-                    </div>
-                </div>
-            </section>
-
-            <div
-                className="chart-mobile-controls chart-mobile-mode md:hidden grid grid-cols-2"
-                role="group"
-                aria-label="手机命盘显示方式"
-            >
-                <button
-                    type="button"
-                    onClick={() => setMobileChartMode('simple')}
-                    aria-pressed={mobileChartMode === 'simple'}
-                    className={`min-h-11 rounded-lg px-3 py-2 text-sm font-bold transition ${mobileChartMode === 'simple' ? 'bg-white text-purple-700 shadow' : 'text-stone-600'}`}
-                >
-                    简洁盘
-                </button>
-                <button
-                    type="button"
-                    onClick={() => setMobileChartMode('professional')}
-                    aria-pressed={mobileChartMode === 'professional'}
-                    className={`min-h-11 rounded-lg px-3 py-2 text-sm font-bold transition ${mobileChartMode === 'professional' ? 'bg-slate-900 text-white shadow' : 'text-stone-600'}`}
-                >
-                    专业盘
-                </button>
-            </div>
+                </section>
+            )}
 
             {mobileChartMode === 'simple' && (
                 <section className="chart-simple-grid md:hidden" aria-label="简洁十二宫命盘">
@@ -982,13 +980,22 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                 </section>
             )}
 
-            {mobileChartMode === 'professional' && (
-                <p className="md:hidden px-1 text-center text-[11px] text-stone-500">左右滑动查看完整传统命盘</p>
-            )}
-
             {/* Chart Grid - Min width to ensure readability on mobile */}
             <div className={`chart-professional-grid ${mobileChartMode === 'professional' ? 'block' : 'hidden'} md:block`}>
-                <div className="wenmo-board relative grid grid-cols-4 grid-rows-4">
+                <div className="wenmo-board-shell">
+                    <div className="wenmo-direction wenmo-direction--top" data-direction="south">
+                        <span>正南方</span><span>南偏西</span>
+                    </div>
+                    <div className="wenmo-direction wenmo-direction--right" data-direction="west">
+                        <span>西偏南</span><span>正西方</span><span>西偏北</span><span>北偏西</span>
+                    </div>
+                    <div className="wenmo-direction wenmo-direction--bottom" data-direction="north">
+                        <span>北偏东</span><span>正北方</span>
+                    </div>
+                    <div className="wenmo-direction wenmo-direction--left" data-direction="east">
+                        <span>南偏东</span><span>东偏南</span><span>正东方</span><span>东偏北</span>
+                    </div>
+                    <div className="wenmo-board relative grid grid-cols-4 grid-rows-4">
                 {renderConnections()}
                 {/* Row 1 */}
                 <div className="wenmo-grid-cell">{renderPalace('巳')}</div>
@@ -999,82 +1006,53 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                 {/* Row 2 */}
                 <div className="wenmo-grid-cell">{renderPalace('辰')}</div>
                 <div className="wenmo-center col-span-2 row-span-2 flex flex-col relative overflow-hidden">
-                    {/* Top: Basic Info */}
                     <div className="wenmo-center-info z-10 flex flex-col">
                         <div className="wenmo-center-heading">
-                            <strong>古书派紫微</strong>
-                            <span>{basicInfo.name || '未命名'} · {basicInfo.gender === 'male' ? '男命' : '女命'} · {horoscope.fiveElementsClass}</span>
+                            <strong>古书派紫微</strong><sup>PRO</sup>
+                            <span>{basicInfo.gender === 'male' ? '阳男' : '阴女'} · {horoscope.fiveElementsClass}</span>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] leading-tight text-slate-700">
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">五行局：</span>
-                                <span className="font-bold text-olive-600">{horoscope.fiveElementsClass}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">年龄(虚岁)：</span>
-                                <span>{new Date().getFullYear() - new Date(basicInfo.birthday).getFullYear() + 1} 岁</span>
-                            </div>
+                        <div className="wenmo-profile-lines">
+                            <p><span>姓名：</span><strong>{basicInfo.name || '匿名'}</strong><span className="wenmo-profile-side">虚岁 {virtualAge} 岁</span></p>
+                            <p><span>出生时间：</span><strong>{basicInfo.birthday} {basicInfo.birthTime}</strong></p>
+                            <p><span>当前时间：</span><strong>{currentTimeLabel}</strong></p>
+                            <p><span>农历：</span><strong>{horoscope.lunarDate || '-'}</strong></p>
+                            <p><span>命主：</span><strong>{horoscope.soul || '-'}</strong><span>身主：</span><strong>{horoscope.body || '-'}</strong><span>生肖：</span><strong>{horoscope.zodiac || '-'}</strong></p>
+                        </div>
 
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">四柱：</span>
-                                <span className="font-bold text-olive-600">{horoscope.chineseDate || '-'}</span>
+                        <div className="wenmo-pillar-panels">
+                            <div>
+                                <b>本命四柱</b>
+                                <div className="wenmo-pillar-row">
+                                    {pillarParts.map((pillar, index) => (
+                                        <span key={`${pillar}-${index}`} data-tone={getGanzhiTone(pillar)}>{pillar}</span>
+                                    ))}
+                                </div>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">公历：</span>
-                                <span>{basicInfo.birthday}</span>
-                            </div>
-
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">农历：</span>
-                                <span>{horoscope.lunarDate || '-'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">时辰：</span>
-                                <span>{basicInfo.birthTime}</span>
-                            </div>
-
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">生肖：</span>
-                                <span>{horoscope.zodiac}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">星座：</span>
-                                <span>{getZodiacSign(basicInfo.birthday)}</span>
-                            </div>
-
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">命主：</span>
-                                <span className="font-bold text-olive-600">{horoscope.soul}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">身主：</span>
-                                <span className="font-bold text-olive-600">{horoscope.body}</span>
-                            </div>
-
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">命宫：</span>
-                                <span>{horoscope.palaces.find(p => p.name === '命宫')?.earthlyBranch || '-'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">身宫：</span>
-                                <span>{horoscope.palaces.find(p => p.isBodyPalace)?.earthlyBranch || '-'}</span>
+                            <div>
+                                <b>四化天干</b>
+                                <div className="wenmo-pillar-row">
+                                    {['origin', 'decadal', 'yearly', 'monthly'].map((layer) => (
+                                        <span key={layer} data-tone={getGanzhiTone(activeStems[layer])}>{activeStems[layer] || '—'}</span>
+                                    ))}
+                                </div>
                             </div>
                         </div>
 
-                        <div className="wenmo-current-view">
-                            {selectedDaxianPalace
-                                ? `所选大限 ${selectedDaxianPalace.decadal.range[0]}-${selectedDaxianPalace.decadal.range[1]}岁 · ${selectedDaxianPalace.heavenlyStem}${selectedDaxianPalace.earthlyBranch}`
-                                : '本命盘 · 点击下方大限进入运限盘'}
+                        <p className="wenmo-start-limit">
+                            出生后约 {sortedDaxianPalaces[0]?.decadal.range[0] || 1} 岁起运
+                            {selectedDaxianPalace && ` · 当前查看 ${selectedDaxianPalace.decadal.range[0]}-${selectedDaxianPalace.decadal.range[1]}岁`}
+                        </p>
+
+                        <div className="wenmo-center-stepper" role="group" aria-label="运盘快捷调整">
+                            <button type="button" disabled={!selection.day} onClick={() => handleSelection('day', Math.max(1, selection.day - 1))}>日↑</button>
+                            <button type="button" disabled={!selection.day || selection.day >= timelineDayCount} onClick={() => handleSelection('day', selection.day + 1)}>日↓</button>
+                            <button type="button" aria-pressed={activeLayers.origin} onClick={() => setActiveLayers((prev) => ({ ...prev, origin: !prev.origin }))}>天盘▽</button>
+                            <button type="button" disabled={selection.hour === null} onClick={() => handleSelection('hour', Math.max(0, selection.hour - 1))}>时↑</button>
+                            <button type="button" disabled={selection.hour === null || selection.hour >= FORTUNE_HOUR_OPTIONS.length - 1} onClick={() => handleSelection('hour', selection.hour + 1)}>时↓</button>
                         </div>
 
-                        {relationshipLabels && (
-                            <div className="wenmo-center-relation" aria-live="polite">
-                                <span><i className="is-self" />本宫<strong>{relationshipLabels.self}</strong></span>
-                                <span><i className="is-sanhe" />三合<strong>{relationshipLabels.sanHe.join('、')}</strong></span>
-                                <span><i className="is-opposite" />对宫<strong>{relationshipLabels.opposite}</strong></span>
-                            </div>
-                        )}
+                        <div className="wenmo-transform-legend">自化图示：<span>→禄</span><span>→权</span><span>→科</span><span>→忌</span></div>
 
                         <div className="wenmo-powered">Powered by iztro</div>
                     </div>
@@ -1091,217 +1069,155 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                 <div className="wenmo-grid-cell">{renderPalace('丑')}</div>
                 <div className="wenmo-grid-cell">{renderPalace('子')}</div>
                 <div className="wenmo-grid-cell">{renderPalace('亥')}</div>
+                    </div>
                 </div>
             </div>
 
-            <section className="wenmo-chart-tools" aria-label="命盘关系与四化图层">
-                <div className="wenmo-relation-control">
-                    <button
-                        type="button"
-                        className="wenmo-relation-toggle"
-                        aria-pressed={showConnections}
-                        onClick={() => setShowConnections((visible) => !visible)}
-                    >
-                        <span aria-hidden="true">↗</span>
-                        三方四正
-                        <small>{showConnections ? '已显示' : '已隐藏'}</small>
-                    </button>
-                    <p>点击任一宫位，箭头会自动显示本宫、两个三合宫与对宫。</p>
-                </div>
+            <div className="wenmo-luck-table chart-timeline" aria-label="运限时间选择">
+                <section className="wenmo-luck-row" aria-label="大限">
+                    <h3>大限</h3>
+                    <div className="wenmo-luck-viewport">
+                        <div className="wenmo-luck-track">
+                            <button type="button" className="wenmo-luck-cell is-childhood" disabled><b>起限前</b><small>童限</small></button>
+                            {sortedDaxianPalaces.map((palace) => (
+                                <button
+                                    key={palace.index}
+                                    type="button"
+                                    className={`wenmo-luck-cell ${selection.daxianIndex === palace.index ? 'is-active' : ''} ${currentDaxianPalace?.index === palace.index ? 'is-current' : ''}`}
+                                    aria-pressed={selection.daxianIndex === palace.index}
+                                    aria-label={`选择${palace.decadal.range[0]}至${palace.decadal.range[1]}岁大限，${palace.decadal.heavenlyStem}${palace.decadal.earthlyBranch}`}
+                                    onClick={() => handleSelection('daxian', palace.index)}
+                                >
+                                    <b>{palace.decadal.range[0]}-{palace.decadal.range[1]}</b>
+                                    <small>{palace.decadal.heavenlyStem}{palace.decadal.earthlyBranch}限</small>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </section>
 
-                <div className="wenmo-four-transform-control">
-                    <span className="wenmo-tool-label">四化叠层</span>
-                    <div className="wenmo-layer-grid grid grid-cols-6 text-[10px]">
-                        {[
-                            { key: 'origin', label: '本', color: 'text-red-600' },
-                            { key: 'decadal', label: '限', color: 'text-green-600' },
-                            { key: 'yearly', label: '年', color: 'text-blue-600' },
-                            { key: 'monthly', label: '月', color: 'text-yellow-600' },
-                            { key: 'daily', label: '日', color: 'text-purple-600' },
-                            { key: 'hourly', label: '时', color: 'text-cyan-600' }
-                        ].map(layer => (
+                <section className="wenmo-luck-row" aria-label="流年">
+                    <h3>流年<small>小限</small></h3>
+                    <div className="wenmo-luck-viewport">
+                        <div className="wenmo-luck-track">
+                            {timelineYearModels.map(({ year, nominalAge, ganZhi }) => (
+                                <button
+                                    key={year}
+                                    type="button"
+                                    className={`wenmo-luck-cell ${selection.year === year ? 'is-active' : ''} ${year === currentYear ? 'is-current' : ''}`}
+                                    aria-pressed={selection.year === year}
+                                    aria-label={`选择${year}流年`}
+                                    onClick={() => handleTimelineYear(year)}
+                                >
+                                    <b>{year}年</b>
+                                    <small>{ganZhi}{nominalAge}岁</small>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                <section className="wenmo-luck-row" aria-label="流月">
+                    <h3>流月</h3>
+                    <div className="wenmo-luck-viewport">
+                        <div className="wenmo-luck-track">
+                            {timelineMonthOptions.map((monthOption, index) => (
+                                <button
+                                    key={`${monthOption.month}-${monthOption.isLeap ? 'leap' : 'regular'}`}
+                                    type="button"
+                                    className={`wenmo-luck-cell ${selection.month === monthOption.month && selection.isLeapMonth === monthOption.isLeap ? 'is-active' : ''}`}
+                                    aria-pressed={selection.month === monthOption.month && selection.isLeapMonth === monthOption.isLeap}
+                                    aria-label={`选择${monthOption.label}`}
+                                    disabled={!selection.year}
+                                    onClick={() => handleSelection('month', monthOption)}
+                                >
+                                    <b>{monthOption.isLeap ? `闰${LUNAR_MONTH_NAMES[index % 12]}` : LUNAR_MONTH_NAMES[(monthOption.month - 1) % 12]}</b>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                <section className="wenmo-luck-row wenmo-luck-row--days" aria-label="流日">
+                    <h3>流日</h3>
+                    <div className="wenmo-day-grid">
+                        {Array.from({ length: 30 }, (_, index) => index + 1).map((day) => (
                             <button
-                                key={layer.key}
+                                key={day}
                                 type="button"
-                                className={`wenmo-layer-button border px-1 py-0.5 flex flex-col items-center justify-center
-                                    ${activeLayers[layer.key] ? 'bg-stone-100 border-stone-300 shadow-inner' : 'bg-stone-50 border-stone-200 text-gray-300'}
-                                `}
-                                onClick={() => setActiveLayers(prev => ({ ...prev, [layer.key]: !prev[layer.key] }))}
-                                aria-pressed={activeLayers[layer.key]}
-                                aria-label={`${activeLayers[layer.key] ? '隐藏' : '显示'}${layer.label}层四化`}
+                                className={`wenmo-day-cell ${selection.day === day ? 'is-active' : ''}`}
+                                aria-pressed={selection.day === day}
+                                aria-label={`选择农历${day}日`}
+                                disabled={!selection.month || day > timelineDayCount}
+                                onClick={() => handleSelection('day', day)}
                             >
-                                <span className={`font-bold ${activeLayers[layer.key] ? layer.color : ''}`}>{layer.label}</span>
-                                {activeStems[layer.key] && <span className="font-mono text-stone-500">{activeStems[layer.key]}</span>}
+                                {LUNAR_DAY_NAMES[day - 1]}
                             </button>
                         ))}
                     </div>
-                </div>
-            </section>
+                </section>
 
-            {/* Cascading Timeline Table */}
-            <div className="chart-timeline wenmo-timeline overflow-x-auto text-[11px] md:text-xs">
-                <table className="min-w-full text-center border-collapse" aria-label="运限时间选择">
-                    <tbody>
-                        {/* Da Xian Row */}
-                        <tr className="wenmo-daxian-row border-b border-gray-200">
-                            <td className="wenmo-timeline-label sticky left-0 z-10 min-w-14 border-r bg-stone-100 p-2 font-bold">大限</td>
-                            <td className="overflow-x-auto p-0">
-                                <div className="wenmo-timeline-options flex overflow-x-auto touch-pan-x">
-                                    {[...palaces].sort((a, b) => a.decadal.range[0] - b.decadal.range[0]).map((p, idx) => (
-                                        <button
-                                            key={idx}
-                                            type="button"
-                                            aria-pressed={selection.daxianIndex === p.index}
-                                            aria-label={`选择${p.decadal.range[0]}至${p.decadal.range[1]}岁大限，${p.heavenlyStem}${p.earthlyBranch}`}
-                                            className={`wenmo-timeline-option min-h-12 min-w-16 px-3 py-2 whitespace-nowrap transition active:scale-95 ${selection.daxianIndex === p.index ? 'is-active bg-green-600 text-white' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
-                                            onClick={() => handleSelection('daxian', p.index)}
-                                        >
-                                            {p.decadal.range[0]}-{p.decadal.range[1]}<br />
-                                            <span className="text-[10px]">{p.heavenlyStem}{p.earthlyBranch}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </td>
-                        </tr>
-
-                        {/* Liu Nian Row (Only if Da Xian selected) */}
-                        {selection.daxianIndex !== null && (
-                            <tr className="border-b border-gray-200">
-                                <td className="sticky left-0 z-10 min-w-14 border-r bg-stone-100 p-2 font-bold">流年</td>
-                                <td className="p-2">
-                                    <div className="flex gap-2 overflow-x-auto touch-pan-x">
-                                        {(() => {
-                                            const p = selectedDaxianPalace;
-                                            if (!p) return null;
-                                            const startAge = p.decadal.range[0];
-                                            const endAge = p.decadal.range[1];
-                                            const birthYear = new Date(basicInfo.birthday).getFullYear();
-                                            // Calculate years for this Da Xian
-                                            // Age 1 = Birth Year. Age X = Birth Year + X - 1.
-                                            const years = [];
-                                            for (let age = startAge; age <= endAge; age++) {
-                                                years.push(birthYear + age - 1);
-                                            }
-                                            return years.map(year => (
-                                                <button
-                                                    key={year}
-                                                    type="button"
-                                                    aria-pressed={selection.year === year}
-                                                    aria-label={`选择${year}流年`}
-                                                    className={`min-h-12 min-w-16 rounded-lg px-3 py-2 whitespace-nowrap transition active:scale-95 ${selection.year === year ? 'bg-blue-600 text-white shadow' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
-                                                    onClick={() => handleSelection('year', year)}
-                                                >
-                                                    {year}年<br />
-                                                    <span className="text-[10px]">{HEAVENLY_STEMS[getYearStemIndex(year)]}{EARTHLY_BRANCHES[(year - 4) % 12]}</span>
-                                                </button>
-                                            ));
-                                        })()}
-                                    </div>
-                                </td>
-                            </tr>
-                        )}
-
-                        {/* Liu Yue Row (Only if Year selected) */}
-                        {selection.year && (
-                            <tr className="border-b border-gray-200">
-
-                                <td className="sticky left-0 z-20 min-w-14 border-r bg-stone-100 p-2 font-bold">
-                                    <button
-                                        type="button"
-                                        className="flex min-h-10 w-full items-center justify-center gap-1 rounded-lg hover:bg-white hover:text-blue-600"
-                                        onClick={() => setShowLunarTip(!showLunarTip)}
-                                        aria-expanded={showLunarTip}
-                                        aria-label="查看流月农历说明"
-                                    >
-                                        流月 <HelpCircle size={10} />
-                                    </button>
-                                    {showLunarTip && (
-                                        <div className="absolute left-0 top-full mt-1 z-50 w-48 p-2 bg-gray-800 text-white text-xs rounded shadow-lg text-left font-normal leading-relaxed">
-                                            <div className="font-bold text-yellow-400 mb-1">⚠️ 农历提醒</div>
-                                            紫微斗数均按农历排盘。
-                                            <br />
-                                            例如：今日阳历12月6日，对应农历十月，请选择【10月】。
-                                            <div className="mt-2 text-right">
-                                                <button type="button" className="min-h-10 px-2 text-blue-300 underline" onClick={(e) => { e.stopPropagation(); setShowLunarTip(false); }}>知道了</button>
-                                            </div>
-                                        </div>
-                                    )}
-                                </td>
-                                <td className="p-2">
-                                    <div className="grid grid-cols-4 gap-2 md:grid-cols-6">
-                                        {getLunarMonthOptions(selection.lunarYear || selection.year).map(monthOption => (
-                                            <button
-                                                key={`${monthOption.month}-${monthOption.isLeap ? 'leap' : 'regular'}`}
-                                                type="button"
-                                                aria-pressed={selection.month === monthOption.month && selection.isLeapMonth === monthOption.isLeap}
-                                                aria-label={`选择${monthOption.label}`}
-                                                className={`min-h-11 rounded-lg px-2 py-2 whitespace-nowrap text-center transition active:scale-95 ${selection.month === monthOption.month && selection.isLeapMonth === monthOption.isLeap ? 'bg-yellow-500 text-white shadow' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
-                                                onClick={() => handleSelection('month', monthOption)}
-                                            >
-                                                {monthOption.label}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </td>
-                            </tr>
-                        )}
-
-                        {/* Liu Ri Row (Only if Month selected) */}
-                        {selection.month && (
-                            <tr className="border-b border-gray-200">
-                                <td className="sticky left-0 z-10 min-w-14 border-r bg-stone-100 p-2 font-bold">流日</td>
-                                <td className="p-2">
-                                    <div className="grid grid-cols-7 gap-1.5">
-                                        {(() => {
-                                            const daysInMonth = getLunarMonthDays(
-                                                selection.lunarYear || selection.year,
-                                                selection.month,
-                                                selection.isLeapMonth,
-                                            );
-                                            return Array.from({ length: daysInMonth }, (_, i) => i + 1).map(day => (
-                                                <button
-                                                    key={day}
-                                                    type="button"
-                                                    aria-pressed={selection.day === day}
-                                                    aria-label={`选择农历${day}日`}
-                                                    className={`min-h-10 rounded-lg px-1 py-2 whitespace-nowrap text-center text-[11px] transition active:scale-95 ${selection.day === day ? 'bg-purple-600 text-white shadow' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
-                                                    onClick={() => handleSelection('day', day)}
-                                                >
-                                                    {day}
-                                                </button>
-                                            ));
-                                        })()}
-                                    </div>
-                                </td>
-                            </tr>
-                        )}
-
-                        {/* Liu Shi Row (Only if Day selected) */}
-                        {selection.day && (
-                            <tr className="border-b border-gray-200">
-                                <td className="sticky left-0 z-10 min-w-14 border-r bg-stone-100 p-2 font-bold">流时</td>
-                                <td className="p-2">
-                                    <div className="flex gap-2 overflow-x-auto touch-pan-x">
-                                        {FORTUNE_HOUR_OPTIONS.map((hourOption) => (
-                                            <button
-                                                key={hourOption.index}
-                                                type="button"
-                                                aria-pressed={selection.hour === hourOption.index}
-                                                aria-label={`选择${hourOption.name}，${hourOption.range}`}
-                                                className={`min-h-12 min-w-24 rounded-lg px-3 py-2 whitespace-nowrap flex flex-col items-center justify-center transition active:scale-95 ${selection.hour === hourOption.index ? 'bg-cyan-600 text-white shadow' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
-                                                onClick={() => handleSelection('hour', hourOption.index)}
-                                            >
-                                                <span>{hourOption.name}</span>
-                                                <span className="text-[9px] opacity-80">{hourOption.range}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                <section className="wenmo-luck-row" aria-label="流时">
+                    <h3>流时</h3>
+                    <div className="wenmo-luck-viewport">
+                        <div className="wenmo-luck-track">
+                            {FORTUNE_HOUR_OPTIONS.map((hourOption) => (
+                                <button
+                                    key={hourOption.index}
+                                    type="button"
+                                    className={`wenmo-luck-cell ${selection.hour === hourOption.index ? 'is-active' : ''}`}
+                                    aria-pressed={selection.hour === hourOption.index}
+                                    aria-label={`选择${hourOption.name}，${hourOption.range}`}
+                                    disabled={!selection.day}
+                                    onClick={() => handleSelection('hour', hourOption.index)}
+                                >
+                                    <b>{hourOption.name}</b>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </section>
             </div>
+
+            <div className="wenmo-mode-bar print:hidden">
+                <button type="button" className="wenmo-mode-side" onClick={() => setShowCommonMenu((visible) => !visible)} aria-expanded={showCommonMenu}>常用功能</button>
+                <div className="wenmo-mode-segments" role="group" aria-label="命盘叠层模式">
+                    {[
+                        { key: 'fly', label: '飞星' },
+                        { key: 'sanhe', label: '三合' },
+                        { key: 'sihua', label: '四化' },
+                    ].map((mode) => (
+                        <button
+                            key={mode.key}
+                            type="button"
+                            aria-pressed={professionalToolMode === mode.key}
+                            onClick={() => {
+                                setProfessionalToolMode(mode.key);
+                                if (mode.key === 'sanhe' || mode.key === 'fly') setShowConnections(true);
+                                if (mode.key === 'sihua') setActiveLayers((prev) => Object.fromEntries(Object.keys(prev).map((key) => [key, true])));
+                            }}
+                        >
+                            {mode.label}
+                        </button>
+                    ))}
+                </div>
+                <button type="button" className="wenmo-mode-side" onClick={onQuickChart}>快捷排盘</button>
+            </div>
+
+            {showCommonMenu && (
+                <nav className="wenmo-common-menu print:hidden" aria-label="常用功能菜单">
+                    <button type="button" onClick={onOpenArchive}>命例档案</button>
+                    <button type="button" onClick={onSave}>保存命盘</button>
+                    <button type="button" onClick={() => { setShowAiMenu(true); setShowCommonMenu(false); }}>AI 分析</button>
+                    <button type="button" onClick={() => window.print()}>打印导出</button>
+                </nav>
+            )}
+
+            <nav className="wenmo-bottom-tabs print:hidden" aria-label="专业盘导航">
+                <button type="button" className="is-active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>◉</span>命盘</button>
+                <button type="button" onClick={() => setShowAiMenu(true)}><span>?</span>帮助</button>
+                <button type="button" onClick={() => setShowDonationModal(true)}><span>ⓘ</span>关于</button>
+            </nav>
 
             {/* --- Unified Floating Action Buttons (Stack) --- */}
             <div className="chart-action-bar fixed inset-x-0 bottom-0 z-50 pointer-events-none md:inset-x-auto md:right-4 md:bottom-6">
@@ -1674,28 +1590,6 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
         </div>
     );
 }
-
-// Helper to calculate Zodiac sign from date
-function getZodiacSign(dateString) {
-    const date = new Date(dateString);
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-
-    if ((month == 1 && day <= 19) || (month == 12 && day >= 22)) return "摩羯座";
-    if ((month == 1 && day >= 20) || (month == 2 && day <= 18)) return "水瓶座";
-    if ((month == 2 && day >= 19) || (month == 3 && day <= 20)) return "双鱼座";
-    if ((month == 3 && day >= 21) || (month == 4 && day <= 19)) return "白羊座";
-    if ((month == 4 && day >= 20) || (month == 5 && day <= 20)) return "金牛座";
-    if ((month == 5 && day >= 21) || (month == 6 && day <= 21)) return "双子座";
-    if ((month == 6 && day >= 22) || (month == 7 && day <= 22)) return "巨蟹座";
-    if ((month == 7 && day >= 23) || (month == 8 && day <= 22)) return "狮子座";
-    if ((month == 8 && day >= 23) || (month == 9 && day <= 22)) return "处女座";
-    if ((month == 9 && day >= 23) || (month == 10 && day <= 23)) return "天秤座";
-    if ((month == 10 && day >= 24) || (month == 11 && day <= 22)) return "天蝎座";
-    if ((month == 11 && day >= 23) || (month == 12 && day <= 21)) return "射手座";
-    return "未知";
-}
-
 
 class ErrorBoundary extends React.Component {
     constructor(props) {
