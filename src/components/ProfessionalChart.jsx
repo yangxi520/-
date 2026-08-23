@@ -844,6 +844,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
 
     // 宫干四化：落本宫为离心自化（向盘外），落对宫为向心自化（向中宫）。
     const renderSelfMutationArrows = () => {
+        const isInteractive = professionalToolMode !== 'fly';
         const arrowModels = Object.entries(selfMutationsByBranch).flatMap(([branch, entries]) => (
             ['outward', 'inward'].flatMap((kind) => {
                 const sameDirection = entries.filter((entry) => entry.kind === kind);
@@ -885,33 +886,37 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                 {arrowModels.map((entry) => (
                     <g
                         key={`${entry.sourceIndex}-${entry.mutagen}-${entry.kind}`}
-                        className="wenmo-mutation-hit"
+                        className={`wenmo-mutation-hit${isInteractive ? '' : ' is-passive'}`}
                         data-mutagen={entry.mutagen}
                         data-mutation-direction={entry.kind}
-                        role="button"
-                        tabIndex="0"
-                        aria-label={`${formatPalaceName(entry.sourceName)}${entry.sourceStem}干使${entry.starName}化${entry.mutagen}，${entry.kind === 'outward' ? '离心自化' : '向心自化'}，点击查看说明`}
-                        onClick={(event) => {
+                        role={isInteractive ? 'button' : undefined}
+                        tabIndex={isInteractive ? 0 : undefined}
+                        aria-label={isInteractive ? `${formatPalaceName(entry.sourceName)}${entry.sourceStem}干使${entry.starName}化${entry.mutagen}，${entry.kind === 'outward' ? '离心自化' : '向心自化'}，点击查看说明` : undefined}
+                        onClick={isInteractive ? (event) => {
                             event.stopPropagation();
                             selectMutationInfo(entry, 'self');
-                        }}
-                        onKeyDown={(event) => handleMutationKeyDown(event, entry, 'self')}
+                        } : undefined}
+                        onKeyDown={isInteractive ? (event) => handleMutationKeyDown(event, entry, 'self') : undefined}
                     >
                         <title>{`${formatPalaceName(entry.sourceName)}干化${entry.mutagen}·${entry.kind === 'outward' ? '离心自化' : '向心自化'}`}</title>
-                        <circle
-                            className="wenmo-arrow-hit-pad"
-                            cx={(entry.geometry.start.x + entry.geometry.end.x) / 2}
-                            cy={(entry.geometry.start.y + entry.geometry.end.y) / 2}
-                            r="4.5"
-                        />
-                        <line
-                            className="wenmo-arrow-hit-target"
-                            x1={entry.geometry.start.x}
-                            y1={entry.geometry.start.y}
-                            x2={entry.geometry.end.x}
-                            y2={entry.geometry.end.y}
-                            vectorEffect="non-scaling-stroke"
-                        />
+                        {isInteractive && (
+                            <>
+                                <circle
+                                    className="wenmo-arrow-hit-pad"
+                                    cx={(entry.geometry.start.x + entry.geometry.end.x) / 2}
+                                    cy={(entry.geometry.start.y + entry.geometry.end.y) / 2}
+                                    r="4.5"
+                                />
+                                <line
+                                    className="wenmo-arrow-hit-target"
+                                    x1={entry.geometry.start.x}
+                                    y1={entry.geometry.start.y}
+                                    x2={entry.geometry.end.x}
+                                    y2={entry.geometry.end.y}
+                                    vectorEffect="non-scaling-stroke"
+                                />
+                            </>
+                        )}
                         <line
                             className="wenmo-self-arrow-line"
                             x1={entry.geometry.start.x}
