@@ -1056,13 +1056,41 @@ select.field-control { cursor: pointer; }
 .wenmo-palace-meta .md\:text-base { font-size: clamp(11px, 3vw, 16px) !important; }
 .wenmo-palace-meta .text-blue-500 { color: #087cf0 !important; font-size: clamp(7px, 1.9vw, 10px) !important; }
 
-.wenmo-connections {
-  z-index: 32 !important;
+.wenmo-sanhe-lines {
+  z-index: 4;
   overflow: visible;
-  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.9));
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.88));
 }
-.wenmo-connections line,
-.wenmo-connections polygon { opacity: 0.95; }
+.wenmo-sanhe-lines line,
+.wenmo-sanhe-lines polygon { opacity: 0.9; }
+.wenmo-fly-lines {
+  z-index: 31;
+  overflow: visible;
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.92));
+}
+.wenmo-self-mutations {
+  z-index: 38;
+  overflow: visible;
+  filter: drop-shadow(0 0 1px #fff) drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
+}
+.wenmo-self-mutations line {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.wenmo-fly-path {
+  opacity: 0.86;
+  stroke-dasharray: 9 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: wenmo-fly-flow 1.15s linear infinite;
+  animation-delay: calc(var(--flight-index, 0) * -0.16s);
+}
+@keyframes wenmo-fly-flow {
+  to { stroke-dashoffset: -28; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wenmo-fly-path { animation: none; }
+}
 
 .wenmo-center {
   z-index: 3;
@@ -1170,6 +1198,8 @@ select.field-control { cursor: pointer; }
 .wenmo-transform-legend span:nth-child(2) { color: #8b2fa8; }
 .wenmo-transform-legend span:nth-child(3) { color: #087cf0; }
 .wenmo-transform-legend span:nth-child(4) { color: #ef2828; }
+.wenmo-transform-legend span { margin-left: 2px; font-weight: 900; }
+.wenmo-transform-legend small { margin-left: 4px; color: #777; font-size: 0.88em; }
 .wenmo-powered { position: absolute; right: 3px; bottom: 2px; color: #c8c8c8; font-size: clamp(4px, 1.1vw, 6px); }
 
 .wenmo-luck-table {

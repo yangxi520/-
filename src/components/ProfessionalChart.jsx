@@ -18,6 +18,11 @@ import {
     getLunarMonthDays,
     getLunarMonthOptions,
 } from '../utils/fortuneContext';
+import {
+    MUTAGEN_META,
+    buildPalaceFlights,
+    groupSelfMutationsByBranch,
+} from '../utils/ziweiMutations';
 import { Sparkles, Coffee, Save, Archive, Calendar, Printer } from "lucide-react";
 import wechatPayImg from '../assets/wechat_pay.jpg';
 import alipayImg from '../assets/alipay.jpg';
@@ -202,6 +207,21 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
             },
         };
     }, [focusedPalace]);
+
+    const palaceFlights = useMemo(
+        () => buildPalaceFlights(horoscope),
+        [horoscope],
+    );
+
+    const selfMutationsByBranch = useMemo(
+        () => groupSelfMutationsByBranch(palaceFlights),
+        [palaceFlights],
+    );
+
+    const focusedPalaceFlights = useMemo(() => {
+        if (!focusedPalace) return [];
+        return palaceFlights.filter((flight) => flight.sourceIndex === focusedPalace.index);
+    }, [focusedPalace, palaceFlights]);
 
     const sortedDaxianPalaces = useMemo(
         () => [...palaces].sort((a, b) => a.decadal.range[0] - b.decadal.range[0]),
@@ -496,7 +516,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                 ${isFocused ? 'bg-amber-50 ring-2 ring-amber-400 z-10 shadow-lg' : 'bg-stone-50 hover:bg-stone-100'}
                 ${isMing ? 'bg-red-50/30' : ''}
             `}
-                data-relation={showConnections ? relationship || undefined : undefined}
+                data-relation={showConnections && professionalToolMode === 'sanhe' ? relationship || undefined : undefined}
                 onClick={() => setFocusedIndex(palace.index)}
                 onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
@@ -677,108 +697,288 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
         );
     };
 
-    // Calculate connection lines for San Fang Si Zheng
-    const renderConnections = () => {
-        if (!showConnections || !palaceRelationship) return null;
-
-        // The centre occupies x/y 100..300 in a 400×400 logical grid.
-        // Each arrow begins on the centre boundary and points into its palace,
-        // keeping the relationship readable without drawing through star text.
-        const getArrowPoints = (branch) => {
-            const pos = GRID_MAP[branch];
-            if (!pos) return null;
-
-            const center = {
-                x: (pos.col - 0.5) * 100,
-                y: (pos.row - 0.5) * 100,
-            };
-
-            if (pos.row === 1) return { start: { x: center.x, y: 104 }, end: { x: center.x, y: 78 } };
-            if (pos.row === 4) return { start: { x: center.x, y: 296 }, end: { x: center.x, y: 322 } };
-            if (pos.col === 1) return { start: { x: 104, y: center.y }, end: { x: 78, y: center.y } };
-            return { start: { x: 296, y: center.y }, end: { x: 322, y: center.y } };
+    const getBranchCenter = (branch) => {
+        const pos = GRID_MAP[branch];
+        if (!pos) return null;
+        return {
+            x: (pos.col - 0.5) * 100,
+            y: (pos.row - 0.5) * 100,
+            pos,
         };
+    };
 
-        const targets = [
-            { branch: palaceRelationship.self, role: 'self', color: '#d43d35', marker: 'relation-arrow-self' },
-            { branch: palaceRelationship.sanHe[0], role: 'sanhe', color: '#1677c8', marker: 'relation-arrow-sanhe-a' },
-            { branch: palaceRelationship.sanHe[1], role: 'sanhe', color: '#168a62', marker: 'relation-arrow-sanhe-b' },
-            { branch: palaceRelationship.opposite, role: 'opposite', color: '#813ca3', marker: 'relation-arrow-opposite' },
-        ].map((target) => ({ ...target, points: getArrowPoints(target.branch) })).filter((target) => target.points);
+    const getCenterFacingPoint = (branch) => {
+        const point = getBranchCenter(branch);
+        if (!point) return null;
 
-        const trianglePoints = targets
-            .filter((target) => target.role !== 'opposite')
-            .map((target) => `${target.points.start.x},${target.points.start.y}`)
-            .join(' ');
-        const selfTarget = targets.find((target) => target.role === 'self');
-        const oppositeTarget = targets.find((target) => target.role === 'opposite');
+        return {
+            x: point.pos.col === 1 ? 100 : point.pos.col === 4 ? 300 : point.x,
+            y: point.pos.row === 1 ? 100 : point.pos.row === 4 ? 300 : point.y,
+        };
+    };
+
+    const getOutwardVector = (branch) => {
+        const point = getBranchCenter(branch);
+        if (!point) return null;
+
+        const rawX = point.pos.col === 1 ? -1 : point.pos.col === 4 ? 1 : 0;
+        const rawY = point.pos.row === 1 ? -1 : point.pos.row === 4 ? 1 : 0;
+        const length = Math.hypot(rawX, rawY) || 1;
+        return { x: rawX / length, y: rawY / length };
+    };
+
+    const getMutationArrowGeometry = (entry, slotIndex, slotCount) => {
+        const center = getBranchCenter(entry.sourceBranch);
+        const outward = getOutwardVector(entry.sourceBranch);
+        if (!center || !outward) return null;
+
+        const tangent = { x: -outward.y, y: outward.x };
+        const offset = (slotIndex - (slotCount - 1) / 2) * 6.5;
+        const direction = entry.kind === 'outward'
+            ? outward
+            : { x: -outward.x, y: -outward.y };
+
+        let boundaryDistance;
+        if (entry.kind === 'outward') {
+            const candidates = [];
+            if (direction.x < 0) candidates.push((0 - center.x) / direction.x);
+            if (direction.x > 0) candidates.push((400 - center.x) / direction.x);
+            if (direction.y < 0) candidates.push((0 - center.y) / direction.y);
+            if (direction.y > 0) candidates.push((400 - center.y) / direction.y);
+            boundaryDistance = Math.min(...candidates.filter((distance) => distance >= 0));
+        } else {
+            const candidates = [];
+            if (center.x < 100 && direction.x > 0) candidates.push((100 - center.x) / direction.x);
+            if (center.x > 300 && direction.x < 0) candidates.push((300 - center.x) / direction.x);
+            if (center.y < 100 && direction.y > 0) candidates.push((100 - center.y) / direction.y);
+            if (center.y > 300 && direction.y < 0) candidates.push((300 - center.y) / direction.y);
+            boundaryDistance = Math.max(...candidates.filter((distance) => distance >= 0));
+        }
+
+        if (!Number.isFinite(boundaryDistance)) return null;
+
+        const startDistance = Math.max(8, boundaryDistance - (entry.kind === 'outward' ? 21 : 22));
+        const endDistance = boundaryDistance + (entry.kind === 'outward' ? 4 : 6);
+
+        return {
+            start: {
+                x: center.x + direction.x * startDistance + tangent.x * offset,
+                y: center.y + direction.y * startDistance + tangent.y * offset,
+            },
+            end: {
+                x: center.x + direction.x * endDistance + tangent.x * offset,
+                y: center.y + direction.y * endDistance + tangent.y * offset,
+            },
+        };
+    };
+
+    // 三方四正只使用灰色虚线；四化颜色不再冒充宫位关系。
+    const renderSanheConnections = () => {
+        if (!showConnections || professionalToolMode !== 'sanhe' || !palaceRelationship) return null;
+
+        const selfPoint = getCenterFacingPoint(palaceRelationship.self);
+        const sanHePoints = palaceRelationship.sanHe.map(getCenterFacingPoint).filter(Boolean);
+        const oppositePoint = getCenterFacingPoint(palaceRelationship.opposite);
+        if (!selfPoint || sanHePoints.length !== 2 || !oppositePoint) return null;
 
         return (
             <svg
-                className="wenmo-connections absolute inset-0 h-full w-full pointer-events-none"
+                className="wenmo-sanhe-lines absolute inset-0 h-full w-full pointer-events-none"
+                data-testid="ziwei-sanhe-layer"
                 viewBox="0 0 400 400"
                 preserveAspectRatio="none"
                 aria-hidden="true"
             >
                 <defs>
-                    {targets.map((target) => (
+                    <marker id="sanhe-opposite-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto" markerUnits="strokeWidth">
+                        <path d="M0,0 L7,3.5 L0,7 Z" fill="#858585" />
+                    </marker>
+                </defs>
+                <polygon
+                    points={[selfPoint, ...sanHePoints].map((point) => `${point.x},${point.y}`).join(' ')}
+                    fill="rgba(80, 80, 80, 0.018)"
+                    stroke="rgba(105, 105, 105, 0.52)"
+                    strokeWidth="1.15"
+                    strokeDasharray="4 4"
+                    vectorEffect="non-scaling-stroke"
+                />
+                <line
+                    x1={selfPoint.x}
+                    y1={selfPoint.y}
+                    x2={oppositePoint.x}
+                    y2={oppositePoint.y}
+                    stroke="rgba(105, 105, 105, 0.52)"
+                    strokeWidth="1.15"
+                    strokeDasharray="4 4"
+                    markerEnd="url(#sanhe-opposite-arrow)"
+                    vectorEffect="non-scaling-stroke"
+                />
+            </svg>
+        );
+    };
+
+    // 宫干四化：落本宫为离心自化（向盘外），落对宫为向心自化（向中宫）。
+    const renderSelfMutationArrows = () => {
+        const arrowModels = Object.entries(selfMutationsByBranch).flatMap(([branch, entries]) => (
+            ['outward', 'inward'].flatMap((kind) => {
+                const sameDirection = entries.filter((entry) => entry.kind === kind);
+                return sameDirection.map((entry, slotIndex) => ({
+                    ...entry,
+                    sourceBranch: branch,
+                    geometry: getMutationArrowGeometry(entry, slotIndex, sameDirection.length),
+                }));
+            })
+        )).filter((entry) => entry.geometry);
+
+        if (arrowModels.length === 0) return null;
+
+        return (
+            <svg
+                className="wenmo-self-mutations absolute inset-0 h-full w-full pointer-events-none"
+                data-testid="ziwei-self-mutation-layer"
+                viewBox="0 0 400 400"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+            >
+                <defs>
+                    {MUTAGEN_META.map((meta) => (
                         <marker
-                            key={target.marker}
-                            id={target.marker}
-                            markerWidth="8"
-                            markerHeight="8"
-                            refX="6.4"
-                            refY="4"
+                            key={meta.key}
+                            id={`self-mutation-arrow-${meta.key}`}
+                            markerWidth="5.4"
+                            markerHeight="5.4"
+                            refX="4.65"
+                            refY="2.7"
                             orient="auto"
                             markerUnits="strokeWidth"
                         >
-                            <path d="M0,0 L8,4 L0,8 Z" fill={target.color} />
+                            <path d="M0,0 L5.4,2.7 L0,5.4 Z" fill={meta.color} />
                         </marker>
                     ))}
                 </defs>
-
-                <polygon
-                    points={trianglePoints}
-                    fill="rgba(22, 119, 200, 0.035)"
-                    stroke="rgba(49, 92, 125, 0.36)"
-                    strokeWidth="1.25"
-                    strokeDasharray="5 4"
-                    vectorEffect="non-scaling-stroke"
-                />
-
-                {selfTarget && oppositeTarget && (
-                    <line
-                        x1={selfTarget.points.start.x}
-                        y1={selfTarget.points.start.y}
-                        x2={oppositeTarget.points.start.x}
-                        y2={oppositeTarget.points.start.y}
-                        stroke="rgba(91, 69, 112, 0.3)"
-                        strokeWidth="1.2"
-                        strokeDasharray="4 4"
-                        vectorEffect="non-scaling-stroke"
-                    />
-                )}
-
-                {targets.map((target) => (
-                    <g key={`${target.role}-${target.branch}`}>
-                        <circle
-                            cx={target.points.start.x}
-                            cy={target.points.start.y}
-                            r="3"
-                            fill="#fff"
-                            stroke={target.color}
-                            strokeWidth="1.4"
+                {arrowModels.map((entry) => (
+                    <g
+                        key={`${entry.sourceIndex}-${entry.mutagen}-${entry.kind}`}
+                        data-mutagen={entry.mutagen}
+                        data-mutation-direction={entry.kind}
+                    >
+                        <title>{`${entry.sourceName}宫干化${entry.mutagen}·${entry.kind === 'outward' ? '离心自化' : '向心自化'}`}</title>
+                        <line
+                            x1={entry.geometry.start.x}
+                            y1={entry.geometry.start.y}
+                            x2={entry.geometry.end.x}
+                            y2={entry.geometry.end.y}
+                            stroke={entry.color}
+                            strokeWidth="1.75"
+                            markerEnd={`url(#self-mutation-arrow-${entry.key})`}
                             vectorEffect="non-scaling-stroke"
                         />
-                        <line
-                            x1={target.points.start.x}
-                            y1={target.points.start.y}
-                            x2={target.points.end.x}
-                            y2={target.points.end.y}
-                            stroke={target.color}
-                            strokeWidth={target.role === 'self' ? 2.1 : 1.8}
-                            markerEnd={`url(#${target.marker})`}
+                    </g>
+                ))}
+            </svg>
+        );
+    };
+
+    // 飞星模式只画当前所选宫位的四条宫干四化，避免 48 条线同时堆叠。
+    const renderFlyConnections = () => {
+        if (!showConnections || professionalToolMode !== 'fly' || focusedPalaceFlights.length === 0) return null;
+
+        const duplicateCounts = focusedPalaceFlights.reduce((counts, flight) => {
+            counts[flight.targetIndex] = (counts[flight.targetIndex] || 0) + 1;
+            return counts;
+        }, {});
+        const duplicateSlots = {};
+
+        const paths = focusedPalaceFlights.map((flight, flightIndex) => {
+            const source = getBranchCenter(flight.sourceBranch);
+            const target = getBranchCenter(flight.targetBranch);
+            if (!source || !target) return null;
+
+            const slotIndex = duplicateSlots[flight.targetIndex] || 0;
+            duplicateSlots[flight.targetIndex] = slotIndex + 1;
+            const slotCount = duplicateCounts[flight.targetIndex] || 1;
+            const slotOffset = (slotIndex - (slotCount - 1) / 2) * 7;
+
+            if (flight.sourceIndex === flight.targetIndex) {
+                const outward = getOutwardVector(flight.sourceBranch) || { x: 0, y: -1 };
+                const tangent = { x: -outward.y, y: outward.x };
+                const anchor = {
+                    x: source.x + outward.x * 23 + tangent.x * slotOffset,
+                    y: source.y + outward.y * 23 + tangent.y * slotOffset,
+                };
+                const start = { x: anchor.x - tangent.x * 11, y: anchor.y - tangent.y * 11 };
+                const end = { x: anchor.x + tangent.x * 11, y: anchor.y + tangent.y * 11 };
+                const controlA = { x: start.x + outward.x * 29 - tangent.x * 8, y: start.y + outward.y * 29 - tangent.y * 8 };
+                const controlB = { x: end.x + outward.x * 29 + tangent.x * 8, y: end.y + outward.y * 29 + tangent.y * 8 };
+                return {
+                    ...flight,
+                    flightIndex,
+                    path: `M ${start.x} ${start.y} C ${controlA.x} ${controlA.y}, ${controlB.x} ${controlB.y}, ${end.x} ${end.y}`,
+                };
+            }
+
+            const delta = { x: target.x - source.x, y: target.y - source.y };
+            const length = Math.hypot(delta.x, delta.y) || 1;
+            const unit = { x: delta.x / length, y: delta.y / length };
+            const tangent = { x: -unit.y, y: unit.x };
+            const start = {
+                x: source.x + unit.x * 19 + tangent.x * slotOffset,
+                y: source.y + unit.y * 19 + tangent.y * slotOffset,
+            };
+            const end = {
+                x: target.x - unit.x * 20 + tangent.x * slotOffset,
+                y: target.y - unit.y * 20 + tangent.y * slotOffset,
+            };
+            const bend = (flightIndex - 1.5) * 5;
+            const control = {
+                x: (start.x + end.x) / 2 + tangent.x * bend,
+                y: (start.y + end.y) / 2 + tangent.y * bend,
+            };
+
+            return {
+                ...flight,
+                flightIndex,
+                path: `M ${start.x} ${start.y} Q ${control.x} ${control.y}, ${end.x} ${end.y}`,
+            };
+        }).filter(Boolean);
+
+        return (
+            <svg
+                className="wenmo-fly-lines absolute inset-0 h-full w-full pointer-events-none"
+                data-testid="ziwei-fly-layer"
+                viewBox="0 0 400 400"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+            >
+                <defs>
+                    {MUTAGEN_META.map((meta) => (
+                        <marker
+                            key={meta.key}
+                            id={`fly-arrow-${meta.key}`}
+                            markerWidth="6"
+                            markerHeight="6"
+                            refX="5.2"
+                            refY="3"
+                            orient="auto"
+                            markerUnits="strokeWidth"
+                        >
+                            <path d="M0,0 L6,3 L0,6 Z" fill={meta.color} />
+                        </marker>
+                    ))}
+                </defs>
+                {paths.map((flight) => (
+                    <g key={`${flight.sourceIndex}-${flight.mutagen}-${flight.targetIndex}`} data-mutagen={flight.mutagen}>
+                        <title>{`${flight.sourceName}宫化${flight.mutagen}→${flight.targetName}宫`}</title>
+                        <path
+                            className="wenmo-fly-path"
+                            d={flight.path}
+                            pathLength="100"
+                            stroke={flight.color}
+                            strokeWidth="1.65"
+                            fill="none"
+                            markerEnd={`url(#fly-arrow-${flight.key})`}
                             vectorEffect="non-scaling-stroke"
+                            style={{ '--flight-index': flight.flightIndex }}
                         />
                     </g>
                 ))}
@@ -959,8 +1159,8 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                         <button type="button" aria-pressed={mobileChartMode === 'simple'} onClick={() => setMobileChartMode('simple')}>简洁盘</button>
                     </div>
                     <div>
-                        <span>关系图层</span>
-                        <button type="button" aria-pressed={showConnections} onClick={() => setShowConnections((visible) => !visible)}>三方四正</button>
+                        <span>连线图层</span>
+                        <button type="button" aria-pressed={showConnections} onClick={() => setShowConnections((visible) => !visible)}>三合 / 飞星</button>
                     </div>
                 </section>
             )}
@@ -996,7 +1196,9 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                         <span>南偏东</span><span>东偏南</span><span>正东方</span><span>东偏北</span>
                     </div>
                     <div className="wenmo-board relative grid grid-cols-4 grid-rows-4">
-                {renderConnections()}
+                {renderSanheConnections()}
+                {renderFlyConnections()}
+                {renderSelfMutationArrows()}
                 {/* Row 1 */}
                 <div className="wenmo-grid-cell">{renderPalace('巳')}</div>
                 <div className="wenmo-grid-cell">{renderPalace('午')}</div>
@@ -1052,7 +1254,9 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                             <button type="button" disabled={selection.hour === null || selection.hour >= FORTUNE_HOUR_OPTIONS.length - 1} onClick={() => handleSelection('hour', selection.hour + 1)}>时↓</button>
                         </div>
 
-                        <div className="wenmo-transform-legend">自化图示：<span>→禄</span><span>→权</span><span>→科</span><span>→忌</span></div>
+                        <div className="wenmo-transform-legend">
+                            宫干自化：<span>禄</span><span>权</span><span>科</span><span>忌</span><small>外离·内向</small>
+                        </div>
 
                         <div className="wenmo-powered">Powered by iztro</div>
                     </div>
