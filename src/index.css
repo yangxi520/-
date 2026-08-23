@@ -359,6 +359,11 @@ a:focus-visible {
 .field-control::placeholder { color: rgba(16, 32, 27, 0.32); }
 .field-control:focus { border-color: rgba(39, 126, 112, 0.7); background: #fffdf7; box-shadow: 0 0 0 4px rgba(85, 187, 168, 0.12); }
 select.field-control { cursor: pointer; }
+.birth-date-grid { display: grid; grid-template-columns: 1.3fr repeat(2, minmax(0, 1fr)); gap: 8px; }
+.birth-date-part { display: flex; min-width: 0; min-height: 50px; align-items: center; border: 1px solid rgba(16, 32, 27, 0.17); border-radius: 12px; color: rgba(16, 32, 27, 0.62); background: rgba(255, 253, 247, 0.72); box-shadow: inset 0 1px rgba(255, 255, 255, 0.7); transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease; }
+.birth-date-part:focus-within { border-color: rgba(39, 126, 112, 0.7); background: #fffdf7; box-shadow: 0 0 0 4px rgba(85, 187, 168, 0.12); }
+.birth-date-part select { min-width: 0; height: 48px; flex: 1; padding: 0 2px 0 12px; border: 0; outline: none; color: #10201b; background: transparent; font-size: 15px; font-variant-numeric: tabular-nums; cursor: pointer; }
+.birth-date-part > span:last-child { flex: 0 0 auto; padding-right: 11px; color: rgba(16, 32, 27, 0.5); font-size: 12px; font-weight: 800; }
 .segmented-control { display: grid; padding: 4px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; border: 1px solid rgba(16, 32, 27, 0.12); border-radius: 13px; background: rgba(16, 32, 27, 0.055); }
 .segment-button, .choice-button { min-height: 44px; border: 1px solid transparent; border-radius: 9px; color: rgba(16, 32, 27, 0.52); font-size: 13px; font-weight: 800; transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease, box-shadow 160ms ease; }
 .segment-button[aria-pressed="true"] { border-color: rgba(39, 126, 112, 0.28); color: #1d675b; background: rgba(255, 253, 247, 0.9); box-shadow: 0 4px 14px rgba(16, 32, 27, 0.08); }
@@ -430,6 +435,9 @@ select.field-control { cursor: pointer; }
   .input-page { padding-right: 12px; padding-left: 12px; align-items: start; }
   .input-panel-header, .birth-form { padding-right: 20px; padding-left: 20px; }
   .input-panel-header::after { right: 19px; }
+  .birth-date-grid { grid-template-columns: 1.2fr repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .birth-date-part select { padding-left: 9px; font-size: 14px; }
+  .birth-date-part > span:last-child { padding-right: 8px; }
   .install-dialog { padding: 22px 18px 20px; }
 
   .mobile-bottom-nav {

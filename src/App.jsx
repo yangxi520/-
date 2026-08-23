@@ -177,6 +177,27 @@ const getTimeDescription = (time) => {
   return timeMap[time] || "未知时辰";
 };
 
+const BIRTH_YEAR_OPTIONS = Array.from(
+  { length: new Date().getFullYear() - 1899 },
+  (_, index) => String(new Date().getFullYear() - index),
+);
+const BIRTH_MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => String(index + 1).padStart(2, '0'));
+
+const getBirthDateParts = (value) => {
+  const [rawYear = '', rawMonth = '', rawDay = ''] = cleanText(value).split('-');
+  return {
+    year: /^\d{4}$/.test(rawYear) ? rawYear : '',
+    month: /^\d{1,2}$/.test(rawMonth) ? rawMonth.padStart(2, '0') : '',
+    day: /^\d{1,2}$/.test(rawDay) ? rawDay.padStart(2, '0') : '',
+  };
+};
+
+const getBirthDayCount = (calendarType, year, month) => {
+  if (calendarType === 'lunar') return 30;
+  if (!year || !month) return 31;
+  return new Date(Date.UTC(Number(year), Number(month), 0)).getUTCDate();
+};
+
 export default function App() {
   const [view, setView] = useState('home'); // 'home', 'input', 'chart', 'money', 'archive', 'videos', 'bazi'
   const [showWelcomeCover, setShowWelcomeCover] = useState(() => {
@@ -200,6 +221,32 @@ export default function App() {
   const [homeNow, setHomeNow] = useState(() => new Date());
   const [homeShareNotice, setHomeShareNotice] = useState(null);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
+
+  const birthDateParts = getBirthDateParts(birthday);
+  const birthDayCount = getBirthDayCount(calendarType, birthDateParts.year, birthDateParts.month);
+  const birthDayOptions = Array.from(
+    { length: birthDayCount },
+    (_, index) => String(index + 1).padStart(2, '0'),
+  );
+
+  const updateBirthDatePart = (part, value) => {
+    const nextParts = { ...birthDateParts, [part]: value };
+    const nextDayCount = getBirthDayCount(calendarType, nextParts.year, nextParts.month);
+    if (nextParts.day && Number(nextParts.day) > nextDayCount) {
+      nextParts.day = String(nextDayCount).padStart(2, '0');
+    }
+    setBirthday(`${nextParts.year}-${nextParts.month}-${nextParts.day}`);
+  };
+
+  const updateCalendarType = (nextCalendarType) => {
+    const nextParts = { ...birthDateParts };
+    const nextDayCount = getBirthDayCount(nextCalendarType, nextParts.year, nextParts.month);
+    if (nextParts.day && Number(nextParts.day) > nextDayCount) {
+      nextParts.day = String(nextDayCount).padStart(2, '0');
+      setBirthday(`${nextParts.year}-${nextParts.month}-${nextParts.day}`);
+    }
+    setCalendarType(nextCalendarType);
+  };
 
   // Archive Save Modal State
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
@@ -931,7 +978,7 @@ export default function App() {
                     <button
                       type="button"
                       aria-pressed={calendarType === 'solar'}
-                      onClick={() => setCalendarType('solar')}
+                      onClick={() => updateCalendarType('solar')}
                       className="segment-button"
                     >
                       阳历
@@ -939,7 +986,7 @@ export default function App() {
                     <button
                       type="button"
                       aria-pressed={calendarType === 'lunar'}
-                      onClick={() => setCalendarType('lunar')}
+                      onClick={() => updateCalendarType('lunar')}
                       className="segment-button"
                     >
                       农历
@@ -948,26 +995,55 @@ export default function App() {
                 </fieldset>
 
                 <div className="form-fieldset">
-                  <label htmlFor="birth-date" className="field-label">出生日期</label>
-                  <input
-                    id="birth-date"
-                    type={calendarType === 'solar' ? 'date' : 'text'}
-                    inputMode={calendarType === 'lunar' ? 'numeric' : undefined}
-                    placeholder={calendarType === 'solar' ? 'YYYY-MM-DD' : '例如：1990-08-15'}
-                    value={birthday}
-                    onChange={(event) => setBirthday(event.target.value)}
-                    aria-describedby="birth-date-hint"
-                    className="field-control"
-                    autoComplete="bday"
-                    required
-                  />
+                  <span id="birth-date-label" className="field-label">出生日期</span>
+                  <div className="birth-date-grid" role="group" aria-labelledby="birth-date-label" aria-describedby="birth-date-hint">
+                    <label className="birth-date-part">
+                      <span className="sr-only">出生年份</span>
+                      <select
+                        value={birthDateParts.year}
+                        onChange={(event) => updateBirthDatePart('year', event.target.value)}
+                        autoComplete="bday-year"
+                        required
+                      >
+                        <option value="">选择</option>
+                        {BIRTH_YEAR_OPTIONS.map((year) => <option key={year} value={year}>{year}</option>)}
+                      </select>
+                      <span aria-hidden="true">年</span>
+                    </label>
+                    <label className="birth-date-part">
+                      <span className="sr-only">出生月份</span>
+                      <select
+                        value={birthDateParts.month}
+                        onChange={(event) => updateBirthDatePart('month', event.target.value)}
+                        autoComplete="bday-month"
+                        required
+                      >
+                        <option value="">选择</option>
+                        {BIRTH_MONTH_OPTIONS.map((month) => <option key={month} value={month}>{Number(month)}</option>)}
+                      </select>
+                      <span aria-hidden="true">月</span>
+                    </label>
+                    <label className="birth-date-part">
+                      <span className="sr-only">出生日期</span>
+                      <select
+                        value={birthDateParts.day}
+                        onChange={(event) => updateBirthDatePart('day', event.target.value)}
+                        autoComplete="bday-day"
+                        required
+                      >
+                        <option value="">选择</option>
+                        {birthDayOptions.map((day) => <option key={day} value={day}>{Number(day)}</option>)}
+                      </select>
+                      <span aria-hidden="true">日</span>
+                    </label>
+                  </div>
                   <p
                     id="birth-date-hint"
                     className={`field-hint ${calendarType === 'lunar' ? 'field-hint--warning' : ''}`}
                   >
                     {calendarType === 'solar'
-                      ? '请选择公历出生日期。'
-                      : '请按 YYYY-MM-DD 输入农历日期；当前不支持闰月标记。'}
+                      ? '请依次选择出生年、月、日。'
+                      : '请依次选择农历年、月、日；当前不支持闰月标记。'}
                   </p>
                 </div>
 
