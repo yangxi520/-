@@ -7,8 +7,7 @@ import { useTexture } from '@react-three/drei';
 import * as THREE from 'three';
 import { ArrowLeft, Hand } from 'lucide-react';
 import { getHexagram } from '../utils/hexagramLogic';
-import useGestureDivination from '../hooks/useGestureDivination';
-import BaguaBackground from './BaguaBackground/index.jsx';
+import FullBaguaExperience from './BaguaBackground/FullBaguaExperience.jsx';
 
 // --- Assets ---
 import coinYangTexture from '../assets/coin_yang_perfect.png';
@@ -193,28 +192,12 @@ export default function MoneyDivination({ onBack }) {
     const [isMobile, setIsMobile] = useState(false);
 
     // --- Gesture Mode State ---
-    const {
-        isGestureMode, currentGesture, handData,
-        throwDetected, videoRef, startCamera, stopCamera,
-        cameraError, clearThrow
-    } = useGestureDivination();
-    const [showGestureGuide, setShowGestureGuide] = useState(false);
-    const gestureGuideShownRef = useRef(false);
+    const [isGestureMode, setIsGestureMode] = useState(false);
 
     // Toggle gesture mode
     const toggleGestureMode = useCallback(async () => {
-        if (isGestureMode) {
-            stopCamera();
-        } else {
-            await startCamera();
-            // Show guide on first use
-            if (!gestureGuideShownRef.current) {
-                gestureGuideShownRef.current = true;
-                setShowGestureGuide(true);
-                setTimeout(() => setShowGestureGuide(false), 5000);
-            }
-        }
-    }, [isGestureMode, stopCamera, startCamera]);
+        setIsGestureMode(prev => !prev);
+    }, []);
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -243,16 +226,11 @@ export default function MoneyDivination({ onBack }) {
         playThrowSound(audioContextRef.current);
 
         // 2. Fetch Quantum Randomness
-        // Start fetching while sound plays. UX: might delay the *visual* throw slightly.
         try {
             const results = await fetchQuantumUtils(3);
-            // Check if we actually used quantum (hacky check: if it fell back, we wouldn't easily know unless we return metadata. 
-            // For now assume if it didn't throw error it's good, or we add flag to util. 
-            // Let's just assume for UX "Quantum Mode Active" if enabled.
             setTargetResults(results);
             setIsQuantum(true);
         } catch {
-            // Fallback handled in util, but here strictly for safety
             setTargetResults([Math.random() > 0.5, Math.random() > 0.5, Math.random() > 0.5]);
             setIsQuantum(false);
         }
@@ -261,38 +239,24 @@ export default function MoneyDivination({ onBack }) {
         setCoinResults({});
         setIsThrown(false);
 
-        // Small delay to ensure state reset before re-throw
         setTimeout(() => {
             setIsThrown(true);
-            // Processing flag will be cleared after animation finishes and coins report back
             isProcessingRef.current = false;
-            // Note: We keep setIsProcessing(true) until coins land? 
-            // Actually original logic cleared it quickly. 
-            // But now we need to wait for `handleCoinResult` to re-enable interaction?
-            // Original logic: handleThrow sets isProcessing=false almost immediately?
-            // No, original: isProcessingRef.current = false; setIsProcessing(false); right before setTimeout.
-            // Wait, that means user could spam?
-            // Let's fix that. Keep it processing until coins land.
         }, 100);
     };
 
     const handleCoinResult = (index, result) => {
-        // if (isProcessingRef.current || yaos.length >= 6 || finalHexagram) return; 
-        // Logic changed: isProcessing is TRUE during throw. We accept results now.
         if (yaos.length >= 6 || finalHexagram) return;
 
         setCoinResults(prev => {
             const newResults = { ...prev, [index]: result };
             if (Object.keys(prev).length < 3 && Object.keys(newResults).length === 3) {
-                // All 3 coins landed
                 if (yaos.length < 6 && !isGeneratingRef.current) {
-                    // Logic to proceed
-                    isGeneratingRef.current = true; // Lock immediately
+                    isGeneratingRef.current = true;
                     setTimeout(() => {
                         generateYao(newResults);
-                        setIsProcessing(false); // Re-enable button
+                        setIsProcessing(false);
                         isProcessingRef.current = false;
-                        // isGeneratingRef.current stays true until next throw
                     }, 500);
                 }
             }
@@ -344,7 +308,6 @@ export default function MoneyDivination({ onBack }) {
         setIsThrown(false);
         isProcessingRef.current = false;
         setIsProcessing(false);
-        clearThrow();
     };
 
     // --- Bridge gesture throw to handleThrow ---
@@ -353,13 +316,6 @@ export default function MoneyDivination({ onBack }) {
     useEffect(() => {
         handleThrowRef.current = handleThrow;
     });
-
-    useEffect(() => {
-        if (throwDetected && isGestureMode) {
-            clearThrow();
-            handleThrowRef.current?.();
-        }
-    }, [throwDetected, isGestureMode, clearThrow]);
 
     return (
         <div className="relative w-full h-[100dvh] min-h-[100dvh] overflow-hidden text-[#2b2b2b]"
@@ -370,38 +326,33 @@ export default function MoneyDivination({ onBack }) {
                 backgroundColor: isGestureMode ? '#030806' : 'transparent',
                 fontFamily: '"Noto Serif SC", "Songti SC", "KaiTi", "STKaiti", serif',
             }}>
-            <BaguaBackground handData={handData} isGestureMode={isGestureMode} />
-            {/* Soft Ambient Overlay */}
-            <div className="absolute inset-0 bg-[#f0e6dc] opacity-20 pointer-events-none" />
+            {isGestureMode && (
+                <FullBaguaExperience 
+                    onThrow={() => handleThrowRef.current?.()} 
+                    onClose={() => setIsGestureMode(false)} 
+                />
+            )}
+
+            {!isGestureMode && <div className="absolute inset-0 bg-[#f0e6dc] opacity-20 pointer-events-none" />}
 
             {/* --- HEADER --- */}
-            {/* Mobile: Top Left, smaller, horizontal-ish or stacked? Vertical implies tradition. */}
-            {/* Desktop: Left, big, vertical */}
             <div
                 className={`absolute z-50 flex gap-3 md:gap-5 ${isMobile ? 'left-4 right-16 flex-row items-center' : 'top-12 left-12 flex-col'}`}
                 style={isMobile ? { top: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
             >
-
-                {/* Seal */}
                 <div className={`size-10 shrink-0 border-2 border-[#a83232] text-[#a83232] flex items-center justify-center font-bold rounded-sm shadow-sm ${isMobile ? 'text-sm' : 'text-lg'}`}>
                     吉
                 </div>
-
-                {/* Title & Subtitle Wrapper */}
                 <div className={`flex ${isMobile ? 'flex-row items-center gap-2' : 'flex-row gap-5'}`} style={{ writingMode: isMobile ? 'horizontal-tb' : 'vertical-rl' }}>
-
-                    {/* Main Title */}
                     <div className="text-[#1a1a1a] font-black opacity-90 font-['STKaiti'] tracking-widest"
                         style={{ fontSize: isMobile ? '26px' : '42px' }}>
                         金钱卦
                     </div>
-
-                    {/* Subtitle */}
                     <div className="text-[#666] tracking-[4px] border-[#999] opacity-80"
                         style={{
                             fontSize: isMobile ? '11px' : '16px',
                             borderRight: isMobile ? 'none' : '1px solid #999',
-                            borderLeft: isMobile ? '1px solid #999' : 'none', // Flip border for horizontal
+                            borderLeft: isMobile ? '1px solid #999' : 'none',
                             paddingRight: isMobile ? '0' : '15px',
                             paddingLeft: isMobile ? '10px' : '0'
                         }}>
@@ -420,110 +371,33 @@ export default function MoneyDivination({ onBack }) {
                 </div>
             </div>
 
-            {/* --- BACK BUTTON --- */}
-            <button
-                type="button"
-                onClick={onBack}
-                className={`absolute z-[100] size-11 rounded-full border border-[#8b4513]/30 bg-[#f8f0e4]/70 backdrop-blur-sm flex items-center justify-center text-[#5d4037] shadow-sm transition-colors hover:border-[#5d4037] hover:bg-[#f8f0e4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a83232] ${isMobile ? 'right-4' : 'top-6 right-12'}`}
-                style={isMobile ? { top: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
-                aria-label="返回首页"
-            >
-                <ArrowLeft size={19} aria-hidden="true" />
-            </button>
+            {!isGestureMode && (
+                <>
+                    <button
+                        type="button"
+                        onClick={onBack}
+                        className={`absolute z-[100] size-11 rounded-full border border-[#8b4513]/30 bg-[#f8f0e4]/70 backdrop-blur-sm flex items-center justify-center text-[#5d4037] shadow-sm transition-colors hover:border-[#5d4037] hover:bg-[#f8f0e4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a83232] ${isMobile ? 'right-4' : 'top-6 right-12'}`}
+                        style={isMobile ? { top: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
+                        aria-label="返回首页"
+                    >
+                        <ArrowLeft size={19} aria-hidden="true" />
+                    </button>
 
-            {/* --- GESTURE MODE TOGGLE --- */}
-            <button
-                type="button"
-                onClick={toggleGestureMode}
-                className={`absolute z-[100] size-11 rounded-full border backdrop-blur-sm flex items-center justify-center shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a83232]
-                    ${isGestureMode
-                        ? 'border-[#a83232]/50 bg-[#a83232]/20 text-[#a83232]'
-                        : 'border-[#8b4513]/30 bg-[#f8f0e4]/70 text-[#5d4037] hover:border-[#5d4037] hover:bg-[#f8f0e4]'
-                    }
-                    ${isMobile ? 'right-16' : 'top-6 right-24'}
-                `}
-                style={isMobile ? { top: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
-                aria-label={isGestureMode ? '关闭手势模式' : '开启手势模式'}
-                aria-pressed={isGestureMode}
-            >
-                <Hand size={18} aria-hidden="true" />
-            </button>
-
-            {/* --- CAMERA ERROR TOAST --- */}
-            {cameraError && (
-                <div
-                    className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] max-w-xs px-4 py-3 rounded-2xl bg-[#1a1a1a]/90 text-white text-xs text-center backdrop-blur-md shadow-lg animate-[fadeIn_0.3s_ease]"
-                    role="alert"
-                >
-                    {cameraError}
-                </div>
+                    <button
+                        type="button"
+                        onClick={toggleGestureMode}
+                        className={`absolute z-[100] size-11 rounded-full border backdrop-blur-sm flex items-center justify-center shadow-sm transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#a83232]
+                            border-[#8b4513]/30 bg-[#f8f0e4]/70 text-[#5d4037] hover:border-[#5d4037] hover:bg-[#f8f0e4]
+                            ${isMobile ? 'right-16' : 'top-6 right-24'}
+                        `}
+                        style={isMobile ? { top: 'max(0.75rem, env(safe-area-inset-top))' } : undefined}
+                        aria-label="开启手势模式"
+                    >
+                        <Hand size={18} aria-hidden="true" />
+                    </button>
+                </>
             )}
 
-            {/* --- GESTURE GUIDE TOAST --- */}
-            {showGestureGuide && (
-                <div
-                    className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] max-w-xs px-5 py-4 rounded-2xl bg-[#1a1a1a]/90 text-white text-center backdrop-blur-md shadow-lg animate-[fadeIn_0.3s_ease]"
-                    role="status"
-                >
-                    <div className="text-2xl mb-2">✊</div>
-                    <div className="text-xs leading-5 opacity-90">
-                        握紧拳头，即可投掷铜钱<br />
-                        <span className="opacity-60">Clench fist to throw</span>
-                    </div>
-                </div>
-            )}
-
-            {/* --- CAMERA PREVIEW (gesture mode) --- */}
-            {isGestureMode && (
-                <div
-                    className={`gesture-camera-preview absolute z-[90]
-                        ${isMobile ? 'bottom-28 left-4' : 'bottom-8 left-8'}
-                    `}
-                    style={isMobile ? { paddingBottom: 'env(safe-area-inset-bottom)' } : undefined}
-                >
-                    <video
-                        ref={videoRef}
-                        autoPlay
-                        muted
-                        playsInline
-                        className="gesture-camera-video"
-                        aria-hidden="true"
-                    />
-                    {/* Gesture status indicator */}
-                    <div className="gesture-camera-status">
-                        <span className="gesture-camera-icon">
-                            {currentGesture === 'fist' ? '✊' : currentGesture === 'palm' ? '🖐' : currentGesture === 'point' ? '☝' : '…'}
-                        </span>
-                        <span className="gesture-camera-label">
-                            {currentGesture === 'fist' ? '投掷！' : currentGesture === 'palm' ? '张掌' : currentGesture === 'point' ? '伸指' : '等待手势'}
-                        </span>
-                    </div>
-                </div>
-            )}
-
-            {/* --- GESTURE HUD (replaces shake prompt when in gesture mode) --- */}
-            {isGestureMode && !finalHexagram && yaos.length < 6 && (
-                <div className="gesture-hud" role="status" aria-live="polite">
-                    {isProcessing ? (
-                        <div className="gesture-hud-text">铜钱落定中…</div>
-                    ) : currentGesture === 'fist' ? (
-                        <>
-                            <div className="gesture-hud-emoji">✊</div>
-                            <div className="gesture-hud-text">投掷！</div>
-                        </>
-                    ) : currentGesture === 'palm' ? (
-                        <>
-                            <div className="gesture-hud-emoji">🖐</div>
-                            <div className="gesture-hud-text">张掌中…</div>
-                        </>
-                    ) : (
-                        <>
-                            <div className="gesture-hud-emoji" style={{ opacity: 0.5 }}>✊</div>
-                            <div className="gesture-hud-text">握紧拳头 · 第{currentThrow}爻</div>
-                        </>
-                    )}
-                </div>
-            )}
 
             {/* --- MAIN CONTENT AREA (Yao List & Result) --- */}
             {/* Mobile: Top Right (for Yao list), avoid center overlap */}
