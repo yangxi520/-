@@ -14,6 +14,7 @@ const ArchiveView = lazy(() => import("./components/ArchiveView"));
 const VideoLessons = lazy(() => import("./components/VideoLessons"));
 const EnglishLearning = lazy(() => import("./components/EnglishLearning"));
 const BaziDivination = lazy(() => import("./components/BaziDivination"));
+const FullBaguaExperience = lazy(() => import("./components/BaguaBackground/FullBaguaExperience.jsx"));
 
 const WELCOME_COVER_KEY = 'gushupai-welcome-cover-seen-v1';
 
@@ -999,6 +1000,21 @@ export default function App() {
                 </span>
                 <span className="tool-symbol" aria-hidden="true">卦</span>
               </button>
+
+              <button
+                type="button"
+                onClick={() => setView('bagua')}
+                className="tool-card tool-card--cinnabar"
+                style={{ '--tool-bg': '#1a1d24', '--tool-border': '#2c3340', color: '#e2e8f0' }}
+              >
+                <span className="tool-card-copy">
+                  <span className="tool-card-eyebrow" style={{ color: '#94a3b8' }}>全息体验 · 3D</span>
+                  <span className="tool-card-title" style={{ color: '#f8fafc' }}>手势八卦</span>
+                  <span className="tool-card-description" style={{ color: '#cbd5e1' }}>通过摄像头捕捉手势，沉浸式体验 3D 八卦阵的起承转合。</span>
+                  <span className="tool-card-action" style={{ color: '#94a3b8' }}>立即体验 <span aria-hidden="true">→</span></span>
+                </span>
+                <span className="tool-symbol" style={{ color: '#334155' }} aria-hidden="true">掌</span>
+              </button>
             </section>
 
             <nav className="quiet-links quiet-links--archive" aria-label="命盘档案">
@@ -1262,6 +1278,20 @@ export default function App() {
           }>
             <BaziDivination onBack={() => setView('home')} />
           </Suspense>
+        ) : view === 'bagua' ? (
+          // --- FULL BAGUA EXPERIENCE VIEW ---
+          <ErrorBoundary>
+            <Suspense fallback={
+              <div className="flex-1 flex items-center justify-center text-white bg-black w-full h-[100dvh]">
+                <div className="text-center">
+                  <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                  <p>正在加载 3D 八卦引擎...</p>
+                </div>
+              </div>
+            }>
+              <FullBaguaExperience onClose={() => setView('home')} />
+            </Suspense>
+          </ErrorBoundary>
         ) : (
           // --- CHART VIEW ---
           <div className="chart-workspace flex-1 relative overflow-hidden flex flex-col">
@@ -1331,7 +1361,7 @@ export default function App() {
         <button
           ref={moreOpenerRef}
           type="button"
-          className={isMoreOpen || ['money', 'videos', 'english'].includes(view) ? 'mobile-nav-item mobile-nav-item--active' : 'mobile-nav-item'}
+          className={isMoreOpen || ['money', 'videos', 'english', 'bagua'].includes(view) ? 'mobile-nav-item mobile-nav-item--active' : 'mobile-nav-item'}
           aria-haspopup="dialog"
           aria-expanded={isMoreOpen}
           onClick={() => setIsMoreOpen((isOpen) => !isOpen)}
@@ -1367,6 +1397,11 @@ export default function App() {
               <button type="button" className="mobile-more-card" onClick={() => navigateFromMobile('money')}>
                 <span className="mobile-more-seal" aria-hidden="true">卦</span>
                 <span><b>金钱卦</b><small>一事一问，即时起卦</small></span>
+                <i aria-hidden="true">›</i>
+              </button>
+              <button type="button" className="mobile-more-card" onClick={() => navigateFromMobile('bagua')}>
+                <span className="mobile-more-seal mobile-more-seal--jade" aria-hidden="true">掌</span>
+                <span><b>手势八卦</b><small>3D 沉浸交互</small></span>
                 <i aria-hidden="true">›</i>
               </button>
               <button
