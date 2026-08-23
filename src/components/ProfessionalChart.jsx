@@ -952,7 +952,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
             const slotIndex = duplicateSlots[flight.targetIndex] || 0;
             duplicateSlots[flight.targetIndex] = slotIndex + 1;
             const slotCount = duplicateCounts[flight.targetIndex] || 1;
-            const slotOffset = (slotIndex - (slotCount - 1) / 2) * 7;
+            const slotOffset = (slotIndex - (slotCount - 1) / 2) * 12;
 
             if (flight.sourceIndex === flight.targetIndex) {
                 const outward = getOutwardVector(flight.sourceBranch) || { x: 0, y: -1 };
@@ -1041,16 +1041,6 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                         }}
                     >
                         <title>{`${formatPalaceName(flight.sourceName)}化${flight.mutagen}→${formatPalaceName(flight.targetName)}`}</title>
-                        <circle
-                            className="wenmo-arrow-hit-pad"
-                            cx={flight.hitCenter.x}
-                            cy={flight.hitCenter.y}
-                            r="4.5"
-                            role="button"
-                            tabIndex="0"
-                            aria-label={`${formatPalaceName(flight.sourceName)}${flight.sourceStem}干使${flight.starName}化${flight.mutagen}飞入${formatPalaceName(flight.targetName)}，点击查看说明`}
-                            onKeyDown={(event) => handleMutationKeyDown(event, flight, 'fly')}
-                        />
                         <path
                             className="wenmo-arrow-hit-target"
                             d={flight.path}
@@ -1070,6 +1060,24 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                             style={{ '--flight-index': flight.flightIndex }}
                         />
                     </g>
+                ))}
+                {paths.map((flight) => (
+                    <circle
+                        key={`fly-hit-${flight.sourceIndex}-${flight.mutagen}-${flight.targetIndex}`}
+                        className="wenmo-arrow-hit-pad wenmo-fly-anchor"
+                        cx={flight.hitCenter.x}
+                        cy={flight.hitCenter.y}
+                        r="4.5"
+                        role="button"
+                        tabIndex="0"
+                        aria-label={`${formatPalaceName(flight.sourceName)}${flight.sourceStem}干使${flight.starName}化${flight.mutagen}飞入${formatPalaceName(flight.targetName)}，点击查看说明`}
+                        style={{ color: flight.color }}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            selectMutationInfo(flight, 'fly');
+                        }}
+                        onKeyDown={(event) => handleMutationKeyDown(event, flight, 'fly')}
+                    />
                 ))}
             </svg>
         );

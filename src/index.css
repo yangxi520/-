@@ -1094,6 +1094,11 @@ select.field-control { cursor: pointer; }
   cursor: pointer;
   pointer-events: all;
 }
+.wenmo-fly-anchor:focus-visible {
+  fill: rgba(255, 255, 255, 0.92);
+  stroke: currentColor;
+  stroke-width: 2px;
+}
 .wenmo-self-arrow-line,
 .wenmo-fly-path { pointer-events: none; }
 .wenmo-mutation-hit:focus-visible .wenmo-self-arrow-line,
