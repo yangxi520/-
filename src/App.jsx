@@ -1,6 +1,7 @@
 import React, { useState, Suspense, lazy } from 'react';
 import ProfessionalChart from "./components/ProfessionalChart";
 import ErrorBoundary from "./components/ErrorBoundary";
+import WelcomeCover from "./components/WelcomeCover";
 import { AlertCircle, ArrowLeft, CheckCircle2, Save } from "lucide-react";
 import * as iztro from "iztro";
 import { archiveManager } from './utils/archiveManager';
@@ -12,6 +13,8 @@ const ArchiveView = lazy(() => import("./components/ArchiveView"));
 const VideoLessons = lazy(() => import("./components/VideoLessons"));
 const EnglishLearning = lazy(() => import("./components/EnglishLearning"));
 const BaziDivination = lazy(() => import("./components/BaziDivination"));
+
+const WELCOME_COVER_KEY = 'gushupai-welcome-cover-seen-v1';
 
 const FORTUNE_KEYWORDS_BY_PALACE = Object.freeze({
   '命宫': ['定心', '取舍', '自省'],
@@ -176,6 +179,13 @@ const getTimeDescription = (time) => {
 
 export default function App() {
   const [view, setView] = useState('home'); // 'home', 'input', 'chart', 'money', 'archive', 'videos', 'bazi'
+  const [showWelcomeCover, setShowWelcomeCover] = useState(() => {
+    try {
+      return globalThis.localStorage?.getItem(WELCOME_COVER_KEY) !== 'seen';
+    } catch {
+      return false;
+    }
+  });
   const [calendarType, setCalendarType] = useState('solar');
   const [gender, setGender] = useState('male');
   const [name, setName] = useState('');
@@ -578,7 +588,18 @@ export default function App() {
     setView(nextView);
   };
 
-  const showsMobileNav = ['home', 'input', 'archive'].includes(view);
+  const leaveWelcomeCover = (nextView = 'home') => {
+    try {
+      globalThis.localStorage?.setItem(WELCOME_COVER_KEY, 'seen');
+    } catch {
+      // Storage can be unavailable in private browsing. The in-memory state
+      // still lets the user continue normally for this visit.
+    }
+    setShowWelcomeCover(false);
+    setView(nextView);
+  };
+
+  const showsMobileNav = !showWelcomeCover && ['home', 'input', 'archive'].includes(view);
   const usesOwnHeader = ['money', 'bazi', 'archive', 'videos', 'english'].includes(view);
 
   return (
@@ -586,7 +607,7 @@ export default function App() {
       <div className="app-ambient" aria-hidden="true"></div>
 
       {/* Header */}
-      {!usesOwnHeader && <header className="app-header">
+      {!showWelcomeCover && !usesOwnHeader && <header className="app-header">
         <div className="header-inner">
           <div className="brand-lockup">
             {view !== 'home' && (
@@ -637,7 +658,12 @@ export default function App() {
 
       {/* Main Content */}
       <main className="app-main">
-        {view === 'home' ? (
+        {showWelcomeCover ? (
+          <WelcomeCover
+            onEnter={() => leaveWelcomeCover('home')}
+            onNavigate={leaveWelcomeCover}
+          />
+        ) : view === 'home' ? (
           // --- HOME PORTAL VIEW ---
           <div className="home-page animate-in fade-in duration-500">
             <div className={`home-overview ${homeFortune ? 'home-overview--personalized' : 'home-overview--empty'}`}>
@@ -865,7 +891,14 @@ export default function App() {
             </nav>
 
             <footer className="home-footer">
-              <p>v2026.08.23.Today-UI</p>
+              <p>v2026.08.23.Cover-UI</p>
+              <button
+                type="button"
+                onClick={() => setShowWelcomeCover(true)}
+                className="force-update-button"
+              >
+                查看品牌封面
+              </button>
               <button
                 type="button"
                 onClick={handleForceUpdate}
@@ -1181,10 +1214,22 @@ export default function App() {
                 <span><b>检查页面更新</b><small>显示异常时清除旧缓存</small></span>
                 <i aria-hidden="true">›</i>
               </button>
+              <button
+                type="button"
+                className="mobile-more-card"
+                onClick={() => {
+                  setIsMoreOpen(false);
+                  setShowWelcomeCover(true);
+                }}
+              >
+                <span className="mobile-more-seal" aria-hidden="true">古</span>
+                <span><b>查看品牌封面</b><small>重新进入古书派欢迎页</small></span>
+                <i aria-hidden="true">›</i>
+              </button>
             </div>
 
             <p className="mobile-more-privacy">命盘档案保存在当前设备；分享运势时默认隐藏姓名、生辰与档案备注。</p>
-            <p className="mobile-more-version">v2026.08.23.Today-UI</p>
+            <p className="mobile-more-version">v2026.08.23.Cover-UI</p>
           </section>
         </div>
       )}
