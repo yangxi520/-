@@ -482,6 +482,216 @@ select.field-control { cursor: pointer; }
   .archive-notice { bottom: calc(76px + env(safe-area-inset-bottom, 0px)) !important; }
 }
 
+/* Professional Ziwei chart: compact paper-grid layout inspired by traditional
+   charting tools, while retaining the Gushupai palette and interactions. */
+.chart-frame {
+  max-width: 640px;
+  border: 1px solid rgba(133, 124, 105, 0.8);
+  border-radius: 4px;
+  background: #f7f4ec;
+  box-shadow: 0 22px 64px rgba(0, 0, 0, 0.42);
+}
+
+.wenmo-chart {
+  display: flex;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 0 76px;
+  flex-direction: column;
+  gap: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  color: #202624;
+  background: #f7f4ec;
+  box-shadow: none;
+  user-select: none;
+}
+
+.chart-mobile-summary { display: none !important; }
+.chart-mobile-mode {
+  padding: 3px;
+  gap: 1px;
+  border-bottom: 1px solid #aaa79f;
+  border-radius: 0;
+  background: #e8e5dd;
+}
+.chart-mobile-mode button { min-height: 38px; border-radius: 2px; font-size: 12px; }
+
+.chart-professional-grid {
+  width: 100%;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: #fff;
+}
+
+.wenmo-board {
+  width: 100%;
+  min-width: 0;
+  aspect-ratio: 4 / 5.05;
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid #888984;
+  background: #aaa9a4;
+  box-shadow: none;
+}
+
+.wenmo-grid-cell,
+.wenmo-center { min-width: 0; min-height: 0; background: #fff; }
+
+.wenmo-palace {
+  padding: 5px !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+.wenmo-palace:hover { background: #fffdf7 !important; }
+.wenmo-palace[aria-pressed="true"] {
+  z-index: 21;
+  background: #fff9e5 !important;
+  box-shadow: inset 0 0 0 2px #bb8b2e !important;
+}
+.wenmo-palace > div:first-child { min-height: 0; }
+.wenmo-star--major { font-size: clamp(12px, 2.15vw, 16px) !important; }
+.wenmo-star--soft,
+.wenmo-star--tough { font-size: clamp(10px, 1.8vw, 14px) !important; }
+.wenmo-adjective-stars { padding-left: 4px !important; font-size: clamp(9px, 1.55vw, 12px) !important; line-height: 1.08; }
+.wenmo-palace-meta { padding-top: 3px !important; border-top-color: rgba(104, 104, 99, 0.16) !important; }
+
+.wenmo-center {
+  border: 0;
+  background: linear-gradient(150deg, #fffefa, #f7f7f2);
+  box-shadow: inset 0 0 0 1px rgba(82, 89, 84, 0.08);
+}
+.wenmo-center > .absolute { display: none; }
+.wenmo-center-info {
+  min-height: 0;
+  padding: 10px 11px 8px;
+  flex: 1 1 auto;
+  justify-content: center;
+  gap: 7px;
+}
+.wenmo-center-heading { text-align: center; }
+.wenmo-center-heading strong {
+  display: block;
+  color: #263d38;
+  font-family: "Songti SC", STSong, SimSun, serif;
+  font-size: clamp(14px, 2.2vw, 18px);
+  letter-spacing: 0.12em;
+}
+.wenmo-center-heading span { display: block; margin-top: 2px; color: #7a746b; font-size: 9px; }
+.wenmo-center-info .grid {
+  width: 100%;
+  max-width: 280px;
+  min-height: 0;
+  margin: 0 auto;
+  grid-template-columns: 1fr !important;
+  align-content: center;
+  gap: 3px !important;
+  font-size: 10px !important;
+  line-height: 1.2;
+}
+.wenmo-center-info .grid > div { min-width: 0; gap: 4px; }
+.wenmo-center-info .grid > div span:first-child { flex: 0 0 auto; }
+.wenmo-center-info .grid > div span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wenmo-current-view {
+  overflow: hidden;
+  padding: 4px 6px;
+  border-top: 1px dashed #cbc6bb;
+  color: #3f5d55;
+  font-size: 9px;
+  line-height: 1.25;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wenmo-center-divider { width: 100%; border-top: 1px solid #aaa9a4; }
+.wenmo-center-layers { flex: 0 0 auto; padding: 6px 8px 7px; gap: 4px; background: #f4f6f1; }
+.wenmo-layer-title { color: #5e625e; font-size: 9px; font-weight: 800; text-align: center; }
+.wenmo-layer-grid { gap: 1px; border: 1px solid #c2c0b9; background: #c2c0b9; }
+.wenmo-layer-button {
+  min-width: 0;
+  min-height: 29px;
+  gap: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  line-height: 1.05;
+}
+.wenmo-layer-button[aria-pressed="false"] { color: #b3b2ad !important; background: #f1f0ec !important; }
+.wenmo-layer-button span:last-child { font-size: 8px; }
+
+.wenmo-timeline {
+  overflow: hidden;
+  border: 1px solid #aaa79f;
+  border-top: 0;
+  border-radius: 0;
+  background: #f8f7f2;
+  box-shadow: none;
+}
+.wenmo-timeline table { background: #f8f7f2; }
+.wenmo-daxian-row { border-bottom: 0 !important; }
+.wenmo-timeline-label {
+  min-width: 50px !important;
+  padding: 6px 4px !important;
+  border-right-color: #bdb9b0 !important;
+  color: #3d4542;
+  background: #e8e6df !important;
+  font-family: "Songti SC", STSong, SimSun, serif;
+  font-size: 13px;
+}
+.wenmo-timeline-options { gap: 1px; background: #d7d4cd; }
+.wenmo-timeline-option {
+  min-width: 62px !important;
+  min-height: 54px !important;
+  padding: 6px 7px !important;
+  border-radius: 0 !important;
+  background: #fdfcf8 !important;
+  box-shadow: none !important;
+  font-size: 11px;
+}
+.wenmo-timeline-option.is-active { color: #fff !important; background: #287568 !important; }
+.wenmo-timeline tr:not(.wenmo-daxian-row) td { border-color: #cfcbc2 !important; }
+.wenmo-timeline tr:not(.wenmo-daxian-row) td:last-child { padding: 5px !important; }
+.wenmo-timeline tr:not(.wenmo-daxian-row) button { border-radius: 2px !important; box-shadow: none !important; }
+
+@media (min-width: 768px) {
+  .wenmo-chart { padding-bottom: 0; }
+}
+
+@media (max-width: 767px) {
+  .chart-scroll-area { padding: 0 0 calc(74px + env(safe-area-inset-bottom, 0px)) !important; }
+  .chart-frame { max-width: 100%; border-right: 0; border-left: 0; border-radius: 0; box-shadow: none; }
+  .wenmo-chart { max-width: 100%; }
+  .wenmo-palace { padding: 2px !important; }
+  .wenmo-star--major { font-size: clamp(10px, 3vw, 12px) !important; }
+  .wenmo-star--soft,
+  .wenmo-star--tough { font-size: clamp(8px, 2.55vw, 10px) !important; }
+  .wenmo-adjective-stars { padding-left: 2px !important; font-size: clamp(7px, 2.15vw, 9px) !important; }
+  .wenmo-palace-meta { padding-top: 1px !important; transform-origin: bottom left; }
+  .wenmo-palace-meta .text-\[9px\] { font-size: 7px !important; }
+  .wenmo-palace-meta .text-\[10px\] { font-size: 8px !important; }
+  .wenmo-center-info { padding: 5px 6px 4px; gap: 4px; }
+  .wenmo-center-info .grid { max-width: 174px; gap: 2px !important; font-size: 7px !important; }
+  .wenmo-center-heading strong { font-size: 12px; }
+  .wenmo-center-heading span,
+  .wenmo-current-view,
+  .wenmo-layer-title { font-size: 7px; }
+  .wenmo-center-layers { padding: 3px 4px 4px; gap: 2px; }
+  .wenmo-layer-button { min-height: 22px; padding: 1px !important; font-size: 8px; }
+  .wenmo-layer-button span:last-child { font-size: 6px; }
+  .wenmo-timeline-option { min-width: 57px !important; min-height: 48px !important; padding: 4px 5px !important; font-size: 10px; }
+}
+
 @media print {
   @page { size: landscape; margin: 8mm; }
 
@@ -522,6 +732,7 @@ select.field-control { cursor: pointer; }
 
   .professional-chart { display: block !important; }
   .chart-professional-grid { display: block !important; overflow: visible !important; }
+  .wenmo-board { aspect-ratio: 1 / 1 !important; }
   .chart-professional-grid > div {
     width: min(100%, 185mm) !important;
     min-width: 0 !important;

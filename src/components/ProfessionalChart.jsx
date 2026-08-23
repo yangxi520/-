@@ -129,7 +129,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     const [showAiMenu, setShowAiMenu] = React.useState(false);
     const [menuView, setMenuView] = React.useState('main'); // 'main', 'fortune', 'baby'
     const [promptPreview, setPromptPreview] = React.useState(null);
-    const [mobileChartMode, setMobileChartMode] = React.useState('simple');
+    const [mobileChartMode, setMobileChartMode] = React.useState('professional');
     // Lunar Tip State
     const [showLunarTip, setShowLunarTip] = React.useState(false);
 
@@ -346,7 +346,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
         return (
             <div
-                className={`w-full h-full relative p-0.5 md:p-1 flex flex-col justify-between transition-all duration-200 cursor-pointer overflow-hidden
+                className={`wenmo-palace w-full h-full relative p-0.5 md:p-1 flex flex-col justify-between transition-all duration-200 cursor-pointer overflow-hidden
                 ${isFocused ? 'bg-amber-50 ring-2 ring-amber-400 z-10 shadow-lg' : 'bg-stone-50 hover:bg-stone-100'}
                 ${isMing ? 'bg-red-50/30' : ''}
             `}
@@ -372,7 +372,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                         {palace.majorStars.map((star, idx) => {
                             const activeSiHua = getActiveSiHua(star.name);
                             return (
-                                <div key={`major-${idx}`} className="flex items-center gap-0.5 font-serif font-bold text-sm md:text-base text-red-600 leading-none whitespace-nowrap">
+                                <div key={`major-${idx}`} className="wenmo-star wenmo-star--major flex items-center gap-0.5 font-serif font-bold text-sm md:text-base text-red-600 leading-none whitespace-nowrap">
                                     <span>{star.name}</span>
                                     <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
                                     {activeSiHua.map((badge, bIdx) => (
@@ -386,7 +386,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
                         {/* Soft Stars (Purple) */}
                         {softStars.map((star, idx) => (
-                            <div key={`soft-${idx}`} className="flex items-center gap-0.5 text-xs md:text-sm font-bold text-purple-600 leading-none whitespace-nowrap">
+                            <div key={`soft-${idx}`} className="wenmo-star wenmo-star--soft flex items-center gap-0.5 text-xs md:text-sm font-bold text-purple-600 leading-none whitespace-nowrap">
                                 <span>{star.name}</span>
                                 <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
                             </div>
@@ -394,7 +394,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
                         {/* Tough Stars (Black) */}
                         {toughStars.map((star, idx) => (
-                            <div key={`tough-${idx}`} className="flex items-center gap-0.5 text-xs md:text-sm font-bold text-gray-900 leading-none whitespace-nowrap">
+                            <div key={`tough-${idx}`} className="wenmo-star wenmo-star--tough flex items-center gap-0.5 text-xs md:text-sm font-bold text-gray-900 leading-none whitespace-nowrap">
                                 <span>{star.name}</span>
                                 <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
                             </div>
@@ -402,7 +402,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                     </div>
 
                     {/* Right Area: Adjective Stars (Blue) */}
-                    <div className="flex flex-wrap content-start items-start gap-x-1 gap-y-0.5 text-[10px] md:text-xs pl-1">
+                    <div className="wenmo-adjective-stars flex flex-wrap content-start items-start gap-x-1 gap-y-0.5 text-[10px] md:text-xs pl-1">
                         {adjectiveStars.map((star, idx) => (
                             <span key={`adj-${idx}`} className="text-blue-500 font-medium leading-tight">
                                 {star.name}
@@ -412,7 +412,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                 </div>
 
                 {/* --- BOTTOM AREA: Meta Info (Wen Mo Style) --- */}
-                <div className="mt-auto flex justify-between items-end w-full border-t border-gray-100/50 pt-1">
+                <div className="wenmo-palace-meta mt-auto flex justify-between items-end w-full border-t border-gray-100/50 pt-1">
 
                     {/* Left Bottom: Stacked Ages (Liu Nian / Xiao Xian) */}
                     <div className="flex flex-col gap-0.5 text-[9px] leading-tight">
@@ -790,10 +790,10 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     };
 
     return (
-        <div className="professional-chart w-full max-w-3xl mx-auto bg-stone-200 text-slate-900 p-2 pb-28 md:p-1 select-none flex flex-col gap-3 overflow-x-visible md:overflow-x-auto shadow-2xl rounded-sm">
+        <div className="professional-chart wenmo-chart">
             {/* Mobile-only readable summary and chart mode selector. */}
             <section
-                className="chart-mobile-controls md:hidden rounded-2xl border border-purple-200 bg-gradient-to-br from-white via-purple-50 to-cyan-50 p-4 shadow-sm"
+                className="chart-mobile-controls chart-mobile-summary md:hidden"
                 aria-label="命盘基本信息摘要"
             >
                 <div className="flex items-start justify-between gap-3">
@@ -837,7 +837,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             </section>
 
             <div
-                className="chart-mobile-controls md:hidden grid grid-cols-2 gap-1 rounded-xl bg-stone-300 p-1"
+                className="chart-mobile-controls chart-mobile-mode md:hidden grid grid-cols-2"
                 role="group"
                 aria-label="手机命盘显示方式"
             >
@@ -879,18 +879,18 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
             )}
 
             {/* Chart Grid - Min width to ensure readability on mobile */}
-            <div className={`chart-professional-grid ${mobileChartMode === 'professional' ? 'block' : 'hidden'} md:block overflow-x-auto rounded-lg`}>
-                <div className="aspect-square grid grid-cols-4 grid-rows-4 gap-[1px] bg-stone-300 border-2 border-stone-400 relative min-w-[600px] md:min-w-0 shadow-inner">
+            <div className={`chart-professional-grid ${mobileChartMode === 'professional' ? 'block' : 'hidden'} md:block`}>
+                <div className="wenmo-board relative grid grid-cols-4 grid-rows-4">
                 {renderConnections()}
                 {/* Row 1 */}
-                <div className="bg-stone-50">{renderPalace('巳')}</div>
-                <div className="bg-stone-50">{renderPalace('午')}</div>
-                <div className="bg-stone-50">{renderPalace('未')}</div>
-                <div className="bg-stone-50">{renderPalace('申')}</div>
+                <div className="wenmo-grid-cell">{renderPalace('巳')}</div>
+                <div className="wenmo-grid-cell">{renderPalace('午')}</div>
+                <div className="wenmo-grid-cell">{renderPalace('未')}</div>
+                <div className="wenmo-grid-cell">{renderPalace('申')}</div>
 
                 {/* Row 2 */}
-                <div className="bg-stone-50">{renderPalace('辰')}</div>
-                <div className="col-span-2 row-span-2 bg-stone-100 flex flex-col relative overflow-hidden border border-stone-200 m-[1px] shadow-inner">
+                <div className="wenmo-grid-cell">{renderPalace('辰')}</div>
+                <div className="wenmo-center col-span-2 row-span-2 flex flex-col relative overflow-hidden">
                     {/* Background Watermark (Optional, simplified for now) */}
                     <div className="absolute inset-0 pointer-events-none opacity-5">
                         <svg viewBox="0 0 100 100" className="w-full h-full">
@@ -899,10 +899,10 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                     </div>
 
                     {/* Top: Basic Info */}
-                    <div className="flex-1 p-2 flex flex-col gap-1 z-10">
-                        <div className="text-center text-purple-800 font-bold text-xs mb-1 flex items-center justify-center gap-1">
-                            <span>{basicInfo.gender === 'male' ? '♂' : '♀'}</span>
-                            <span>基本信息</span>
+                    <div className="wenmo-center-info z-10 flex flex-col">
+                        <div className="wenmo-center-heading">
+                            <strong>古书派紫微</strong>
+                            <span>{basicInfo.name || '未命名'} · {basicInfo.gender === 'male' ? '男命' : '女命'} · {horoscope.fiveElementsClass}</span>
                         </div>
 
                         <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px] leading-tight text-slate-700">
@@ -920,7 +920,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                 <span className="font-bold text-olive-600">{horoscope.chineseDate || '-'}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-slate-500">阳历：</span>
+                                <span className="text-slate-500">公历：</span>
                                 <span>{basicInfo.birthday}</span>
                             </div>
 
@@ -960,16 +960,22 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                 <span>{horoscope.palaces.find(p => p.isBodyPalace)?.earthlyBranch || '-'}</span>
                             </div>
                         </div>
+
+                        <div className="wenmo-current-view">
+                            {selectedDaxianPalace
+                                ? `所选大限 ${selectedDaxianPalace.decadal.range[0]}-${selectedDaxianPalace.decadal.range[1]}岁 · ${selectedDaxianPalace.heavenlyStem}${selectedDaxianPalace.earthlyBranch}`
+                                : '本命盘 · 点击下方大限进入运限盘'}
+                        </div>
                     </div>
 
                     {/* Divider */}
-                    <div className="border-t border-dashed border-gray-300 w-full my-1"></div>
+                    <div className="wenmo-center-divider"></div>
 
                     {/* Bottom: Limit Info (Layer Toggles) */}
-                    <div className="flex-1 p-2 flex flex-col gap-1 z-10 bg-green-50/30">
-                        <div className="text-center text-black font-bold text-xs mb-1">运限层级开关</div>
+                    <div className="wenmo-center-layers z-10 flex flex-col">
+                        <div className="wenmo-layer-title">四化叠层</div>
 
-                        <div className="grid grid-cols-3 gap-1 text-[10px]">
+                        <div className="wenmo-layer-grid grid grid-cols-6 text-[10px]">
 
                             {[
                                 { key: 'origin', label: '本', color: 'text-red-600' },
@@ -982,7 +988,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                 <button
                                     key={layer.key}
                                     type="button"
-                                    className={`border rounded px-1 py-0.5 flex items-center justify-center gap-1
+                                    className={`wenmo-layer-button border px-1 py-0.5 flex flex-col items-center justify-center
                                         ${activeLayers[layer.key] ? 'bg-stone-100 border-stone-300 shadow-inner' : 'bg-stone-50 border-stone-200 text-gray-300'}
                                     `}
                                     onClick={() => setActiveLayers(prev => ({ ...prev, [layer.key]: !prev[layer.key] }))}
@@ -1000,37 +1006,37 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                         </div>
                     </div>
                 </div>
-                <div className="bg-stone-50">{renderPalace('酉')}</div>
+                <div className="wenmo-grid-cell">{renderPalace('酉')}</div>
 
                 {/* Row 3 */}
-                <div className="bg-stone-50">{renderPalace('卯')}</div>
+                <div className="wenmo-grid-cell">{renderPalace('卯')}</div>
                 {/* Center spans here */}
-                <div className="bg-stone-50">{renderPalace('戌')}</div>
+                <div className="wenmo-grid-cell">{renderPalace('戌')}</div>
 
                 {/* Row 4 */}
-                <div className="bg-stone-50">{renderPalace('寅')}</div>
-                <div className="bg-stone-50">{renderPalace('丑')}</div>
-                <div className="bg-stone-50">{renderPalace('子')}</div>
-                <div className="bg-stone-50">{renderPalace('亥')}</div>
+                <div className="wenmo-grid-cell">{renderPalace('寅')}</div>
+                <div className="wenmo-grid-cell">{renderPalace('丑')}</div>
+                <div className="wenmo-grid-cell">{renderPalace('子')}</div>
+                <div className="wenmo-grid-cell">{renderPalace('亥')}</div>
                 </div>
             </div>
 
             {/* Cascading Timeline Table */}
-            <div className="chart-timeline overflow-x-auto rounded-xl border border-stone-300 bg-white text-[11px] shadow-sm md:text-xs">
+            <div className="chart-timeline wenmo-timeline overflow-x-auto text-[11px] md:text-xs">
                 <table className="min-w-full text-center border-collapse" aria-label="运限时间选择">
                     <tbody>
                         {/* Da Xian Row */}
-                        <tr className="border-b border-gray-200">
-                            <td className="sticky left-0 z-10 min-w-14 border-r bg-stone-100 p-2 font-bold">大限</td>
-                            <td className="overflow-x-auto p-2">
-                                <div className="flex gap-2 overflow-x-auto touch-pan-x">
+                        <tr className="wenmo-daxian-row border-b border-gray-200">
+                            <td className="wenmo-timeline-label sticky left-0 z-10 min-w-14 border-r bg-stone-100 p-2 font-bold">大限</td>
+                            <td className="overflow-x-auto p-0">
+                                <div className="wenmo-timeline-options flex overflow-x-auto touch-pan-x">
                                     {[...palaces].sort((a, b) => a.decadal.range[0] - b.decadal.range[0]).map((p, idx) => (
                                         <button
                                             key={idx}
                                             type="button"
                                             aria-pressed={selection.daxianIndex === p.index}
                                             aria-label={`选择${p.decadal.range[0]}至${p.decadal.range[1]}岁大限，${p.heavenlyStem}${p.earthlyBranch}`}
-                                            className={`min-h-12 min-w-16 rounded-lg px-3 py-2 whitespace-nowrap transition active:scale-95 ${selection.daxianIndex === p.index ? 'bg-green-600 text-white shadow' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
+                                            className={`wenmo-timeline-option min-h-12 min-w-16 px-3 py-2 whitespace-nowrap transition active:scale-95 ${selection.daxianIndex === p.index ? 'is-active bg-green-600 text-white' : 'bg-stone-50 text-gray-700 hover:bg-gray-100'} `}
                                             onClick={() => handleSelection('daxian', p.index)}
                                         >
                                             {p.decadal.range[0]}-{p.decadal.range[1]}<br />

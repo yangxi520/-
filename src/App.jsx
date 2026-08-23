@@ -1171,7 +1171,7 @@ export default function App() {
           <div className="flex-1 relative overflow-hidden flex flex-col">
             {/* Chart Area */}
             <div className="chart-scroll-area flex-1 overflow-auto p-2 md:p-4">
-              <div className="max-w-3xl mx-auto bg-slate-50/95 rounded-lg overflow-hidden shadow-2xl border border-emerald-700/30 relative">
+              <div className="chart-frame relative mx-auto w-full overflow-hidden">
 
                 <ProfessionalChart
                   horoscope={horoscope}
