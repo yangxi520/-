@@ -485,7 +485,7 @@ select.field-control { cursor: pointer; }
 /* Professional Ziwei chart: compact paper-grid layout inspired by traditional
    charting tools, while retaining the Gushupai palette and interactions. */
 .chart-frame {
-  max-width: 640px;
+  max-width: 900px;
   border: 1px solid rgba(133, 124, 105, 0.8);
   border-radius: 4px;
   background: #f7f4ec;
@@ -495,7 +495,7 @@ select.field-control { cursor: pointer; }
 .wenmo-chart {
   display: flex;
   width: 100%;
-  max-width: 640px;
+  max-width: 900px;
   margin: 0 auto;
   padding: 0 0 76px;
   flex-direction: column;
@@ -530,7 +530,7 @@ select.field-control { cursor: pointer; }
 .wenmo-board {
   width: 100%;
   min-width: 0;
-  aspect-ratio: 4 / 5.05;
+  aspect-ratio: 1 / 1.08;
   gap: 1px;
   overflow: hidden;
   border: 1px solid #888984;
@@ -554,25 +554,33 @@ select.field-control { cursor: pointer; }
   background: #fff9e5 !important;
   box-shadow: inset 0 0 0 2px #bb8b2e !important;
 }
-.wenmo-palace > div:first-child { min-height: 0; }
+.wenmo-palace[data-relation="sanhe"] { box-shadow: inset 0 0 0 1.5px rgba(22, 119, 200, 0.68) !important; }
+.wenmo-palace[data-relation="opposite"] { box-shadow: inset 0 0 0 1.5px rgba(129, 60, 163, 0.7) !important; }
+.wenmo-palace > div:first-child { min-height: 0; flex: 1 1 auto; }
 .wenmo-star--major { font-size: clamp(12px, 2.15vw, 16px) !important; }
 .wenmo-star--soft,
 .wenmo-star--tough { font-size: clamp(10px, 1.8vw, 14px) !important; }
 .wenmo-adjective-stars { padding-left: 4px !important; font-size: clamp(9px, 1.55vw, 12px) !important; line-height: 1.08; }
-.wenmo-palace-meta { padding-top: 3px !important; border-top-color: rgba(104, 104, 99, 0.16) !important; }
+.wenmo-palace-meta { min-height: 47px; padding-top: 3px !important; flex: 0 0 auto; border-top-color: rgba(104, 104, 99, 0.22) !important; }
+.wenmo-sihua-badge { display: inline-grid; min-width: 11px; height: 11px; padding: 0 !important; place-items: center; border-radius: 2px !important; font-size: 7px !important; line-height: 1; }
+
+.wenmo-connections {
+  z-index: 6;
+  overflow: visible;
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.88));
+}
 
 .wenmo-center {
   border: 0;
   background: linear-gradient(150deg, #fffefa, #f7f7f2);
   box-shadow: inset 0 0 0 1px rgba(82, 89, 84, 0.08);
 }
-.wenmo-center > .absolute { display: none; }
 .wenmo-center-info {
   min-height: 0;
-  padding: 10px 11px 8px;
+  padding: 12px 14px 9px;
   flex: 1 1 auto;
   justify-content: center;
-  gap: 7px;
+  gap: 8px;
 }
 .wenmo-center-heading { text-align: center; }
 .wenmo-center-heading strong {
@@ -585,14 +593,15 @@ select.field-control { cursor: pointer; }
 .wenmo-center-heading span { display: block; margin-top: 2px; color: #7a746b; font-size: 9px; }
 .wenmo-center-info .grid {
   width: 100%;
-  max-width: 280px;
+  max-width: 430px;
   min-height: 0;
   margin: 0 auto;
-  grid-template-columns: 1fr !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   align-content: center;
-  gap: 3px !important;
-  font-size: 10px !important;
-  line-height: 1.2;
+  column-gap: 13px !important;
+  row-gap: 4px !important;
+  font-size: 11px !important;
+  line-height: 1.22;
 }
 .wenmo-center-info .grid > div { min-width: 0; gap: 4px; }
 .wenmo-center-info .grid > div span:first-child { flex: 0 0 auto; }
@@ -613,9 +622,59 @@ select.field-control { cursor: pointer; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.wenmo-center-divider { width: 100%; border-top: 1px solid #aaa9a4; }
-.wenmo-center-layers { flex: 0 0 auto; padding: 6px 8px 7px; gap: 4px; background: #f4f6f1; }
-.wenmo-layer-title { color: #5e625e; font-size: 9px; font-weight: 800; text-align: center; }
+.wenmo-center-relation {
+  display: grid;
+  width: 100%;
+  padding: 5px 7px;
+  grid-template-columns: 0.8fr 1.4fr 0.8fr;
+  gap: 5px;
+  border: 1px solid rgba(81, 88, 84, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  color: #686c69;
+  font-size: 8px;
+  line-height: 1.25;
+}
+.wenmo-center-relation span { display: flex; min-width: 0; align-items: center; gap: 3px; white-space: nowrap; }
+.wenmo-center-relation strong { overflow: hidden; color: #303936; font-weight: 800; text-overflow: ellipsis; }
+.wenmo-center-relation i { display: inline-block; width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; }
+.wenmo-center-relation i.is-self { background: #d43d35; }
+.wenmo-center-relation i.is-sanhe { background: #1677c8; }
+.wenmo-center-relation i.is-opposite { background: #813ca3; }
+.wenmo-powered { color: #b6b5b0; font-size: 7px; font-style: italic; text-align: right; }
+
+.wenmo-chart-tools {
+  display: grid;
+  padding: 7px 9px;
+  grid-template-columns: minmax(190px, 0.9fr) minmax(310px, 1.4fr);
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #aaa79f;
+  border-top: 0;
+  background: #efeee8;
+}
+.wenmo-relation-control { display: flex; min-width: 0; align-items: center; gap: 8px; }
+.wenmo-relation-control p { margin: 0; color: #777871; font-size: 9px; line-height: 1.35; }
+.wenmo-relation-toggle {
+  display: flex;
+  min-width: 104px;
+  min-height: 34px;
+  padding: 4px 8px;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: 1px solid #a8a69e;
+  color: #656963;
+  background: #faf9f5;
+  font-family: "Songti SC", STSong, SimSun, serif;
+  font-size: 12px;
+  font-weight: 800;
+}
+.wenmo-relation-toggle > span { color: #a9aaa5; font-size: 16px; }
+.wenmo-relation-toggle small { color: #92928c; font-family: sans-serif; font-size: 7px; font-weight: 600; }
+.wenmo-relation-toggle[aria-pressed="true"] { border-color: #427c70; color: #245f54; background: #edf7f3; box-shadow: inset 0 -2px #2d796b; }
+.wenmo-relation-toggle[aria-pressed="true"] > span { color: #d43d35; }
+.wenmo-four-transform-control { display: grid; min-width: 0; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 7px; }
+.wenmo-tool-label { color: #5e625e; font-family: "Songti SC", STSong, SimSun, serif; font-size: 11px; font-weight: 800; white-space: nowrap; }
 .wenmo-layer-grid { gap: 1px; border: 1px solid #c2c0b9; background: #c2c0b9; }
 .wenmo-layer-button {
   min-width: 0;
@@ -639,6 +698,13 @@ select.field-control { cursor: pointer; }
   box-shadow: none;
 }
 .wenmo-timeline table { background: #f8f7f2; }
+.wenmo-timeline table { width: 100%; table-layout: fixed; }
+.wenmo-timeline tr > td:first-child {
+  position: static !important;
+  width: 52px !important;
+  min-width: 52px !important;
+}
+.wenmo-timeline tr > td:nth-child(2) { width: calc(100% - 52px); max-width: 0; }
 .wenmo-daxian-row { border-bottom: 0 !important; }
 .wenmo-timeline-label {
   min-width: 50px !important;
@@ -672,21 +738,27 @@ select.field-control { cursor: pointer; }
   .chart-scroll-area { padding: 0 0 calc(74px + env(safe-area-inset-bottom, 0px)) !important; }
   .chart-frame { max-width: 100%; border-right: 0; border-left: 0; border-radius: 0; box-shadow: none; }
   .wenmo-chart { max-width: 100%; }
-  .wenmo-palace { padding: 2px !important; }
+  .wenmo-palace { padding: 3px !important; }
   .wenmo-star--major { font-size: clamp(10px, 3vw, 12px) !important; }
   .wenmo-star--soft,
   .wenmo-star--tough { font-size: clamp(8px, 2.55vw, 10px) !important; }
   .wenmo-adjective-stars { padding-left: 2px !important; font-size: clamp(7px, 2.15vw, 9px) !important; }
-  .wenmo-palace-meta { padding-top: 1px !important; transform-origin: bottom left; }
+  .wenmo-palace-meta { min-height: 38px; padding-top: 2px !important; transform-origin: bottom left; }
   .wenmo-palace-meta .text-\[9px\] { font-size: 7px !important; }
   .wenmo-palace-meta .text-\[10px\] { font-size: 8px !important; }
-  .wenmo-center-info { padding: 5px 6px 4px; gap: 4px; }
-  .wenmo-center-info .grid { max-width: 174px; gap: 2px !important; font-size: 7px !important; }
+  .wenmo-center-info { padding: 6px 7px 5px; gap: 4px; }
+  .wenmo-center-info .grid { max-width: none; column-gap: 6px !important; row-gap: 2px !important; font-size: 7px !important; }
   .wenmo-center-heading strong { font-size: 12px; }
   .wenmo-center-heading span,
-  .wenmo-current-view,
-  .wenmo-layer-title { font-size: 7px; }
-  .wenmo-center-layers { padding: 3px 4px 4px; gap: 2px; }
+  .wenmo-current-view { font-size: 7px; }
+  .wenmo-center-relation { padding: 3px 4px; grid-template-columns: 0.75fr 1.5fr 0.75fr; gap: 3px; font-size: 6px; }
+  .wenmo-center-relation i { width: 4px; height: 4px; }
+  .wenmo-chart-tools { padding: 5px; grid-template-columns: 1fr; gap: 5px; }
+  .wenmo-relation-control { gap: 6px; }
+  .wenmo-relation-control p { font-size: 7px; }
+  .wenmo-relation-toggle { min-width: 94px; min-height: 30px; padding: 3px 6px; font-size: 10px; }
+  .wenmo-four-transform-control { grid-template-columns: 48px minmax(0, 1fr); gap: 4px; }
+  .wenmo-tool-label { font-size: 9px; text-align: center; }
   .wenmo-layer-button { min-height: 22px; padding: 1px !important; font-size: 8px; }
   .wenmo-layer-button span:last-child { font-size: 6px; }
   .wenmo-timeline-option { min-width: 57px !important; min-height: 48px !important; padding: 4px 5px !important; font-size: 10px; }

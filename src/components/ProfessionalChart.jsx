@@ -114,6 +114,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     // This can be independent of timeline selection, or synced.
     // Let's make it independent but initialized by Da Xian selection.
     const [focusedIndex, setFocusedIndex] = React.useState(null);
+    const [showConnections, setShowConnections] = React.useState(true);
 
     // Active Layer Visibility State (Toggle)
     const [activeLayers, setActiveLayers] = React.useState({
@@ -147,8 +148,55 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
     const [showDonationModal, setShowDonationModal] = React.useState(false);
 
     const selectedDaxianPalace = selection.daxianIndex !== null
-        ? palaces[selection.daxianIndex]
+        ? palaces.find((palace) => palace.index === selection.daxianIndex) || palaces[selection.daxianIndex]
         : null;
+
+    const focusedPalace = useMemo(() => {
+        if (focusedIndex === null) return null;
+        return palaces.find((palace) => palace.index === focusedIndex) || palaces[focusedIndex] || null;
+    }, [focusedIndex, palaces]);
+
+    React.useEffect(() => {
+        if (focusedIndex !== null || palaces.length === 0) return;
+        const mingPalace = palaces.find((palace) => palace.name === '命宫');
+        setFocusedIndex(mingPalace?.index ?? palaces[0]?.index ?? 0);
+    }, [focusedIndex, palaces]);
+
+    const palaceRelationship = useMemo(() => {
+        if (!focusedPalace) return null;
+
+        const branchIndex = BRANCH_ORDER.indexOf(focusedPalace.earthlyBranch);
+        if (branchIndex === -1) return null;
+
+        const self = BRANCH_ORDER[branchIndex];
+        const sanHe = [
+            BRANCH_ORDER[(branchIndex + 4) % 12],
+            BRANCH_ORDER[(branchIndex + 8) % 12],
+        ];
+        const opposite = BRANCH_ORDER[(branchIndex + 6) % 12];
+
+        return {
+            self,
+            sanHe,
+            opposite,
+            byBranch: {
+                [self]: 'self',
+                [sanHe[0]]: 'sanhe',
+                [sanHe[1]]: 'sanhe',
+                [opposite]: 'opposite',
+            },
+        };
+    }, [focusedPalace]);
+
+    const relationshipLabels = useMemo(() => {
+        if (!palaceRelationship) return null;
+        const getName = (branch) => palaces.find((palace) => palace.earthlyBranch === branch)?.name || `${branch}宫`;
+        return {
+            self: getName(palaceRelationship.self),
+            sanHe: palaceRelationship.sanHe.map(getName),
+            opposite: getName(palaceRelationship.opposite),
+        };
+    }, [palaceRelationship, palaces]);
 
     const closeAiMenu = () => {
         setShowAiMenu(false);
@@ -170,8 +218,10 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
         }
 
         // 2. Decadal (Xian)
-        if (sel.daxianIndex !== null && horo.palaces[sel.daxianIndex]) {
-            stems.decadal = horo.palaces[sel.daxianIndex].heavenlyStem;
+        if (sel.daxianIndex !== null) {
+            const decadalPalace = horo.palaces.find((palace) => palace.index === sel.daxianIndex)
+                || horo.palaces[sel.daxianIndex];
+            if (decadalPalace) stems.decadal = decadalPalace.heavenlyStem;
         }
 
         // 3. Yearly (Nian)
@@ -300,7 +350,8 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
         const palace = palaces.find(p => p.earthlyBranch === branch);
         if (!palace) return <div className="w-full h-full bg-stone-50" />;
 
-        const isFocused = focusedIndex !== null && palaces[focusedIndex]?.earthlyBranch === branch;
+        const isFocused = focusedPalace?.earthlyBranch === branch;
+        const relationship = palaceRelationship?.byBranch?.[branch] || null;
 
         // Determine if this palace is Ming or Shen
         const isMing = palace.name === '命宫';
@@ -350,11 +401,12 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                 ${isFocused ? 'bg-amber-50 ring-2 ring-amber-400 z-10 shadow-lg' : 'bg-stone-50 hover:bg-stone-100'}
                 ${isMing ? 'bg-red-50/30' : ''}
             `}
-                onClick={() => setFocusedIndex(palaces.findIndex(p => p.earthlyBranch === branch))}
+                data-relation={showConnections ? relationship || undefined : undefined}
+                onClick={() => setFocusedIndex(palace.index)}
                 onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        setFocusedIndex(palaces.findIndex(p => p.earthlyBranch === branch));
+                        setFocusedIndex(palace.index);
                     }
                 }}
                 role="button"
@@ -385,29 +437,53 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                         })}
 
                         {/* Soft Stars (Purple) */}
-                        {softStars.map((star, idx) => (
-                            <div key={`soft-${idx}`} className="wenmo-star wenmo-star--soft flex items-center gap-0.5 text-xs md:text-sm font-bold text-purple-600 leading-none whitespace-nowrap">
-                                <span>{star.name}</span>
-                                <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
-                            </div>
-                        ))}
+                        {softStars.map((star, idx) => {
+                            const activeSiHua = getActiveSiHua(star.name);
+                            return (
+                                <div key={`soft-${idx}`} className="wenmo-star wenmo-star--soft flex items-center gap-0.5 text-xs md:text-sm font-bold text-purple-600 leading-none whitespace-nowrap">
+                                    <span>{star.name}</span>
+                                    <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
+                                    {activeSiHua.map((badge, bIdx) => (
+                                        <span key={bIdx} className={`wenmo-sihua-badge text-[8px] px-0.5 rounded-sm text-white ${badge.color}`}>
+                                            {badge.type}
+                                        </span>
+                                    ))}
+                                </div>
+                            );
+                        })}
 
                         {/* Tough Stars (Black) */}
-                        {toughStars.map((star, idx) => (
-                            <div key={`tough-${idx}`} className="wenmo-star wenmo-star--tough flex items-center gap-0.5 text-xs md:text-sm font-bold text-gray-900 leading-none whitespace-nowrap">
-                                <span>{star.name}</span>
-                                <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
-                            </div>
-                        ))}
+                        {toughStars.map((star, idx) => {
+                            const activeSiHua = getActiveSiHua(star.name);
+                            return (
+                                <div key={`tough-${idx}`} className="wenmo-star wenmo-star--tough flex items-center gap-0.5 text-xs md:text-sm font-bold text-gray-900 leading-none whitespace-nowrap">
+                                    <span>{star.name}</span>
+                                    <span className="text-[8px] md:text-[9px] text-gray-400 font-normal ml-[1px]">{star.brightness}</span>
+                                    {activeSiHua.map((badge, bIdx) => (
+                                        <span key={bIdx} className={`wenmo-sihua-badge text-[8px] px-0.5 rounded-sm text-white ${badge.color}`}>
+                                            {badge.type}
+                                        </span>
+                                    ))}
+                                </div>
+                            );
+                        })}
                     </div>
 
                     {/* Right Area: Adjective Stars (Blue) */}
                     <div className="wenmo-adjective-stars flex flex-wrap content-start items-start gap-x-1 gap-y-0.5 text-[10px] md:text-xs pl-1">
-                        {adjectiveStars.map((star, idx) => (
-                            <span key={`adj-${idx}`} className="text-blue-500 font-medium leading-tight">
-                                {star.name}
-                            </span>
-                        ))}
+                        {adjectiveStars.map((star, idx) => {
+                            const activeSiHua = getActiveSiHua(star.name);
+                            return (
+                                <span key={`adj-${idx}`} className="inline-flex items-center gap-px text-blue-500 font-medium leading-tight">
+                                    {star.name}
+                                    {activeSiHua.map((badge, bIdx) => (
+                                        <span key={bIdx} className={`wenmo-sihua-badge text-[7px] px-px rounded-sm text-white ${badge.color}`}>
+                                            {badge.type}
+                                        </span>
+                                    ))}
+                                </span>
+                            );
+                        })}
                     </div>
                 </div>
 
@@ -566,77 +642,109 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
     // Calculate connection lines for San Fang Si Zheng
     const renderConnections = () => {
-        if (focusedIndex === null) return null;
+        if (!showConnections || !palaceRelationship) return null;
 
-        const focusedPalace = palaces[focusedIndex];
-        if (!focusedPalace) return null;
-
-        const branchIndex = BRANCH_ORDER.indexOf(focusedPalace.earthlyBranch);
-        if (branchIndex === -1) return null;
-
-        // Calculate related branches indices
-        const sanHe1Index = (branchIndex + 4) % 12;
-        const sanHe2Index = (branchIndex + 8) % 12;
-        const duiGongIndex = (branchIndex + 6) % 12;
-
-        const branches = [
-            BRANCH_ORDER[branchIndex], // Self
-            BRANCH_ORDER[sanHe1Index], // San He 1
-            BRANCH_ORDER[sanHe2Index], // San He 2
-            BRANCH_ORDER[duiGongIndex] // Dui Gong
-        ];
-
-        // Helper to get center coordinates of a grid cell
-        const getCenter = (branch) => {
+        // The centre occupies x/y 100..300 in a 400×400 logical grid.
+        // Each arrow begins on the centre boundary and points into its palace,
+        // keeping the relationship readable without drawing through star text.
+        const getArrowPoints = (branch) => {
             const pos = GRID_MAP[branch];
-            if (!pos) return { x: 0, y: 0 };
-            // Grid is 4x4.
-            // Col 1 center is 12.5%, Col 2 is 37.5%, etc.
-            // Row 1 center is 12.5%, Row 2 is 37.5%, etc.
-            const x = (pos.col - 1) * 25 + 12.5;
-            const y = (pos.row - 1) * 25 + 12.5;
-            return { x, y };
+            if (!pos) return null;
+
+            const center = {
+                x: (pos.col - 0.5) * 100,
+                y: (pos.row - 0.5) * 100,
+            };
+
+            if (pos.row === 1) return { start: { x: center.x, y: 104 }, end: { x: center.x, y: 78 } };
+            if (pos.row === 4) return { start: { x: center.x, y: 296 }, end: { x: center.x, y: 322 } };
+            if (pos.col === 1) return { start: { x: 104, y: center.y }, end: { x: 78, y: center.y } };
+            return { start: { x: 296, y: center.y }, end: { x: 322, y: center.y } };
         };
 
-        const pSelf = getCenter(branches[0]);
-        const pSanHe1 = getCenter(branches[1]);
-        const pSanHe2 = getCenter(branches[2]);
-        const pDuiGong = getCenter(branches[3]);
+        const targets = [
+            { branch: palaceRelationship.self, role: 'self', color: '#d43d35', marker: 'relation-arrow-self' },
+            { branch: palaceRelationship.sanHe[0], role: 'sanhe', color: '#1677c8', marker: 'relation-arrow-sanhe-a' },
+            { branch: palaceRelationship.sanHe[1], role: 'sanhe', color: '#168a62', marker: 'relation-arrow-sanhe-b' },
+            { branch: palaceRelationship.opposite, role: 'opposite', color: '#813ca3', marker: 'relation-arrow-opposite' },
+        ].map((target) => ({ ...target, points: getArrowPoints(target.branch) })).filter((target) => target.points);
+
+        const trianglePoints = targets
+            .filter((target) => target.role !== 'opposite')
+            .map((target) => `${target.points.start.x},${target.points.start.y}`)
+            .join(' ');
+        const selfTarget = targets.find((target) => target.role === 'self');
+        const oppositeTarget = targets.find((target) => target.role === 'opposite');
 
         return (
-            <svg className="absolute inset-0 w-full h-full pointer-events-none z-20 overflow-visible">
+            <svg
+                className="wenmo-connections absolute inset-0 h-full w-full pointer-events-none"
+                viewBox="0 0 400 400"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+            >
                 <defs>
-                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                        <feGaussianBlur stdDeviation="2" result="blur" />
-                        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-                    </filter>
+                    {targets.map((target) => (
+                        <marker
+                            key={target.marker}
+                            id={target.marker}
+                            markerWidth="8"
+                            markerHeight="8"
+                            refX="6.4"
+                            refY="4"
+                            orient="auto"
+                            markerUnits="strokeWidth"
+                        >
+                            <path d="M0,0 L8,4 L0,8 Z" fill={target.color} />
+                        </marker>
+                    ))}
                 </defs>
 
-                {/* San He Triangle */}
-                <path
-                    d={`M${pSelf.x}% ${pSelf.y}% L${pSanHe1.x}% ${pSanHe1.y}% L${pSanHe2.x}% ${pSanHe2.y}% Z`}
-                    fill="rgba(236, 72, 153, 0.1)"
-                    stroke="rgba(236, 72, 153, 0.6)"
-                    strokeWidth="1.5"
-                    strokeDasharray="5,5"
-                    filter="url(#glow)"
+                <polygon
+                    points={trianglePoints}
+                    fill="rgba(22, 119, 200, 0.035)"
+                    stroke="rgba(49, 92, 125, 0.36)"
+                    strokeWidth="1.25"
+                    strokeDasharray="5 4"
+                    vectorEffect="non-scaling-stroke"
                 />
 
-                {/* Dui Gong Line */}
-                <line
-                    x1={`${pSelf.x}% `} y1={`${pSelf.y}% `}
-                    x2={`${pDuiGong.x}% `} y2={`${pDuiGong.y}% `}
-                    stroke="rgba(34, 211, 238, 0.8)"
-                    strokeWidth="2"
-                    strokeDasharray="4,2"
-                    filter="url(#glow)"
-                />
+                {selfTarget && oppositeTarget && (
+                    <line
+                        x1={selfTarget.points.start.x}
+                        y1={selfTarget.points.start.y}
+                        x2={oppositeTarget.points.start.x}
+                        y2={oppositeTarget.points.start.y}
+                        stroke="rgba(91, 69, 112, 0.3)"
+                        strokeWidth="1.2"
+                        strokeDasharray="4 4"
+                        vectorEffect="non-scaling-stroke"
+                    />
+                )}
 
-                {/* Dots at intersections */}
-                <circle cx={`${pSelf.x}% `} cy={`${pSelf.y}% `} r="3" fill="#ec4899" />
-                <circle cx={`${pSanHe1.x}% `} cy={`${pSanHe1.y}% `} r="3" fill="#ec4899" />
-                <circle cx={`${pSanHe2.x}% `} cy={`${pSanHe2.y}% `} r="3" fill="#ec4899" />
-                <circle cx={`${pDuiGong.x}% `} cy={`${pDuiGong.y}% `} r="3" fill="#22d3ee" />
+                {targets.map((target) => (
+                    <g key={`${target.role}-${target.branch}`}>
+                        <circle
+                            cx={target.points.start.x}
+                            cy={target.points.start.y}
+                            r="3"
+                            fill="#fff"
+                            stroke={target.color}
+                            strokeWidth="1.4"
+                            vectorEffect="non-scaling-stroke"
+                        />
+                        <line
+                            x1={target.points.start.x}
+                            y1={target.points.start.y}
+                            x2={target.points.end.x}
+                            y2={target.points.end.y}
+                            stroke={target.color}
+                            strokeWidth={target.role === 'self' ? 2.1 : 1.8}
+                            markerEnd={`url(#${target.marker})`}
+                            vectorEffect="non-scaling-stroke"
+                        />
+                    </g>
+                ))}
             </svg>
         );
     };
@@ -891,13 +999,6 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                 {/* Row 2 */}
                 <div className="wenmo-grid-cell">{renderPalace('辰')}</div>
                 <div className="wenmo-center col-span-2 row-span-2 flex flex-col relative overflow-hidden">
-                    {/* Background Watermark (Optional, simplified for now) */}
-                    <div className="absolute inset-0 pointer-events-none opacity-5">
-                        <svg viewBox="0 0 100 100" className="w-full h-full">
-                            <path d="M50 10 L90 90 L10 90 Z" fill="none" stroke="currentColor" strokeWidth="1" />
-                        </svg>
-                    </div>
-
                     {/* Top: Basic Info */}
                     <div className="wenmo-center-info z-10 flex flex-col">
                         <div className="wenmo-center-heading">
@@ -953,7 +1054,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
 
                             <div className="flex justify-between">
                                 <span className="text-slate-500">命宫：</span>
-                                <span>{horoscope.palaces.find(p => p.isBodyPalace === false && p.name === '命宫')?.earthlyBranch || '-'}</span>
+                                <span>{horoscope.palaces.find(p => p.name === '命宫')?.earthlyBranch || '-'}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500">身宫：</span>
@@ -966,44 +1067,16 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                 ? `所选大限 ${selectedDaxianPalace.decadal.range[0]}-${selectedDaxianPalace.decadal.range[1]}岁 · ${selectedDaxianPalace.heavenlyStem}${selectedDaxianPalace.earthlyBranch}`
                                 : '本命盘 · 点击下方大限进入运限盘'}
                         </div>
-                    </div>
 
-                    {/* Divider */}
-                    <div className="wenmo-center-divider"></div>
+                        {relationshipLabels && (
+                            <div className="wenmo-center-relation" aria-live="polite">
+                                <span><i className="is-self" />本宫<strong>{relationshipLabels.self}</strong></span>
+                                <span><i className="is-sanhe" />三合<strong>{relationshipLabels.sanHe.join('、')}</strong></span>
+                                <span><i className="is-opposite" />对宫<strong>{relationshipLabels.opposite}</strong></span>
+                            </div>
+                        )}
 
-                    {/* Bottom: Limit Info (Layer Toggles) */}
-                    <div className="wenmo-center-layers z-10 flex flex-col">
-                        <div className="wenmo-layer-title">四化叠层</div>
-
-                        <div className="wenmo-layer-grid grid grid-cols-6 text-[10px]">
-
-                            {[
-                                { key: 'origin', label: '本', color: 'text-red-600' },
-                                { key: 'decadal', label: '限', color: 'text-green-600' },
-                                { key: 'yearly', label: '年', color: 'text-blue-600' },
-                                { key: 'monthly', label: '月', color: 'text-yellow-600' },
-                                { key: 'daily', label: '日', color: 'text-purple-600' },
-                                { key: 'hourly', label: '时', color: 'text-cyan-600' }
-                            ].map(layer => (
-                                <button
-                                    key={layer.key}
-                                    type="button"
-                                    className={`wenmo-layer-button border px-1 py-0.5 flex flex-col items-center justify-center
-                                        ${activeLayers[layer.key] ? 'bg-stone-100 border-stone-300 shadow-inner' : 'bg-stone-50 border-stone-200 text-gray-300'}
-                                    `}
-                                    onClick={() => setActiveLayers(prev => ({ ...prev, [layer.key]: !prev[layer.key] }))}
-                                    aria-pressed={activeLayers[layer.key]}
-                                    aria-label={`${activeLayers[layer.key] ? '隐藏' : '显示'}${layer.label}层四化`}
-                                >
-                                    <span className={`font-bold ${activeLayers[layer.key] ? layer.color : ''}`}>{layer.label}</span>
-                                    {activeStems[layer.key] && <span className="font-mono text-stone-500">{activeStems[layer.key]}</span>}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="text-right text-[8px] text-gray-300 mt-auto italic">
-                            Powered by iztro
-                        </div>
+                        <div className="wenmo-powered">Powered by iztro</div>
                     </div>
                 </div>
                 <div className="wenmo-grid-cell">{renderPalace('酉')}</div>
@@ -1020,6 +1093,50 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                 <div className="wenmo-grid-cell">{renderPalace('亥')}</div>
                 </div>
             </div>
+
+            <section className="wenmo-chart-tools" aria-label="命盘关系与四化图层">
+                <div className="wenmo-relation-control">
+                    <button
+                        type="button"
+                        className="wenmo-relation-toggle"
+                        aria-pressed={showConnections}
+                        onClick={() => setShowConnections((visible) => !visible)}
+                    >
+                        <span aria-hidden="true">↗</span>
+                        三方四正
+                        <small>{showConnections ? '已显示' : '已隐藏'}</small>
+                    </button>
+                    <p>点击任一宫位，箭头会自动显示本宫、两个三合宫与对宫。</p>
+                </div>
+
+                <div className="wenmo-four-transform-control">
+                    <span className="wenmo-tool-label">四化叠层</span>
+                    <div className="wenmo-layer-grid grid grid-cols-6 text-[10px]">
+                        {[
+                            { key: 'origin', label: '本', color: 'text-red-600' },
+                            { key: 'decadal', label: '限', color: 'text-green-600' },
+                            { key: 'yearly', label: '年', color: 'text-blue-600' },
+                            { key: 'monthly', label: '月', color: 'text-yellow-600' },
+                            { key: 'daily', label: '日', color: 'text-purple-600' },
+                            { key: 'hourly', label: '时', color: 'text-cyan-600' }
+                        ].map(layer => (
+                            <button
+                                key={layer.key}
+                                type="button"
+                                className={`wenmo-layer-button border px-1 py-0.5 flex flex-col items-center justify-center
+                                    ${activeLayers[layer.key] ? 'bg-stone-100 border-stone-300 shadow-inner' : 'bg-stone-50 border-stone-200 text-gray-300'}
+                                `}
+                                onClick={() => setActiveLayers(prev => ({ ...prev, [layer.key]: !prev[layer.key] }))}
+                                aria-pressed={activeLayers[layer.key]}
+                                aria-label={`${activeLayers[layer.key] ? '隐藏' : '显示'}${layer.label}层四化`}
+                            >
+                                <span className={`font-bold ${activeLayers[layer.key] ? layer.color : ''}`}>{layer.label}</span>
+                                {activeStems[layer.key] && <span className="font-mono text-stone-500">{activeStems[layer.key]}</span>}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </section>
 
             {/* Cascading Timeline Table */}
             <div className="chart-timeline wenmo-timeline overflow-x-auto text-[11px] md:text-xs">
@@ -1054,7 +1171,8 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive })
                                 <td className="p-2">
                                     <div className="flex gap-2 overflow-x-auto touch-pan-x">
                                         {(() => {
-                                            const p = palaces[selection.daxianIndex];
+                                            const p = selectedDaxianPalace;
+                                            if (!p) return null;
                                             const startAge = p.decadal.range[0];
                                             const endAge = p.decadal.range[1];
                                             const birthYear = new Date(basicInfo.birthday).getFullYear();
