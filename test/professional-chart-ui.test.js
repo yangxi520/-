@@ -26,6 +26,9 @@ test('紫微命盘默认打开高密度专业盘并保留运限交互', async ()
   assert.match(source, /data-testid="ziwei-self-mutation-layer"/);
   assert.match(source, /data-mutation-direction=\{entry\.kind\}/);
   assert.match(source, /data-testid="ziwei-fly-layer"/);
+  assert.match(source, /className="wenmo-arrow-hit-target"/);
+  assert.match(source, /data-testid="ziwei-mutation-explainer"/);
+  assert.match(source, /单条飞化只表示结构关系/);
   assert.match(source, /mingPalace\?\.index/);
   assert.match(source, /viewBox="0 0 400 400"/);
   assert.match(source, /markerEnd=\{`url\(#self-mutation-arrow-\$\{entry\.key\}\)`\}/);
@@ -41,6 +44,8 @@ test('专业盘使用连续纸面网格、竖排星曜与五层运限', async ()
   assert.match(styles, /\.wenmo-luck-cell\.is-active/);
   assert.match(styles, /\.chart-action-bar \{ display: none !important; \}/);
   assert.match(styles, /\.wenmo-fly-path\s*\{[\s\S]*?animation: wenmo-fly-flow/);
+  assert.match(styles, /\.wenmo-arrow-hit-target\s*\{[\s\S]*?stroke-width: 18px/);
+  assert.match(styles, /\.wenmo-arrow-explainer\s*\{/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(styles, /@media print[\s\S]*?\.wenmo-board \{ aspect-ratio: 1 \/ 1 !important; \}/);
 });

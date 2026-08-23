@@ -21,6 +21,8 @@ import {
 import {
     MUTAGEN_META,
     buildPalaceFlights,
+    getAllMutagenStarMaps,
+    getMutagenStarMap,
     groupSelfMutationsByBranch,
 } from '../utils/ziweiMutations';
 import { Sparkles, Coffee, Save, Archive, Calendar, Printer } from "lucide-react";
@@ -58,20 +60,6 @@ const GRID_MAP = {
     '寅': { row: 4, col: 1 }, '丑': { row: 4, col: 2 }, '子': { row: 4, col: 3 }, '亥': { row: 4, col: 4 },
 };
 
-// Si Hua Map (Stem -> { lu, quan, ke, ji })
-const SI_HUA_MAP = {
-    '甲': { lu: '廉贞', quan: '破军', ke: '武曲', ji: '太阳' },
-    '乙': { lu: '天机', quan: '天梁', ke: '紫微', ji: '太阴' },
-    '丙': { lu: '天同', quan: '天机', ke: '文昌', ji: '廉贞' },
-    '丁': { lu: '太阴', quan: '天同', ke: '天机', ji: '巨门' },
-    '戊': { lu: '贪狼', quan: '太阴', ke: '右弼', ji: '天机' },
-    '己': { lu: '武曲', quan: '贪狼', ke: '天梁', ji: '文曲' },
-    '庚': { lu: '太阳', quan: '武曲', ke: '太阴', ji: '天同' },
-    '辛': { lu: '巨门', quan: '太阳', ke: '文曲', ji: '文昌' },
-    '壬': { lu: '天梁', quan: '紫微', ke: '左辅', ji: '武曲' },
-    '癸': { lu: '破军', quan: '巨门', ke: '太阴', ji: '贪狼' },
-};
-
 const HEAVENLY_STEMS = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
 const EARTHLY_BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
 
@@ -106,6 +94,27 @@ const GANZHI_TONES = {
 };
 const getGanzhiTone = (ganzhi = '') => GANZHI_TONES[ganzhi[0]] || 'ink';
 
+const MUTAGEN_MEANINGS = {
+    '禄': {
+        title: '舒适与获得',
+        detail: '常用来观察满足感、资源与较容易投入的方向。',
+    },
+    '权': {
+        title: '掌控与责任',
+        detail: '常用来观察主导欲、责任感与需要多付出的方向。',
+    },
+    '科': {
+        title: '表达与名声',
+        detail: '常用来观察展示、名誉、信心与较平顺的方向。',
+    },
+    '忌': {
+        title: '在意与牵挂',
+        detail: '常用来观察特别在乎、容易纠结或需要反复处理的方向。',
+    },
+};
+
+const formatPalaceName = (name = '') => name.endsWith('宫') ? name : `${name}宫`;
+
 // Helper: Get Year Stem (0-9 index)
 const getYearStemIndex = (year) => (year - 4) % 10;
 
@@ -138,6 +147,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
     const [showChartSettings, setShowChartSettings] = React.useState(false);
     const [showCommonMenu, setShowCommonMenu] = React.useState(false);
     const [professionalToolMode, setProfessionalToolMode] = React.useState('sanhe');
+    const [selectedMutationInfo, setSelectedMutationInfo] = React.useState(null);
 
     // Active Layer Visibility State (Toggle)
     const [activeLayers, setActiveLayers] = React.useState({
@@ -222,6 +232,17 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
         if (!focusedPalace) return [];
         return palaceFlights.filter((flight) => flight.sourceIndex === focusedPalace.index);
     }, [focusedPalace, palaceFlights]);
+
+    const selectMutationInfo = (flight, layer) => {
+        setSelectedMutationInfo({ ...flight, layer });
+    };
+
+    const handleMutationKeyDown = (event, flight, layer) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        event.stopPropagation();
+        selectMutationInfo(flight, layer);
+    };
 
     const sortedDaxianPalaces = useMemo(
         () => [...palaces].sort((a, b) => a.decadal.range[0] - b.decadal.range[0]),
@@ -379,7 +400,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
             const stem = activeStems[layer.key];
             if (!stem) return;
 
-            const map = SI_HUA_MAP[stem];
+            const map = getMutagenStarMap(stem);
             if (!map) return;
 
             if (map.lu === starName) result.push({ type: '禄', ...layer });
@@ -517,11 +538,15 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                 ${isMing ? 'bg-red-50/30' : ''}
             `}
                 data-relation={showConnections && professionalToolMode === 'sanhe' ? relationship || undefined : undefined}
-                onClick={() => setFocusedIndex(palace.index)}
+                onClick={() => {
+                    setFocusedIndex(palace.index);
+                    setSelectedMutationInfo(null);
+                }}
                 onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
                         setFocusedIndex(palace.index);
+                        setSelectedMutationInfo(null);
                     }
                 }}
                 role="button"
@@ -834,11 +859,12 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
 
         return (
             <svg
-                className="wenmo-self-mutations absolute inset-0 h-full w-full pointer-events-none"
+                className="wenmo-self-mutations absolute inset-0 h-full w-full"
                 data-testid="ziwei-self-mutation-layer"
                 viewBox="0 0 400 400"
                 preserveAspectRatio="none"
-                aria-hidden="true"
+                role="group"
+                aria-label="宫干自化箭头，点击查看含义"
             >
                 <defs>
                     {MUTAGEN_META.map((meta) => (
@@ -859,11 +885,29 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                 {arrowModels.map((entry) => (
                     <g
                         key={`${entry.sourceIndex}-${entry.mutagen}-${entry.kind}`}
+                        className="wenmo-mutation-hit"
                         data-mutagen={entry.mutagen}
                         data-mutation-direction={entry.kind}
+                        role="button"
+                        tabIndex="0"
+                        aria-label={`${formatPalaceName(entry.sourceName)}${entry.sourceStem}干使${entry.starName}化${entry.mutagen}，${entry.kind === 'outward' ? '离心自化' : '向心自化'}，点击查看说明`}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            selectMutationInfo(entry, 'self');
+                        }}
+                        onKeyDown={(event) => handleMutationKeyDown(event, entry, 'self')}
                     >
-                        <title>{`${entry.sourceName}宫干化${entry.mutagen}·${entry.kind === 'outward' ? '离心自化' : '向心自化'}`}</title>
+                        <title>{`${formatPalaceName(entry.sourceName)}干化${entry.mutagen}·${entry.kind === 'outward' ? '离心自化' : '向心自化'}`}</title>
                         <line
+                            className="wenmo-arrow-hit-target"
+                            x1={entry.geometry.start.x}
+                            y1={entry.geometry.start.y}
+                            x2={entry.geometry.end.x}
+                            y2={entry.geometry.end.y}
+                            vectorEffect="non-scaling-stroke"
+                        />
+                        <line
+                            className="wenmo-self-arrow-line"
                             x1={entry.geometry.start.x}
                             y1={entry.geometry.start.y}
                             x2={entry.geometry.end.x}
@@ -944,11 +988,12 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
 
         return (
             <svg
-                className="wenmo-fly-lines absolute inset-0 h-full w-full pointer-events-none"
+                className="wenmo-fly-lines absolute inset-0 h-full w-full"
                 data-testid="ziwei-fly-layer"
                 viewBox="0 0 400 400"
                 preserveAspectRatio="none"
-                aria-hidden="true"
+                role="group"
+                aria-label="宫干飞星箭头，点击查看含义"
             >
                 <defs>
                     {MUTAGEN_META.map((meta) => (
@@ -967,8 +1012,27 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                     ))}
                 </defs>
                 {paths.map((flight) => (
-                    <g key={`${flight.sourceIndex}-${flight.mutagen}-${flight.targetIndex}`} data-mutagen={flight.mutagen}>
-                        <title>{`${flight.sourceName}宫化${flight.mutagen}→${flight.targetName}宫`}</title>
+                    <g
+                        key={`${flight.sourceIndex}-${flight.mutagen}-${flight.targetIndex}`}
+                        className="wenmo-mutation-hit"
+                        data-mutagen={flight.mutagen}
+                        role="button"
+                        tabIndex="0"
+                        aria-label={`${formatPalaceName(flight.sourceName)}${flight.sourceStem}干使${flight.starName}化${flight.mutagen}飞入${formatPalaceName(flight.targetName)}，点击查看说明`}
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            selectMutationInfo(flight, 'fly');
+                        }}
+                        onKeyDown={(event) => handleMutationKeyDown(event, flight, 'fly')}
+                    >
+                        <title>{`${formatPalaceName(flight.sourceName)}化${flight.mutagen}→${formatPalaceName(flight.targetName)}`}</title>
+                        <path
+                            className="wenmo-arrow-hit-target"
+                            d={flight.path}
+                            pathLength="100"
+                            fill="none"
+                            vectorEffect="non-scaling-stroke"
+                        />
                         <path
                             className="wenmo-fly-path"
                             d={flight.path}
@@ -1062,12 +1126,13 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                     basicInfo,
                     horoscope,
                     palaces,
-                    SI_HUA_MAP,
+                    getAllMutagenStarMaps(),
                     fortuneContext,
                 );
 
                 if (!prompt) throw new Error(`无法生成${FORTUNE_LAYER_LABELS[type] || '运势'}话术`);
 
+                setSelectedMutationInfo(null);
                 setPromptPreview({
                     title: `${FORTUNE_LAYER_LABELS[type]}运势话术`,
                     text: prompt,
@@ -1077,6 +1142,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
             } else if (type.startsWith('baby_')) {
                 const babyType = type.replace('baby_', '');
                 setSelectedBabyType(babyType);
+                setSelectedMutationInfo(null);
                 setShowPartnerModal(true);
                 setShowAiMenu(false); // Close menu
                 return; // Stop here, wait for modal
@@ -1134,6 +1200,72 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
         }, 100);
     };
 
+    const renderMutationExplanation = () => {
+        if (!selectedMutationInfo) return null;
+
+        const info = selectedMutationInfo;
+        const meaning = MUTAGEN_MEANINGS[info.mutagen] || {
+            title: '四化关系',
+            detail: '请结合整张命盘综合观察。',
+        };
+        const typeLabel = info.kind === 'outward'
+            ? '离心自化'
+            : info.kind === 'inward'
+                ? '向心自化'
+                : '宫干飞化';
+
+        let ruleText;
+        if (info.layer === 'self' && info.kind === 'outward') {
+            ruleText = `${formatPalaceName(info.sourceName)}的${info.sourceStem}干使本宫${info.starName}化${info.mutagen}。四化星仍落在本宫，所以用朝盘外的箭头标记“离心自化”。`;
+        } else if (info.layer === 'self' && info.kind === 'inward') {
+            ruleText = `${formatPalaceName(info.sourceName)}的${info.sourceStem}干使对宫${formatPalaceName(info.targetName)}的${info.starName}化${info.mutagen}。四化星落在对宫，所以用朝中宫的箭头标记“向心自化”。`;
+        } else {
+            const relationNote = info.kind === 'outward'
+                ? '这条飞化落回本宫，同时构成离心自化。'
+                : info.kind === 'inward'
+                    ? '这条飞化落入对宫，同时构成向心自化。'
+                    : '彩色箭头从起宫指向真实落宫。';
+            ruleText = `${formatPalaceName(info.sourceName)}的${info.sourceStem}干使${info.starName}化${info.mutagen}，飞入${formatPalaceName(info.targetName)}。${relationNote}`;
+        }
+
+        return (
+            <aside
+                className="wenmo-arrow-explainer print:hidden"
+                data-testid="ziwei-mutation-explainer"
+                data-mutagen={info.mutagen}
+                role="dialog"
+                aria-modal="false"
+                aria-live="polite"
+                aria-labelledby="mutation-explainer-title"
+                style={{ '--mutation-color': info.color }}
+            >
+                <header>
+                    <span className="wenmo-arrow-explainer__badge">化{info.mutagen}</span>
+                    <div>
+                        <small>{info.layer === 'fly' ? '飞星箭头' : '宫干自化箭头'} · {typeLabel}</small>
+                        <h2 id="mutation-explainer-title">{formatPalaceName(info.sourceName)} · {info.sourceStem}干 · {info.starName}化{info.mutagen}</h2>
+                    </div>
+                    <button type="button" onClick={() => setSelectedMutationInfo(null)} aria-label="关闭箭头说明">×</button>
+                </header>
+
+                <p>{ruleText}</p>
+
+                <dl>
+                    <div><dt>起宫</dt><dd>{info.sourceStem}{info.sourceBranch} · {formatPalaceName(info.sourceName)}</dd></div>
+                    <div><dt>目标星</dt><dd>{info.starName}化{info.mutagen}</dd></div>
+                    <div><dt>落宫</dt><dd>{info.targetBranch} · {formatPalaceName(info.targetName)}</dd></div>
+                </dl>
+
+                <footer>
+                    <span aria-hidden="true" />
+                    <strong>{meaning.title}</strong>
+                    <p>{meaning.detail}</p>
+                    <small>单条飞化只表示结构关系，不宜单独下吉凶结论。</small>
+                </footer>
+            </aside>
+        );
+    };
+
     return (
         <div className="professional-chart wenmo-chart">
             <header className="wenmo-professional-bar print:hidden">
@@ -1143,7 +1275,10 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                 <h1 data-testid="ziwei-chart-title">古书派紫微专业版</h1>
                 <button
                     type="button"
-                    onClick={() => setShowChartSettings((visible) => !visible)}
+                    onClick={() => {
+                        setSelectedMutationInfo(null);
+                        setShowChartSettings((visible) => !visible);
+                    }}
                     aria-expanded={showChartSettings}
                     aria-controls="chart-settings-panel"
                 >
@@ -1384,7 +1519,15 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
             </div>
 
             <div className="wenmo-mode-bar print:hidden">
-                <button type="button" className="wenmo-mode-side" onClick={() => setShowCommonMenu((visible) => !visible)} aria-expanded={showCommonMenu}>常用功能</button>
+                <button
+                    type="button"
+                    className="wenmo-mode-side"
+                    onClick={() => {
+                        setSelectedMutationInfo(null);
+                        setShowCommonMenu((visible) => !visible);
+                    }}
+                    aria-expanded={showCommonMenu}
+                >常用功能</button>
                 <div className="wenmo-mode-segments" role="group" aria-label="命盘叠层模式">
                     {[
                         { key: 'fly', label: '飞星' },
@@ -1396,6 +1539,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                             type="button"
                             aria-pressed={professionalToolMode === mode.key}
                             onClick={() => {
+                                setSelectedMutationInfo(null);
                                 setProfessionalToolMode(mode.key);
                                 if (mode.key === 'sanhe' || mode.key === 'fly') setShowConnections(true);
                                 if (mode.key === 'sihua') setActiveLayers((prev) => Object.fromEntries(Object.keys(prev).map((key) => [key, true])));
@@ -1408,19 +1552,21 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                 <button type="button" className="wenmo-mode-side" onClick={onQuickChart}>快捷排盘</button>
             </div>
 
+            {renderMutationExplanation()}
+
             {showCommonMenu && (
                 <nav className="wenmo-common-menu print:hidden" aria-label="常用功能菜单">
                     <button type="button" onClick={onOpenArchive}>命例档案</button>
                     <button type="button" onClick={onSave}>保存命盘</button>
-                    <button type="button" onClick={() => { setShowAiMenu(true); setShowCommonMenu(false); }}>AI 分析</button>
+                    <button type="button" onClick={() => { setSelectedMutationInfo(null); setShowAiMenu(true); setShowCommonMenu(false); }}>AI 分析</button>
                     <button type="button" onClick={() => window.print()}>打印导出</button>
                 </nav>
             )}
 
             <nav className="wenmo-bottom-tabs print:hidden" aria-label="专业盘导航">
                 <button type="button" className="is-active" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}><span>◉</span>命盘</button>
-                <button type="button" onClick={() => setShowAiMenu(true)}><span>?</span>帮助</button>
-                <button type="button" onClick={() => setShowDonationModal(true)}><span>ⓘ</span>关于</button>
+                <button type="button" onClick={() => { setSelectedMutationInfo(null); setShowAiMenu(true); }}><span>?</span>帮助</button>
+                <button type="button" onClick={() => { setSelectedMutationInfo(null); setShowDonationModal(true); }}><span>ⓘ</span>关于</button>
             </nav>
 
             {/* --- Unified Floating Action Buttons (Stack) --- */}
@@ -1465,7 +1611,10 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                         type="button"
                         onClick={() => {
                             if (showAiMenu) closeAiMenu();
-                            else setShowAiMenu(true);
+                            else {
+                                setSelectedMutationInfo(null);
+                                setShowAiMenu(true);
+                            }
                         }}
                         className="group relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-r from-purple-700 to-pink-700 text-white shadow-lg transition active:scale-95 md:h-12 md:min-h-0 md:w-12 md:rounded-full md:from-purple-600 md:to-pink-600 md:hover:scale-110"
                         title="AI 分析"
@@ -1553,6 +1702,7 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                                     type="button"
                                     onClick={() => {
                                         closeAiMenu();
+                                        setSelectedMutationInfo(null);
                                         setShowDonationModal(true);
                                     }}
                                     className="w-full text-left px-4 py-3 rounded hover:bg-white/10 flex items-center gap-3 text-sm font-bold text-orange-300 border border-transparent hover:border-orange-500/30 transition-all"
