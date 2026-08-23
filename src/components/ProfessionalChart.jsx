@@ -969,6 +969,10 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                     ...flight,
                     flightIndex,
                     path: `M ${start.x} ${start.y} C ${controlA.x} ${controlA.y}, ${controlB.x} ${controlB.y}, ${end.x} ${end.y}`,
+                    hitCenter: {
+                        x: (start.x + 3 * controlA.x + 3 * controlB.x + end.x) / 8,
+                        y: (start.y + 3 * controlA.y + 3 * controlB.y + end.y) / 8,
+                    },
                 };
             }
 
@@ -994,6 +998,10 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                 ...flight,
                 flightIndex,
                 path: `M ${start.x} ${start.y} Q ${control.x} ${control.y}, ${end.x} ${end.y}`,
+                hitCenter: {
+                    x: (start.x + 2 * control.x + end.x) / 4,
+                    y: (start.y + 2 * control.y + end.y) / 4,
+                },
             };
         }).filter(Boolean);
 
@@ -1027,16 +1035,22 @@ function ProfessionalChartInner({ horoscope, basicInfo, onSave, onOpenArchive, o
                         key={`${flight.sourceIndex}-${flight.mutagen}-${flight.targetIndex}`}
                         className="wenmo-mutation-hit"
                         data-mutagen={flight.mutagen}
-                        role="button"
-                        tabIndex="0"
-                        aria-label={`${formatPalaceName(flight.sourceName)}${flight.sourceStem}干使${flight.starName}化${flight.mutagen}飞入${formatPalaceName(flight.targetName)}，点击查看说明`}
                         onClick={(event) => {
                             event.stopPropagation();
                             selectMutationInfo(flight, 'fly');
                         }}
-                        onKeyDown={(event) => handleMutationKeyDown(event, flight, 'fly')}
                     >
                         <title>{`${formatPalaceName(flight.sourceName)}化${flight.mutagen}→${formatPalaceName(flight.targetName)}`}</title>
+                        <circle
+                            className="wenmo-arrow-hit-pad"
+                            cx={flight.hitCenter.x}
+                            cy={flight.hitCenter.y}
+                            r="4.5"
+                            role="button"
+                            tabIndex="0"
+                            aria-label={`${formatPalaceName(flight.sourceName)}${flight.sourceStem}干使${flight.starName}化${flight.mutagen}飞入${formatPalaceName(flight.targetName)}，点击查看说明`}
+                            onKeyDown={(event) => handleMutationKeyDown(event, flight, 'fly')}
+                        />
                         <path
                             className="wenmo-arrow-hit-target"
                             d={flight.path}
