@@ -1,0 +1,400 @@
+.bazi-landing {
+  --bazi-ink: #020b0c;
+  --bazi-surface: #071719;
+  --bazi-paper: #fbf7ed;
+  --bazi-gold: #dcb471;
+  --bazi-gold-bright: #f0ce91;
+  --bazi-jade: #55bba8;
+  --bazi-cinnabar: #8e231d;
+  position: relative;
+  min-height: 100%;
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+  color: var(--bazi-paper);
+  background:
+    radial-gradient(circle at 50% 36%, rgba(23, 91, 79, 0.18), transparent 31rem),
+    linear-gradient(180deg, #02090a 0%, var(--bazi-ink) 46%, #03100f 100%);
+  isolation: isolate;
+}
+
+.bazi-landing__backdrop {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bazi-landing__landscape {
+  position: absolute;
+  inset: 0;
+  min-height: 780px;
+  opacity: 0.28;
+  background-image: url('../../assets/bazi_landscape.jpg');
+  background-position: 50% 22%;
+  background-size: max(760px, 130vw) auto;
+  background-repeat: no-repeat;
+  filter: grayscale(1) sepia(0.32) hue-rotate(92deg) saturate(0.56) brightness(0.36) contrast(1.2);
+  mix-blend-mode: screen;
+}
+
+.bazi-landing__backdrop::after {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, rgba(2, 11, 12, 0.08), rgba(2, 11, 12, 0.44) 44%, rgba(2, 11, 12, 0.96) 92%),
+    radial-gradient(circle at 50% 34%, transparent 0 10rem, rgba(2, 11, 12, 0.5) 25rem);
+  content: '';
+}
+
+.bazi-landing__constellation {
+  position: absolute;
+  width: 170px;
+  height: 130px;
+  opacity: 0.22;
+  background:
+    radial-gradient(circle at 9% 64%, var(--bazi-gold) 0 1px, transparent 2px),
+    radial-gradient(circle at 28% 30%, var(--bazi-gold) 0 1px, transparent 2px),
+    radial-gradient(circle at 48% 52%, var(--bazi-gold) 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 68% 18%, var(--bazi-gold) 0 1px, transparent 2px),
+    radial-gradient(circle at 86% 62%, var(--bazi-gold) 0 1px, transparent 2px);
+}
+
+.bazi-landing__constellation::before,
+.bazi-landing__constellation::after {
+  position: absolute;
+  height: 1px;
+  background: rgba(220, 180, 113, 0.45);
+  content: '';
+  transform-origin: left center;
+}
+
+.bazi-landing__constellation::before { top: 68px; left: 14px; width: 115px; transform: rotate(-23deg); }
+.bazi-landing__constellation::after { top: 37px; left: 47px; width: 96px; transform: rotate(17deg); }
+.bazi-landing__constellation--left { top: 88px; left: -52px; transform: rotate(-8deg); }
+.bazi-landing__constellation--right { top: 155px; right: -62px; transform: scaleX(-1) rotate(13deg); }
+
+.bazi-landing__header {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  min-height: 62px;
+  padding: max(10px, env(safe-area-inset-top, 0px)) 14px 8px;
+  grid-template-columns: 44px minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid rgba(220, 180, 113, 0.14);
+  background: rgba(2, 11, 12, 0.72);
+  backdrop-filter: blur(16px) saturate(110%);
+  -webkit-backdrop-filter: blur(16px) saturate(110%);
+}
+
+.bazi-landing__back {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgba(220, 180, 113, 0.18);
+  border-radius: 50%;
+  color: var(--bazi-gold-bright);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.bazi-landing__back:active { background: rgba(220, 180, 113, 0.1); }
+.bazi-landing__back svg { width: 20px; height: 20px; }
+
+.bazi-landing__lockup {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.bazi-landing__seal {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(216, 90, 69, 0.58);
+  border-radius: 9px 9px 9px 3px;
+  color: #ffd7bd;
+  background: linear-gradient(145deg, #a92f26, #6f1714);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.12);
+  font-family: "Songti SC", STSong, SimSun, serif;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.bazi-landing__brand-copy { display: grid; min-width: 0; gap: 1px; }
+.bazi-landing__brand-copy strong {
+  overflow: hidden;
+  color: var(--bazi-paper);
+  font-family: "Songti SC", STSong, SimSun, serif;
+  font-size: 16px;
+  letter-spacing: 0.12em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bazi-landing__brand-copy small { color: rgba(220, 180, 113, 0.56); font-size: 8px; letter-spacing: 0.17em; }
+
+.bazi-landing__volume {
+  justify-self: end;
+  color: rgba(220, 180, 113, 0.52);
+  font-family: "Songti SC", STSong, SimSun, serif;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  writing-mode: vertical-rl;
+}
+
+.bazi-landing__content {
+  position: relative;
+  z-index: 1;
+  width: min(100%, 700px);
+  margin: 0 auto;
+  padding: 18px 16px max(24px, env(safe-area-inset-bottom, 0px));
+}
+
+.bazi-landing__hero { text-align: center; }
+.bazi-landing__eyebrow {
+  margin: 0;
+  color: var(--bazi-gold);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.23em;
+}
+
+.bazi-landing__hero h1 {
+  margin: 8px 0 0;
+  color: #f4d39c;
+  font-family: "Songti SC", STSong, SimSun, serif;
+  font-size: clamp(29px, 8vw, 42px);
+  font-weight: 700;
+  letter-spacing: 0.075em;
+  line-height: 1.25;
+  text-shadow: 0 7px 26px rgba(220, 180, 113, 0.1);
+}
+
+.bazi-landing__intro {
+  max-width: 31rem;
+  margin: 8px auto 0;
+  color: rgba(251, 247, 237, 0.6);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.bazi-landing__motto {
+  display: inline-flex;
+  margin: 10px 0 0;
+  padding: 5px 10px;
+  border: 1px solid rgba(220, 180, 113, 0.12);
+  border-radius: 999px;
+  color: rgba(220, 180, 113, 0.66);
+  background: rgba(2, 11, 12, 0.45);
+  font-family: "Songti SC", STSong, SimSun, serif;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.bazi-landing__structure {
+  position: relative;
+  margin-top: 14px;
+  padding-top: 214px;
+}
+
+.bazi-landing__cosmogram {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 206px;
+  height: 206px;
+  border: 1px solid rgba(220, 180, 113, 0.35);
+  border-radius: 50%;
+  background:
+    repeating-conic-gradient(from 0deg, rgba(220, 180, 113, 0.16) 0 0.45deg, transparent 0.45deg 15deg),
+    radial-gradient(circle, transparent 0 22%, rgba(220, 180, 113, 0.38) 22.4% 22.8%, transparent 23.2% 39%, rgba(220, 180, 113, 0.25) 39.4% 39.8%, transparent 40.2% 58%, rgba(220, 180, 113, 0.2) 58.4% 58.8%, transparent 59.2% 76%, rgba(220, 180, 113, 0.16) 76.4% 76.8%, transparent 77.2%),
+    radial-gradient(circle at 50% 50%, rgba(25, 104, 88, 0.16), rgba(2, 11, 12, 0.22) 62%, rgba(2, 11, 12, 0.72));
+  box-shadow: 0 0 46px rgba(22, 96, 83, 0.12), inset 0 0 32px rgba(2, 11, 12, 0.65);
+  transform: translateX(-50%);
+}
+
+.bazi-landing__cosmogram::before,
+.bazi-landing__cosmogram::after {
+  position: absolute;
+  z-index: -1;
+  background: linear-gradient(90deg, transparent, rgba(220, 180, 113, 0.32), transparent);
+  content: '';
+}
+.bazi-landing__cosmogram::before { top: 50%; right: -17px; left: -17px; height: 1px; }
+.bazi-landing__cosmogram::after { top: -17px; bottom: -17px; left: 50%; width: 1px; background: linear-gradient(180deg, transparent, rgba(220, 180, 113, 0.32), transparent); }
+
+.bazi-landing__orbit-label {
+  position: absolute;
+  left: 50%;
+  color: rgba(240, 206, 145, 0.75);
+  font-family: "Songti SC", STSong, SimSun, serif;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  transform: translateX(-50%);
+}
+.bazi-landing__orbit-label--outer { top: 18px; }
+.bazi-landing__orbit-label--middle { top: 48px; }
+.bazi-landing__orbit-label--inner { top: 76px; }
+
+.bazi-landing__cosmogram-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  width: 65px;
+  height: 65px;
+  place-content: center;
+  border: 1px solid rgba(240, 206, 145, 0.48);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(134, 73, 36, 0.22), rgba(2, 11, 12, 0.92) 68%);
+  box-shadow: 0 0 26px rgba(220, 180, 113, 0.15);
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+.bazi-landing__cosmogram-core small { color: rgba(220, 180, 113, 0.52); font-size: 7px; letter-spacing: 0.12em; }
+.bazi-landing__cosmogram-core strong { margin-top: 1px; color: #f5d7a7; font-family: "Songti SC", STSong, SimSun, serif; font-size: 20px; letter-spacing: 0.08em; }
+
+.bazi-landing__structure-heading { display: flex; margin-bottom: 8px; align-items: end; justify-content: space-between; gap: 12px; }
+.bazi-landing__structure-heading p { margin: 0; color: rgba(240, 206, 145, 0.72); font-size: 10px; font-weight: 800; letter-spacing: 0.18em; }
+.bazi-landing__structure-heading h2 { margin: 0; color: rgba(251, 247, 237, 0.74); font-family: "Songti SC", STSong, SimSun, serif; font-size: 13px; font-weight: 600; letter-spacing: 0.16em; }
+
+.bazi-landing__pillars { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+.bazi-landing__pillar {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 90px;
+  padding: 9px 4px 7px;
+  place-items: center;
+  border: 1px solid rgba(220, 180, 113, 0.25);
+  border-radius: 12px 12px 12px 4px;
+  background: linear-gradient(180deg, rgba(11, 32, 31, 0.92), rgba(3, 15, 15, 0.94));
+  box-shadow: inset 0 1px rgba(240, 206, 145, 0.05);
+}
+.bazi-landing__pillar::before { position: absolute; top: 5px; right: 8px; left: 8px; height: 1px; background: rgba(220, 180, 113, 0.18); content: ''; }
+.bazi-landing__pillar span { color: rgba(240, 206, 145, 0.7); font-size: 10px; letter-spacing: 0.12em; }
+.bazi-landing__pillar strong { color: var(--bazi-gold-bright); font-family: "Songti SC", STSong, SimSun, serif; font-size: 24px; line-height: 1; }
+.bazi-landing__pillar small { display: grid; width: 21px; height: 21px; place-items: center; border: 1px solid rgba(169, 47, 38, 0.42); color: rgba(248, 164, 143, 0.9); font-family: "Songti SC", STSong, SimSun, serif; font-size: 10px; }
+.bazi-landing__pillar--day { border-color: rgba(220, 180, 113, 0.56); background: linear-gradient(180deg, rgba(41, 43, 32, 0.96), rgba(7, 22, 20, 0.97)); }
+.bazi-landing__pillar--day::after { position: absolute; top: -1px; right: 18%; left: 18%; height: 2px; background: var(--bazi-cinnabar); content: ''; }
+
+.bazi-landing__chapters {
+  margin-top: 14px;
+  padding: 13px;
+  border: 1px solid rgba(220, 180, 113, 0.16);
+  border-radius: 17px 17px 17px 6px;
+  background: rgba(3, 18, 17, 0.76);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.bazi-landing__section-title { display: flex; align-items: center; gap: 9px; }
+.bazi-landing__section-title > span { display: grid; width: 29px; height: 29px; flex: 0 0 auto; place-items: center; border: 1px solid rgba(216, 90, 69, 0.4); border-radius: 8px 8px 8px 2px; color: #e9937e; background: rgba(142, 35, 29, 0.11); font-family: "Songti SC", STSong, SimSun, serif; font-size: 13px; }
+.bazi-landing__section-title h2 { margin: 0; color: var(--bazi-paper); font-family: "Songti SC", STSong, SimSun, serif; font-size: 15px; letter-spacing: 0.08em; }
+.bazi-landing__section-title p { margin: 2px 0 0; color: rgba(251, 247, 237, 0.62); font-size: 10px; }
+
+.bazi-landing__chapter-grid { display: grid; margin-top: 10px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.bazi-landing__chapter { display: grid; min-width: 0; min-height: 71px; padding: 8px 3px; place-items: center; border: 1px solid rgba(220, 180, 113, 0.13); border-radius: 10px 10px 10px 3px; background: rgba(255, 255, 255, 0.018); text-align: center; }
+.bazi-landing__chapter > span { display: grid; width: 22px; height: 22px; place-items: center; border: 1px solid rgba(220, 180, 113, 0.24); border-radius: 50%; color: var(--bazi-gold); font-family: "Songti SC", STSong, SimSun, serif; font-size: 10px; }
+.bazi-landing__chapter strong { color: #efd09a; font-family: "Songti SC", STSong, SimSun, serif; font-size: 13px; letter-spacing: 0.06em; }
+.bazi-landing__chapter small { color: rgba(251, 247, 237, 0.62); font-size: 10px; letter-spacing: 0.04em; }
+
+.bazi-landing__journey {
+  display: flex;
+  margin: 12px 0 0;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  list-style: none;
+  color: rgba(240, 206, 145, 0.72);
+  font-family: "Songti SC", STSong, SimSun, serif;
+  font-size: 10px;
+  letter-spacing: 0.02em;
+}
+.bazi-landing__journey li { display: flex; align-items: center; white-space: nowrap; }
+.bazi-landing__journey li:not(:last-child)::after { margin: 0 5px; color: rgba(220, 180, 113, 0.34); content: '→'; }
+
+.bazi-landing__action { margin-top: 12px; text-align: center; }
+.bazi-landing__action button {
+  display: flex;
+  width: 100%;
+  min-height: 54px;
+  padding: 0 19px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid rgba(240, 206, 145, 0.48);
+  border-radius: 15px 15px 15px 5px;
+  color: #ffe0b0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent 42%),
+    linear-gradient(135deg, #8e231d, #651410);
+  box-shadow: 0 15px 34px rgba(67, 9, 7, 0.35), inset 0 1px rgba(255, 255, 255, 0.1);
+  font-family: "Songti SC", STSong, SimSun, serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+.bazi-landing__action button:active { background: linear-gradient(135deg, #a92f26, #741713); }
+.bazi-landing__action button svg { width: 18px; height: 18px; }
+.bazi-landing__action p { margin: 8px 0 0; color: rgba(251, 247, 237, 0.58); font-size: 10px; letter-spacing: 0.08em; }
+.bazi-landing__action p span { margin-right: 4px; color: rgba(85, 187, 168, 0.62); font-size: 7px; }
+
+@media (min-width: 640px) {
+  .bazi-landing__content { padding-top: 24px; padding-right: 24px; padding-left: 24px; }
+  .bazi-landing__structure { padding-top: 236px; }
+  .bazi-landing__cosmogram { width: 226px; height: 226px; }
+  .bazi-landing__pillar { min-height: 102px; }
+  .bazi-landing__pillar strong { font-size: 29px; }
+  .bazi-landing__chapter { min-height: 78px; }
+}
+
+@media (max-width: 359px) {
+  .bazi-landing__header { padding-right: 10px; padding-left: 10px; }
+  .bazi-landing__brand-copy strong { font-size: 14px; }
+  .bazi-landing__brand-copy small { letter-spacing: 0.1em; }
+  .bazi-landing__content { padding-right: 12px; padding-left: 12px; }
+  .bazi-landing__hero h1 { font-size: 27px; }
+  .bazi-landing__structure { padding-top: 174px; }
+  .bazi-landing__cosmogram { width: 166px; height: 166px; }
+  .bazi-landing__orbit-label--outer { top: 13px; }
+  .bazi-landing__orbit-label--middle { top: 36px; }
+  .bazi-landing__orbit-label--inner { top: 59px; }
+  .bazi-landing__cosmogram-core { width: 55px; height: 55px; }
+  .bazi-landing__cosmogram-core strong { font-size: 17px; }
+  .bazi-landing__pillar { min-height: 82px; }
+  .bazi-landing__pillar strong { font-size: 21px; }
+  .bazi-landing__chapter { min-height: 66px; }
+  .bazi-landing__journey { font-size: 9px; }
+  .bazi-landing__journey li:not(:last-child)::after { margin: 0 3px; }
+}
+
+@media (max-height: 700px) and (max-width: 639px) {
+  .bazi-landing__content { padding-top: 11px; }
+  .bazi-landing__intro { margin-top: 5px; }
+  .bazi-landing__motto { margin-top: 7px; }
+  .bazi-landing__structure { margin-top: 9px; padding-top: 174px; }
+  .bazi-landing__cosmogram { width: 166px; height: 166px; }
+  .bazi-landing__orbit-label--outer { top: 13px; }
+  .bazi-landing__orbit-label--middle { top: 36px; }
+  .bazi-landing__orbit-label--inner { top: 59px; }
+  .bazi-landing__cosmogram-core { width: 55px; height: 55px; }
+  .bazi-landing__cosmogram-core strong { font-size: 17px; }
+  .bazi-landing__pillars { gap: 5px; }
+  .bazi-landing__pillar { min-height: 80px; }
+  .bazi-landing__chapters { margin-top: 10px; padding-top: 10px; padding-bottom: 10px; }
+  .bazi-landing__chapter { min-height: 62px; }
+  .bazi-landing__journey { margin-top: 9px; }
+  .bazi-landing__action { margin-top: 9px; }
+}
+
+@media print {
+  .bazi-landing { display: none !important; }
+}

@@ -4,6 +4,7 @@
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Calendar, Clock, Printer, Sparkles, TrendingUp, User } from 'lucide-react';
+import BaziLanding from './bazi/BaziLanding';
 import {
     BAZI_HOUR_OPTIONS,
     buildBaziChart,
@@ -298,7 +299,7 @@ const WuxingStructure = ({ counts }) => {
 const formatStartSolar = (value) => value?.split(' ')[0]?.replaceAll('-', '.') ?? '—';
 
 export default function BaziDivination({ onBack }) {
-    const [step, setStep] = useState('input');
+    const [step, setStep] = useState('landing');
     const [calendarType, setCalendarType] = useState('solar');
     const [birthYear, setBirthYear] = useState(1990);
     const [birthMonth, setBirthMonth] = useState(1);
@@ -322,6 +323,8 @@ export default function BaziDivination({ onBack }) {
     const daYunScrollerRef = useRef(null);
     const professionalSectionRef = useRef(null);
     const liuNianSectionRef = useRef(null);
+    const calculateTimerRef = useRef(null);
+    const stepRegionRef = useRef(null);
 
     const currentYear = new Date().getFullYear();
     const years = Array.from({ length: currentYear - 1900 + 1 }, (_, index) => 1900 + index);
@@ -402,6 +405,18 @@ export default function BaziDivination({ onBack }) {
         }
     }, [professionalDetail]);
 
+    useEffect(() => {
+        if (step === 'landing') return undefined;
+        const frame = window.requestAnimationFrame(() => {
+            stepRegionRef.current?.focus({ preventScroll: true });
+        });
+        return () => window.cancelAnimationFrame(frame);
+    }, [step]);
+
+    useEffect(() => () => {
+        if (calculateTimerRef.current) window.clearTimeout(calculateTimerRef.current);
+    }, []);
+
     const changeCalendarType = (nextType) => {
         const nextMonths = getBaziMonthOptions(nextType, birthYear);
         const nextMonth = nextMonths.find((month) => month.value === birthMonth)?.value
@@ -430,15 +445,30 @@ export default function BaziDivination({ onBack }) {
     };
 
     const handleCalculate = () => {
+        if (calculateTimerRef.current) window.clearTimeout(calculateTimerRef.current);
         setLoading(true);
         setChartAsOf(new Date());
         setFortuneSelection({ mode: 'current', daYunIndex: null, liuNianYear: null });
         setShowSelectionDock(false);
         setResultMode('basic');
-        window.setTimeout(() => {
+        calculateTimerRef.current = window.setTimeout(() => {
+            calculateTimerRef.current = null;
             setStep('result');
             setLoading(false);
         }, 350);
+    };
+
+    const handleHeaderBack = () => {
+        if (step === 'result') {
+            setStep('input');
+            return;
+        }
+        if (calculateTimerRef.current) {
+            window.clearTimeout(calculateTimerRef.current);
+            calculateTimerRef.current = null;
+        }
+        setLoading(false);
+        setStep('landing');
     };
 
     const selectDaYun = (daYun) => {
@@ -487,6 +517,10 @@ export default function BaziDivination({ onBack }) {
 
     const genderLabel = gender === 'male' ? '乾造' : '坤造';
 
+    if (step === 'landing') {
+        return <BaziLanding onBack={onBack} onStart={() => setStep('input')} />;
+    }
+
     return (
         <div className="relative flex flex-1 flex-col overflow-hidden bg-[#090806] text-stone-100 print:block print:overflow-visible print:bg-white">
             <div className="pointer-events-none absolute inset-0 overflow-hidden print:hidden" aria-hidden="true">
@@ -495,7 +529,7 @@ export default function BaziDivination({ onBack }) {
             </div>
 
             <header className="relative z-10 flex shrink-0 items-center gap-3 border-b border-amber-100/10 bg-stone-950/80 px-4 pb-3 backdrop-blur-xl print:hidden" style={{ paddingTop: 'max(0.75rem, env(safe-area-inset-top))' }}>
-                <button type="button" onClick={step === 'result' ? () => setStep('input') : onBack} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400" aria-label={step === 'result' ? '返回八字输入' : '返回首页'}>
+                <button type="button" onClick={handleHeaderBack} disabled={loading} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-full transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 disabled:cursor-wait disabled:opacity-45" aria-label={step === 'result' ? '返回八字输入' : loading ? '正在排盘，请稍候' : '返回八字卷首'}>
                     <ArrowLeft className="size-5 text-amber-300" aria-hidden="true" />
                 </button>
                 <div className="flex items-center gap-2">
@@ -509,7 +543,7 @@ export default function BaziDivination({ onBack }) {
 
             <main className="relative z-10 flex-1 overflow-auto px-3 pt-5 print:overflow-visible print:p-0 sm:px-4" style={{ paddingBottom: 'max(1.5rem, env(safe-area-inset-bottom))' }}>
                 {step === 'input' ? (
-                    <div className="mx-auto max-w-md animate-in space-y-5 fade-in duration-300">
+                    <div ref={stepRegionRef} tabIndex={-1} role="region" aria-label="八字出生信息输入" className="mx-auto max-w-md animate-in space-y-5 fade-in duration-300 focus:outline-none">
                         <div className="space-y-2 py-2 text-center">
                             <div className="inline-flex items-center gap-2 text-[11px] tracking-[0.28em] text-amber-300/70"><span className="h-px w-8 bg-amber-300/30" />生辰入盘<span className="h-px w-8 bg-amber-300/30" /></div>
                             <h2 className="text-2xl font-bold tracking-[0.12em] text-stone-100">探索四柱命格</h2>
@@ -583,7 +617,7 @@ export default function BaziDivination({ onBack }) {
                         </section>
                     </div>
                 ) : (
-                    <div className="mx-auto max-w-4xl animate-in fade-in duration-300 print:max-w-none" role="region" aria-label="八字排盘结果">
+                    <div ref={stepRegionRef} tabIndex={-1} className="mx-auto max-w-4xl animate-in fade-in duration-300 focus:outline-none print:max-w-none" role="region" aria-label="八字排盘结果">
                         {baziResult ? (
                             <>
                                 <article className="overflow-hidden rounded-[24px] border border-[#d0c4b2] bg-[#f3ecdf] text-[#302a25] shadow-2xl shadow-black/35 print:overflow-visible print:rounded-none print:border-0 print:shadow-none">

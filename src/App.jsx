@@ -858,8 +858,8 @@ export default function App() {
                 <span className="tool-card-copy">
                   <span className="tool-card-eyebrow">四柱 · 五行</span>
                   <span className="tool-card-title">八字排盘</span>
-                  <span className="tool-card-description">以年、月、日、时四柱，查看十神、五行与大运流年。</span>
-                  <span className="tool-card-action">进入排盘 <span aria-hidden="true">→</span></span>
+                  <span className="tool-card-description">从年、月、日、时四柱入门，学习十神、五行与大运流年的关系。</span>
+                  <span className="tool-card-action">进入八字书院 <span aria-hidden="true">→</span></span>
                 </span>
                 <span className="tool-symbol" aria-hidden="true">柱</span>
               </button>
@@ -1083,7 +1083,7 @@ export default function App() {
           <Suspense fallback={
             <div className="flex-1 flex items-center justify-center text-white">
               <div className="text-center">
-                <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                <div className="w-12 h-12 border-4 border-[#55bba8] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                 <p>正在加载八字模块...</p>
               </div>
             </div>

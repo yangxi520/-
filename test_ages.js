@@ -25,7 +25,6 @@ horoscope.palaces.forEach((p, idx) => {
 // The answer is: Ages where (Age - 1 + BirthYearBranchIndex) % 12 === PalaceBranchIndex.
 
 const EARTHLY_BRANCHES = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-const birthYearBranch = EARTHLY_BRANCHES.indexOf(horoscope.zodiac); // '午' for 1990 (Horse) -> index 6
 // Wait, iztro zodiac might be character?
 // 1990 is Geng Wu (Horse).
 console.log(`Birth Zodiac: ${horoscope.zodiac} (Should be Horse/Wu)`);
