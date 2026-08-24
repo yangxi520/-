@@ -131,15 +131,22 @@ function handleResults(results) {
     if (fistReady && ++fistFrames >= 4) {
       fistReady = false;
       fistFrames = 0;
-      if (experience.state === 'seed' && experience.flatten()) {
-        sound.flatten();
-        if (callbacks.onFist) callbacks.onFist();
-      } else if (
-        (experience.state === 'rising' || experience.state === 'risen') &&
-        experience.flattenBack()
-      ) {
+      
+      // Always notify listener (for Yao generation)
+      if (callbacks.onFist) callbacks.onFist();
+
+      // Trigger visual response according to state
+      if (experience.state === 'hidden') {
+        if (experience.summon(0, 0)) {
+          experience.flatten();
+          sound.flatten();
+        }
+      } else if (experience.state === 'seed') {
+        if (experience.flatten()) sound.flatten();
+      } else if (experience.state === 'rising' || experience.state === 'risen') {
+        if (experience.flattenBack()) sound.fold();
+      } else if (experience.state === 'flat') {
         sound.fold();
-        if (callbacks.onFist) callbacks.onFist();
       }
     }
   } else {

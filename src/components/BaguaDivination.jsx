@@ -67,9 +67,9 @@ export default function BaguaDivination({ onBack }) {
         isGeneratingRef.current = true;
 
         try {
-            // Fetch 3 quantum coins for one Yao
+            // Fetch 3 quantum coins for one Yao (returns boolean array)
             const results = await fetchQuantumUtils(3);
-            const headsCount = Object.values(results).filter(r => r === 'heads').length;
+            const headsCount = results.filter(Boolean).length;
             
             let yaoType, isMoving, binaryVal;
             if (headsCount === 3) { yaoType = '老阳'; isMoving = true; binaryVal = 1; }
@@ -94,7 +94,8 @@ export default function BaguaDivination({ onBack }) {
         } catch (error) {
             console.error("Quantum random failed, fallback to Math.random", error);
             // Fallback
-            const headsCount = [Math.random() > 0.5, Math.random() > 0.5, Math.random() > 0.5].filter(Boolean).length;
+            const results = [Math.random() > 0.5, Math.random() > 0.5, Math.random() > 0.5];
+            const headsCount = results.filter(Boolean).length;
             
             let yaoType, isMoving, binaryVal;
             if (headsCount === 3) { yaoType = '老阳'; isMoving = true; binaryVal = 1; }
@@ -143,7 +144,7 @@ export default function BaguaDivination({ onBack }) {
             {/* Title overlay */}
             <div className="absolute top-6 left-6 z-50 text-white/80 pointer-events-none drop-shadow-md">
                 <div className="text-xl tracking-widest font-bold">手势起卦</div>
-                <div className="text-xs tracking-widest opacity-60 mt-1">隔空握拳 六次成卦</div>
+                <div className="text-xs tracking-widest opacity-60 mt-1">隔空握拳 六次成卦 ({yaos.length}/6)</div>
             </div>
 
             {/* Back Button */}
@@ -161,14 +162,9 @@ export default function BaguaDivination({ onBack }) {
                 {/* Visual wrapper that animates into view */}
                 <div className={`transition-all duration-700 ease-out flex flex-col items-center justify-center
                     ${yaos.length > 0 ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}
-                    ${finalHexagram ? 'translate-y-[-10%]' : ''}
+                    ${finalHexagram ? 'translate-y-[-12%]' : ''}
                 `}>
                     <div className="w-[180px] md:w-[240px] flex flex-col-reverse gap-3 md:gap-4 drop-shadow-2xl">
-                        {/* Ghost Placeholders */}
-                        {yaos.length === 0 && Array(6).fill(0).map((_, i) => (
-                            <div key={i} className="w-full h-2 md:h-3 border-b border-white/10" aria-hidden="true" />
-                        ))}
-
                         {/* Render generated Yaos */}
                         {yaos.map((yao, index) => (
                             <div key={index} className="flex items-center gap-4 w-full animate-in fade-in zoom-in duration-500 fill-mode-both">
@@ -190,11 +186,11 @@ export default function BaguaDivination({ onBack }) {
 
                 {/* Final Hexagram Result */}
                 {finalHexagram && (
-                    <div className="absolute bottom-16 md:bottom-24 w-full max-w-sm px-6 flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-8 duration-700 pointer-events-auto">
-                        <div className="w-12 h-0.5 bg-white/30 mb-4 rounded-full"></div>
-                        <div className="text-[11px] tracking-[0.35em] text-white/50 mb-2">卦象结果</div>
-                        <h2 className="text-4xl font-normal mb-3 text-white font-['STKaiti'] tracking-widest drop-shadow-lg">{finalHexagram.name}</h2>
-                        <div className="text-sm text-white/80 leading-7 text-left mb-6 p-4 bg-black/40 backdrop-blur-md rounded-2xl border border-white/10">
+                    <div className="absolute bottom-12 md:bottom-20 w-full max-w-sm px-6 flex flex-col items-center text-center animate-in fade-in slide-in-from-bottom-8 duration-700 pointer-events-auto z-50">
+                        <div className="w-12 h-0.5 bg-white/30 mb-3 rounded-full"></div>
+                        <div className="text-[11px] tracking-[0.35em] text-white/50 mb-1">卦象结果</div>
+                        <h2 className="text-3xl md:text-4xl font-normal mb-2 text-white font-['STKaiti'] tracking-widest drop-shadow-lg">{finalHexagram.name}</h2>
+                        <div className="text-xs md:text-sm text-white/80 leading-6 text-left mb-4 p-4 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 max-h-[160px] overflow-y-auto">
                             {finalHexagram.desc}
                         </div>
                         <button
@@ -207,6 +203,20 @@ export default function BaguaDivination({ onBack }) {
                     </div>
                 )}
             </div>
+
+            {/* Manual Trigger Button (Fallback for users without camera or slow gesture recognition) */}
+            {!finalHexagram && (
+                <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-50 pointer-events-auto flex flex-col items-center">
+                    <button
+                        type="button"
+                        onClick={handleFist}
+                        className="px-6 py-2.5 rounded-full bg-white/15 hover:bg-white/25 border border-white/25 text-white/95 text-xs md:text-sm font-medium backdrop-blur-md transition-all active:scale-95 shadow-xl flex items-center gap-2 cursor-pointer"
+                    >
+                        <span>✊ 模拟握拳生爻 ({yaos.length}/6)</span>
+                    </button>
+                    <span className="text-[10px] text-white/40 mt-1.5 tracking-wider">对着摄像头握拳 或 点击按钮手动起卦</span>
+                </div>
+            )}
 
         </div>
     );
