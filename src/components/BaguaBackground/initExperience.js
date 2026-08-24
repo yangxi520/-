@@ -133,12 +133,13 @@ function handleResults(results) {
       fistFrames = 0;
       if (experience.state === 'seed' && experience.flatten()) {
         sound.flatten();
-        if (callbacks.onThrow) callbacks.onThrow();
+        if (callbacks.onFist) callbacks.onFist();
       } else if (
         (experience.state === 'rising' || experience.state === 'risen') &&
         experience.flattenBack()
       ) {
         sound.fold();
+        if (callbacks.onFist) callbacks.onFist();
       }
     }
   } else {

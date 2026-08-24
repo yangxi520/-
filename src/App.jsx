@@ -14,7 +14,7 @@ const ArchiveView = lazy(() => import("./components/ArchiveView"));
 const VideoLessons = lazy(() => import("./components/VideoLessons"));
 const EnglishLearning = lazy(() => import("./components/EnglishLearning"));
 const BaziDivination = lazy(() => import("./components/BaziDivination"));
-const FullBaguaExperience = lazy(() => import("./components/BaguaBackground/FullBaguaExperience.jsx"));
+const BaguaDivination = lazy(() => import("./components/BaguaDivination.jsx"));
 
 const WELCOME_COVER_KEY = 'gushupai-welcome-cover-seen-v1';
 
@@ -1285,11 +1285,11 @@ export default function App() {
               <div className="flex-1 flex items-center justify-center text-white bg-black w-full h-[100dvh]">
                 <div className="text-center">
                   <div className="w-12 h-12 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                  <p>正在加载 3D 八卦引擎...</p>
+                  <p>正在加载全息起卦引擎...</p>
                 </div>
               </div>
             }>
-              <FullBaguaExperience onClose={() => setView('home')} />
+              <BaguaDivination onBack={() => setView('home')} />
             </Suspense>
           </ErrorBoundary>
         ) : (
