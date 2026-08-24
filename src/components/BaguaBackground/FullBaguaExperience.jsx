@@ -2,21 +2,21 @@ import { useEffect, useRef } from 'react';
 import { initBaguaExperience } from './initExperience.js';
 import './BaguaExperience.css';
 
-export default function FullBaguaExperience({ onThrow, onClose }) {
+export default function FullBaguaExperience({ onFist, onClose }) {
   const containerRef = useRef(null);
 
   useEffect(() => {
     // start the vanilla JS experience
     const cleanup = initBaguaExperience({
-      onThrow: () => {
-        if (onThrow) onThrow();
+      onFist: () => {
+        if (onFist) onFist();
       }
     });
     
     return () => {
       if (cleanup) cleanup();
     };
-  }, [onThrow]);
+  }, [onFist]);
 
   return (
     <div ref={containerRef} className="full-bagua-experience w-full h-full absolute inset-0 z-0">
